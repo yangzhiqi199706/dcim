@@ -20,7 +20,6 @@ import Konva from "konva";
 const SNAP_GUIDE_OFFSET = 24;
 
 let history = [];
-let historyStep = -1;
 const params = new URLSearchParams(window.location.search);
 const isPreview = params.get('type') ? true : false;// Comment translated to English.
 const isSwiper = params.get('swiper') ? true : false;// Comment translated to English.
@@ -464,7 +463,7 @@ function Home() {
         ));
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
     };
@@ -486,7 +485,7 @@ function Home() {
         ));
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
         selectShapes(memberIds);
@@ -570,10 +569,11 @@ function Home() {
         selectShapes(allIds);
         selectedIdsRef.current = allIds;
         if (allIds.length > 0) {
-            setSelectedId(allIds[0]);
-            selectedIdRef.current = allIds[0];
-            const firstShape = imagesRef.current.find((shape) => shape.id === allIds[0]);
-            setDragShape(firstShape || null);
+            const firstUnlocked = imagesRef.current.find((shape) => shape.draggable !== false);
+            const anchorShape = firstUnlocked || imagesRef.current[0];
+            setSelectedId(anchorShape.id);
+            selectedIdRef.current = anchorShape.id;
+            setDragShape(anchorShape);
         }
     };
 
@@ -674,7 +674,7 @@ function Home() {
         const nextImages = imagesRef.current.filter((shape) => !deleteIds.has(shape.id));
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
         selectShapes([]);
@@ -722,7 +722,7 @@ function Home() {
 
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
         selectShapes(pastedIds);
@@ -754,7 +754,7 @@ function Home() {
 
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
     };
@@ -1044,7 +1044,7 @@ function Home() {
         ));
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
         selectShapes([...selectedIdsRef.current]);
@@ -2171,8 +2171,12 @@ function Home() {
                 elements.push(elementNode);
             }
         });
-        let ids = elements.map((el) => el.attrs.id);
-        ids = expandDragSelectionIds(ids, null);
+        let rawIds = elements.map((el) => el.attrs.id);
+        const expandedSet = new Set();
+        rawIds.forEach((id) => {
+            getExpandedSelectionIds(id).forEach((mid) => expandedSet.add(mid));
+        });
+        const ids = Array.from(expandedSet);
         selectShapes(ids);
         selectedIdsRef.current = ids;
         updateSelectionRect('remove');
@@ -2278,7 +2282,6 @@ function Home() {
         setImages(tplimages);
         imagesRef.current = tplimages;
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-        historyStep = 0;
         history = [];
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
     }
@@ -2319,7 +2322,7 @@ function Home() {
                 images.concat([shape])
             );
             imagesRef.current = images.concat([shape]);
-            historyStep += 1;
+    
             history.push(JSON.parse(JSON.stringify(imagesRef.current)));
 
             setSelectedId(null);
@@ -2344,7 +2347,7 @@ function Home() {
         imagesToUpdate[findIndex] = singleImageToUpdate;
         setImages(JSON.parse(JSON.stringify(imagesToUpdate)));
         imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
-        historyStep += 1;
+
         history.push(imagesToUpdate);
         setChart(imagesRef.current, selectedIdRef.current, null);
         if (selectedIdsRef.current.length === 0) {
@@ -2380,7 +2383,7 @@ function Home() {
                     imagesToUpdate.push(shape);
                     setImages(JSON.parse(JSON.stringify(imagesToUpdate)));// Comment translated to English.
                     imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
-                    historyStep += 1;
+            
                     history.push(imagesToUpdate);
                     setChart(imagesRef.current, selectedIdRef.current, null);
 
@@ -2399,7 +2402,7 @@ function Home() {
                 const delImageToUpdate = imagesToUpdate.filter((img) => img.id !== newShapeProps.id);
                 setImages(JSON.parse(JSON.stringify(delImageToUpdate)));
                 imagesRef.current = JSON.parse(JSON.stringify(delImageToUpdate));
-                historyStep += 1;
+        
                 history.push(delImageToUpdate);
                 setChart(imagesRef.current, selectedIdRef.current, null);
 
@@ -2454,7 +2457,7 @@ function Home() {
             const nextImages = imagesRef.current.filter((shape) => !deleteIds.has(shape.id));
             setImages(JSON.parse(JSON.stringify(nextImages)));
             imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-            historyStep += 1;
+    
             history.push(JSON.parse(JSON.stringify(imagesRef.current)));
             setChart(imagesRef.current, selectedIdRef.current, null);
             selectShapes([]);
@@ -2476,7 +2479,7 @@ function Home() {
             ));
             setImages(JSON.parse(JSON.stringify(nextImages)));
             imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-            historyStep += 1;
+    
             history.push(JSON.parse(JSON.stringify(imagesRef.current)));
             setChart(imagesRef.current, selectedIdRef.current, null);
             selectShapes([...targetIds]);
@@ -2639,7 +2642,7 @@ function Home() {
 
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
+
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
         if (type === 'copys') {
@@ -2656,25 +2659,15 @@ function Home() {
             return;
         }
         if (type === 'undo') {
-            history = Array.from(new Set(history));
-            historyStep = history.length - 1;
-            if (historyStep < 1) {
-                console.log(t('auto.k0385'));
-                historyStep = -1;
-                setImages([]);
-                imagesRef.current = [];
-                history = [];
+            if (history.length <= 1) {
                 return;
             }
-            let undostep = 1;
-            historyStep -= undostep;
-            const previous = history[historyStep];
-            history = history.slice(0, -undostep);
+            history = history.slice(0, -1);
+            const previous = JSON.parse(JSON.stringify(history[history.length - 1]));
             setImages(previous);
             imagesRef.current = previous;
             onClickTap('handle');
             setChart(imagesRef.current, selectedIdRef.current, null);
-            console.log(t('auto.k0386'));
         } else {
             if (selectedIdRef.current !== null || selectedIdsRef.current.length !== 0) {
                 if (selectedIdsRef.current.length !== 0) {
@@ -3144,7 +3137,7 @@ function Home() {
                                 alarmCatchRef.current = '1';
                                 imagesRef.current = [];
                                 setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-                                historyStep = -1;
+
                                 history = [];
                                 await continuePendingPageSwitch.current();
                                 scheduleIdleAutoSave();
@@ -3277,7 +3270,7 @@ function Home() {
                                     setImages(newimags);
                                     imagesRef.current = newimags;
                                     setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-                                    historyStep += 1;
+                            
                                     history.push(JSON.parse(JSON.stringify(imagesRef.current)));
                                 }
                                 setresetBox(false);
