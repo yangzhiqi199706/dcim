@@ -1,0 +1,265 @@
+/* 温湿度数值说明框 */
+.numstatus {
+    position: absolute;
+    width: 78px;
+    height: 48px;
+    background: rgba(14, 67, 166, .8) url(../Images/dcim/status.png) center no-repeat;
+    padding: 5px 1px 5px 2px;
+    background-size: 100% 100%;
+}
+
+.numstatus>div {
+    float: left;
+    width: 20px;
+    color: #E3F8F9;
+    line-height: 36px;
+    font-size: 13px;
+}
+
+.numstatus span {
+    float: left;
+    width: 16px;
+    color: #B9D1FF;
+    line-height: 1;
+    margin-top: 4px;
+}
+
+.numstatus span:nth-child(2n) {
+    width: 36px;
+    text-align: center;
+    color: #03DFFB;
+    font-size: 13px;
+}
+
+/* 参数，报警，状态 */
+.param-status {
+    border: 16px solid transparent;
+    border-image-source: url(../Images/dcim/lang.png);
+    border-image-slice: 13;
+    border-image-width: 9px;
+    background-color: #0F1942;
+    width: 100%;
+}
+
+.param-statustitle {
+    color: #9FCCFF;
+    font-size: 14px;
+    text-align: center;
+    height: 32px;
+    line-height: 30px;
+    overflow: hidden;
+    border-left: 1px solid #1A3151;
+    margin-top: 5px;
+}
+
+.param-statustitle div {
+    width: 100px;
+    float: left;
+    cursor: pointer;
+    border: 2px solid #1A3151;
+    box-shadow: 0 0 8px 5px #1a3151 inset;
+    position: relative;
+    left: -30px;
+    transform: skewX(-45deg);
+}
+
+.param-statustitle div:first-child {
+    width: 145px
+}
+
+.param-statustitle div label {
+    transform: skewX(45deg);
+    display: block;
+    cursor: pointer;
+}
+
+.param-statustitle-check {
+    font-size: 120%;
+}
+
+.param-statusbox {
+    height: 260px;
+    overflow: auto;
+}
+
+.param-status table {
+    margin-top: 5px;
+    text-align: center;
+    color: #A9CFE8;
+    width: 100%;
+    font-size: 14px;
+}
+
+.param-status thead tr th {
+    border: 2px solid #1A3151;
+    box-shadow: 0 0 8px 5px #1a3151 inset;
+    text-align: center;
+    padding: 3px;
+    font-weight: 500;
+}
+
+/* 气泡组件 */
+.tipstxt {
+    position: absolute;
+    color: #03DFFB;
+    font-size: 12px;
+    line-height: 30px;
+    min-width: 56px;
+    padding: 0 8px;
+    height: 32px;
+    background: transparent url(../Images/dcim/pao.png) center no-repeat;
+    background-size: 100% 100%;
+    text-align: center;
+}
+
+/* 告警列表 */
+.alarmList{overflow-y: auto;overflow-x: hidden;}
+.alarmList table{width:100%;padding:0 10px}
+.alarmList td,
+.alarmList th {
+    background-color: transparent;
+    padding: 4px 8px;
+    border: none;
+}
+
+.alarmList th {
+    font-weight: 700;
+    text-align: left;
+}
+.alarmList thead{position: sticky;top:0;z-index: 10;background-color: #3783FF;}
+
+.alarmList thead tr {
+    height: 32px;
+    width: 100%;
+    background: url(../Images/icon/list-head.png) center center no-repeat;
+    background-size: contain;
+}
+
+.alarmList tbody tr {
+    height: 32px;
+    width: 100%;
+    background: transparent center center no-repeat;
+    background-size: cover;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.alarmList tbody tr:nth-child(2n+1) {
+    background-image: url(../Images/icon/list-1.png)
+}
+
+.alarmList tbody tr:nth-child(2n) {
+    background-image: url(../Images/icon/list-2.png)
+}
+
+.alarmList tbody tr:hover {
+    background-color: transparent;
+}
+
+.alarmList tbody tr:hover {
+    transform: scale(1.02);
+}
+
+.level1color td {
+    color: #35DFFC !important
+}
+
+.level2color td {
+    color: #3783FF !important
+}
+
+.level3color td {
+    color: #FFCC37 !important
+}
+
+.level4color td {
+    color: #FF9000 !important
+}
+
+.level5color td {
+    color: #F96055 !important
+}
+.bubble {
+    position: relative;
+    background: linear-gradient(#E0F4FB, #C6E8EA);
+    color: #222;
+    padding: 8px 10px;
+    border-radius: 8px;
+    width: 180px;
+    font-size: 12px;
+    z-index: 99999;
+}
+.bubbleTop{top:-70px;}
+.bubbleBottom{bottom:-30px;}
+.bubbleLeft{left:-190px;top:-20px}
+.bubbleRight{right:calc(-100% - 10px);top:-20px}
+
+/* 气泡箭头（通过边框生成三角形） */
+.bubble::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 20px;
+    border-width: 10px 10px 0;
+    border-style: solid;
+    border-color: #C6E8EA transparent transparent;
+}
+.bubbleBottom::after {
+    bottom: 100%;
+    left: 20px;
+    border-width: 0 10px 10px; /* 上、左右、下 */
+    border-color: transparent transparent #E0F4FB;
+}
+.bubbleLeft::after {
+    left: 100%;
+    top: 10px;
+    height:1px;
+    border-width:  10px 0 10px 10px; /* 上、右、下、左 */
+    border-color: transparent transparent transparent #E0F4FB;
+}
+.bubbleRight::after {
+    left: -10px;
+    top: 10px;
+    height:1px;
+    border-width: 10px 10px 10px 0; /* 上、右、下、左 */
+    border-color: transparent #C6E8EA transparent transparent;
+}
+
+.bubble label {
+    width: 72px;
+    display: inline-block;
+}
+
+.bubble span {
+    color: red;
+    display: inline-block;
+    width: 76px;
+    text-align: center;
+}
+.rope{
+    background-image: url('../Images/icon/rope.jpg');
+    background-repeat: repeat-x;
+    background-size: 20px 100%;
+    position: relative;
+    margin: 80px 200px;
+}
+.ropeRed{width:10px;position: absolute;left:0;top:0;bottom:0;height:100%;background: red;}
+.ropeRev{left:auto;right:0;}
+.ropeNumS,.ropeNumE{color:#A9CFE8;font-size: 12px;position: absolute;}
+.ropeNumTop.ropeNumS{left:0;top:-20px}
+.ropeNumTop.ropeNumE{right:0;top:-20px}
+.ropeNumBottom.ropeNumS{left:0;bottom:-20px}
+.ropeNumBottom.ropeNumE{right:0;bottom:-20px}
+.ropeNumLeft.ropeNumS{left:0;top:-20px}
+.ropeNumLeft.ropeNumE{left:0;bottom:-20px}
+.ropeNumRight.ropeNumS{right:0;top:-20px}
+.ropeNumRight.ropeNumE{right:0;bottom:-20px}
+
+.ropeRev.ropeNumS{left:auto;right:0;}
+.ropeRev.ropeNumE{right:auto;left:0;}
+.ropeNumLeft.ropeNumS.ropeRev{top:auto;bottom:-20px;left:0;right:auto}
+.ropeNumLeft.ropeNumE.ropeRev{bottom:auto;top:-20px}
+.ropeNumRight.ropeNumS.ropeRev{top:auto;bottom:-20px;}
+.ropeNumRight.ropeNumE.ropeRev{bottom:auto;top:-20px;right:0;left:auto}
+
+.ropeIcon{width:60px;margin-top: 10px;position: fixed;}
