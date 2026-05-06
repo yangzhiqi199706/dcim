@@ -62,6 +62,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
     };
 
     const handleDragEnd = e => {
+        if (shapeProps.draggable === false) return;
         onChange({
             ...shapeProps,
             x: e.target.x(),

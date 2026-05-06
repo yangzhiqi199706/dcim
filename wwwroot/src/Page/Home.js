@@ -435,6 +435,13 @@ function Home() {
         return expandedIds.filter((id) => isShapeUnlocked(id));
     };
 
+    const getUnlockedSelectedIds = () => {
+        if (!Array.isArray(selectedIdsRef.current) || selectedIdsRef.current.length === 0) {
+            return [];
+        }
+        return selectedIdsRef.current.filter((id) => isShapeUnlocked(id));
+    };
+
     const createDerivedGroupId = (sourceGroupId) => {
         if (!sourceGroupId) return null;
         return `group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -565,22 +572,28 @@ function Home() {
     };
 
     const selectAllShapes = () => {
-        const allIds = imagesRef.current.map((shape) => shape.id);
+        const unlockedShapes = imagesRef.current.filter((shape) => shape.draggable !== false);
+        const allIds = unlockedShapes.map((shape) => shape.id);
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
         selectShapes(allIds);
         selectedIdsRef.current = allIds;
         if (allIds.length > 0) {
-            const firstUnlocked = imagesRef.current.find((shape) => shape.draggable !== false);
-            const anchorShape = firstUnlocked || imagesRef.current[0];
-            setSelectedId(anchorShape.id);
-            selectedIdRef.current = anchorShape.id;
-            setDragShape(anchorShape);
+            const anchorShape = unlockedShapes[0];
+            setTimeout(() => {
+                setSelectedId(anchorShape.id);
+                selectedIdRef.current = anchorShape.id;
+                setDragShape(anchorShape);
+            }, 0);
         }
     };
 
     const getClipboardSelectionShapes = () => {
         let targetIds = [];
-        if (selectedIdsRef.current.length > 0) {
-            targetIds = expandDragSelectionIds(selectedIdsRef.current, null);
+        const unlockedSelectedIds = getUnlockedSelectedIds();
+        if (unlockedSelectedIds.length > 0) {
+            targetIds = expandDragSelectionIds(unlockedSelectedIds, null);
         } else if (selectedIdRef.current !== null) {
             targetIds = getUnlockedExpandedSelectionIds(selectedIdRef.current);
         }
@@ -736,25 +749,39 @@ function Home() {
         message.success(`已粘贴 ${pastedIds.length} 个元素`);
     };
 
-    const toggleSelectionLockState = () => {
-        const targetIds = selectedIdsRef.current.length > 0
-            ? selectedIdsRef.current
-            : (selectedIdRef.current !== null ? [selectedIdRef.current] : []);
+    const lockSelectedShapes = () => {
+        const unlockedSelectedIds = getUnlockedSelectedIds();
+        const targetIds = unlockedSelectedIds.length > 0
+            ? unlockedSelectedIds
+            : (selectedIdRef.current !== null && isShapeUnlocked(selectedIdRef.current) ? [selectedIdRef.current] : []);
         if (targetIds.length === 0) return;
 
-        const targetShapes = imagesRef.current.filter((shape) => targetIds.includes(shape.id));
-        if (targetShapes.length === 0) return;
-
-        const allLocked = targetShapes.every((shape) => shape.draggable === false);
         const nextImages = imagesRef.current.map((shape) => (
             targetIds.includes(shape.id)
-                ? { ...shape, draggable: allLocked ? true : false }
+                ? { ...shape, draggable: false }
                 : shape
         ));
 
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+    };
 
+    const unlockSelectedShapes = () => {
+        const lockedSelectedIds = Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0
+            ? selectedIdsRef.current.filter((id) => !isShapeUnlocked(id))
+            : (selectedIdRef.current !== null && !isShapeUnlocked(selectedIdRef.current) ? [selectedIdRef.current] : []);
+        if (lockedSelectedIds.length === 0) return;
+
+        const nextImages = imagesRef.current.map((shape) => (
+            lockedSelectedIds.includes(shape.id)
+                ? { ...shape, draggable: true }
+                : shape
+        ));
+
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
     };
@@ -1026,9 +1053,19 @@ function Home() {
 
     const applyMultiDragPositions = (positionMap) => {
         if (!positionMap) return;
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        if (!stage) return;
         Object.keys(positionMap).forEach((id) => {
-            const stage = stageRef.current ? stageRef.current.getStage() : null;
-            const node = stage ? stage.findOne('#' + id) : null;
+            const shape = imagesRef.current.find((s) => s.id === id);
+            if (shape && shape.draggable === false) {
+                // 锁定元素：强制还原节点到 data 层记录的位置，防止 node.position() 把它移走
+                const node = stage.findOne('#' + id);
+                if (node) {
+                    node.position({ x: shape.x, y: shape.y });
+                }
+                return;
+            }
+            const node = stage.findOne('#' + id);
             if (node) {
                 node.position(positionMap[id]);
             }
@@ -1037,11 +1074,13 @@ function Home() {
 
     const commitMultiDragPositions = (positionMap) => {
         if (!positionMap) return;
-        const nextImages = imagesRef.current.map((shape) => (
-            positionMap[shape.id]
-                ? { ...shape, x: positionMap[shape.id].x, y: positionMap[shape.id].y }
-                : shape
-        ));
+        const nextImages = imagesRef.current.map((shape) => {
+            if (!positionMap[shape.id]) return shape;
+            if (shape.draggable === false) {
+                return shape;
+            }
+            return { ...shape, x: positionMap[shape.id].x, y: positionMap[shape.id].y };
+        });
         setImages(JSON.parse(JSON.stringify(nextImages)));
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
 
@@ -1139,7 +1178,11 @@ function Home() {
 
     const handleShapeDragMove = (e, shape) => {
         const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
-        const isMultiDrag = Array.isArray(expandedSelectedIds) && expandedSelectedIds.length > 1 && expandedSelectedIds.includes(shape.id);
+        const dragSelectedIds = expandedSelectedIds.filter((id) => {
+            const currentShape = imagesRef.current.find((item) => item.id === id);
+            return currentShape && currentShape.draggable !== false;
+        });
+        const isMultiDrag = Array.isArray(dragSelectedIds) && dragSelectedIds.length > 1 && dragSelectedIds.includes(shape.id);
 
         if (!isMultiDrag) {
             multiDragRef.current = {
@@ -1158,7 +1201,7 @@ function Home() {
 
         if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
             const startPositions = {};
-            expandedSelectedIds.forEach((id) => {
+            dragSelectedIds.forEach((id) => {
                 const currentShape = imagesRef.current.find((item) => item.id === id);
                 if (currentShape) {
                     startPositions[id] = {
@@ -1167,8 +1210,6 @@ function Home() {
                     };
                 }
             });
-            selectedIdsRef.current = expandedSelectedIds;
-            selectShapes(expandedSelectedIds);
             multiDragRef.current = {
                 active: true,
                 draggedId: shape.id,
@@ -1186,7 +1227,7 @@ function Home() {
         let deltaX = e.target.x() - startPosition.x;
         let deltaY = e.target.y() - startPosition.y;
         let nextPositions = {};
-        expandedSelectedIds.forEach((id) => {
+        dragSelectedIds.forEach((id) => {
             const basePos = multiDragRef.current.startPositions[id];
             if (basePos) {
                 nextPositions[id] = {
@@ -1197,9 +1238,9 @@ function Home() {
         });
 
         if (snapEnabled) {
-            const groupMetrics = buildGroupMetricsFromIds(expandedSelectedIds, nextPositions);
+            const groupMetrics = buildGroupMetricsFromIds(dragSelectedIds, nextPositions);
             if (groupMetrics) {
-                const { matchX, matchY, snappedMetrics } = getSnappedMetrics(groupMetrics, expandedSelectedIds);
+                const { matchX, matchY, snappedMetrics } = getSnappedMetrics(groupMetrics, dragSelectedIds);
                 if (matchX || matchY) {
                     const offsetX = snappedMetrics.x - groupMetrics.x;
                     const offsetY = snappedMetrics.y - groupMetrics.y;
@@ -1223,7 +1264,7 @@ function Home() {
             }
         }
 
-        nextPositions = getBoundedMultiDragPositions(nextPositions, expandedSelectedIds);
+        nextPositions = getBoundedMultiDragPositions(nextPositions, dragSelectedIds);
         applyMultiDragPositions(nextPositions);
         multiDragRef.current.pendingPositions = nextPositions;
     };
@@ -1418,6 +1459,9 @@ function Home() {
             if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
                 e.preventDefault();
                 ungroupSelectedShapes();
+            } else if (e.ctrlKey && e.shiftKey && (e.key === 'K' || e.key === 'k')) {
+                e.preventDefault();
+                unlockSelectedShapes();
             } else if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
                 copySelectionToClipboard();
             } else if (e.ctrlKey && (e.key === 'X' || e.key === 'x')) {
@@ -1432,7 +1476,7 @@ function Home() {
                 groupSelectedShapes();
             } else if (e.ctrlKey && (e.key === 'K' || e.key === 'k')) {
                 e.preventDefault();
-                toggleSelectionLockState();
+                lockSelectedShapes();
             } else if (e.ctrlKey && e.key === 'ArrowUp') {
                 handleToolChange('up');
             } else if (e.ctrlKey && (e.key === 'Z' || e.key === 'z')) {
@@ -1971,12 +2015,36 @@ function Home() {
         }
     }, []);// Comment translated to English.
 
+    useEffect(() => {
+        const unlockedSelectedIds = selectedIds.filter((id) => {
+            const shape = imagesRef.current.find((item) => item.id === id);
+            return shape && shape.draggable !== false;
+        });
+        if (unlockedSelectedIds.length !== selectedIds.length) {
+            selectShapes(unlockedSelectedIds);
+            selectedIdsRef.current = unlockedSelectedIds;
+        }
+
+        const selectedShape = selectedId !== null
+            ? imagesRef.current.find((item) => item.id === selectedId)
+            : null;
+        if (selectedShape && selectedShape.draggable === false) {
+            setSelectedId(null);
+            selectedIdRef.current = null;
+            setDragShape(null);
+        }
+    }, [images, selectedIds, selectedId]);
+
     // Comment translated to English.
     useEffect(() => {
         if (!layerRef.current || !transformRefids.current) {
             return;
         }
         const nodes = selectedIds
+            .filter((id) => {
+                const shape = imagesRef.current.find((item) => item.id === id);
+                return shape && shape.draggable !== false;
+            })
             .map((id) => layerRef.current.findOne("#" + id))
             .filter(Boolean);
         transformRefids.current.nodes(nodes);
@@ -2047,7 +2115,23 @@ function Home() {
         settoolType(null);
         // }
     };
-    // Comment translated to English.
+
+    useEffect(() => {
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        if (!stage) return;
+        images.forEach((shape) => {
+            if (shape && shape.draggable === false) {
+                const node = stage.findOne('#' + shape.id);
+                if (node) {
+                    const pos = node.position();
+                    if (pos.x !== shape.x || pos.y !== shape.y) {
+                        node.position({ x: shape.x, y: shape.y });
+                    }
+                }
+            }
+        });
+    }, [images, selectedIds, selectedId]);
+
     const onClickTap = async (e) => {
         if (e === 'handle') {
             checkDeselect();
@@ -2073,9 +2157,20 @@ function Home() {
         const isSelected = tr.nodes().indexOf(e.target) >= 0;
         const isDrag = e.target.parent.attrs.draggable;
         const clickedShapeId = e.target.parent.attrs.id;
-        const clickedSelectionIds = getExpandedSelectionIds(clickedShapeId);
+        const clickedSelectionIds = getExpandedSelectionIds(clickedShapeId).filter((id) => {
+            const shape = imagesRef.current.find((item) => item.id === id);
+            return shape && shape.draggable !== false;
+        });
         // Comment translated to English.
-        if (!isDrag) { message.error(t('auto.k0361')); return; }
+        if (!isDrag) {
+            selectShapes([]);
+            selectedIdsRef.current = [];
+            setSelectedId(null);
+            selectedIdRef.current = null;
+            setDragShape(null);
+            message.error(t('auto.k0361'));
+            return;
+        }
         if (!metaPressed && !isSelected) {
             selectShapes([]);
             selectedIdsRef.current = [];
@@ -2174,9 +2269,17 @@ function Home() {
         let rawIds = elements.map((el) => el.attrs.id);
         const expandedSet = new Set();
         rawIds.forEach((id) => {
-            getExpandedSelectionIds(id).forEach((mid) => expandedSet.add(mid));
+            getExpandedSelectionIds(id).forEach((mid) => {
+                const shape = imagesRef.current.find((item) => item.id === mid);
+                if (shape && shape.draggable !== false) {
+                    expandedSet.add(mid);
+                }
+            });
         });
         const ids = Array.from(expandedSet);
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
         selectShapes(ids);
         selectedIdsRef.current = ids;
         updateSelectionRect('remove');
@@ -2340,11 +2443,14 @@ function Home() {
     // Comment translated to English.
     const handleShapeChange = (newShapeProps, id) => {
         clearSnapGuides();
-        let imagesToUpdate = images;
-        const findIndex = images.findIndex((img) => img.id === newShapeProps.id);
-        let singleImageToUpdate = imagesToUpdate[findIndex];
-        singleImageToUpdate = newShapeProps;
-        imagesToUpdate[findIndex] = singleImageToUpdate;
+        let imagesToUpdate = [...imagesRef.current];
+        const findIndex = imagesToUpdate.findIndex((img) => img.id === newShapeProps.id);
+        if (findIndex < 0) return;
+        const existing = imagesToUpdate[findIndex];
+        if (existing && existing.draggable === false && (newShapeProps.x !== existing.x || newShapeProps.y !== existing.y)) {
+            newShapeProps = { ...newShapeProps, x: existing.x, y: existing.y };
+        }
+        imagesToUpdate[findIndex] = newShapeProps;
         setImages(JSON.parse(JSON.stringify(imagesToUpdate)));
         imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
 
@@ -2363,7 +2469,9 @@ function Home() {
                 setDragShape(newShapeProps);
             })
         } else {
-            selectShapes(selectedIdsRef.current)
+            const unlockedSelectedIds = getUnlockedSelectedIds();
+            selectShapes(unlockedSelectedIds);
+            selectedIdsRef.current = unlockedSelectedIds;
         }
     };
     // Comment translated to English.
@@ -2452,8 +2560,9 @@ function Home() {
     };
 
     const handleMultiToolBack = (type) => {
+        const unlockedSelectedIds = getUnlockedSelectedIds();
         if (type === 'del') {
-            const deleteIds = new Set(selectedIdsRef.current);
+            const deleteIds = new Set(unlockedSelectedIds);
             const nextImages = imagesRef.current.filter((shape) => !deleteIds.has(shape.id));
             setImages(JSON.parse(JSON.stringify(nextImages)));
             imagesRef.current = JSON.parse(JSON.stringify(nextImages));
@@ -2471,7 +2580,7 @@ function Home() {
 
         if (type === 'lock' || type === 'unlock') {
             const targetDraggable = type === 'unlock';
-            const targetIds = new Set(selectedIdsRef.current);
+            const targetIds = new Set(unlockedSelectedIds);
             const nextImages = imagesRef.current.map((shape) => (
                 targetIds.has(shape.id)
                     ? { ...shape, draggable: targetDraggable }
@@ -2489,7 +2598,7 @@ function Home() {
         }
 
         let tr = transformRefids.current;
-        const alignmentUnits = getAlignmentUnits(selectedIdsRef.current);
+        const alignmentUnits = getAlignmentUnits(unlockedSelectedIds);
         if (!tr || alignmentUnits.length === 0) {
             settoolType(null);
             return;
@@ -2530,7 +2639,7 @@ function Home() {
         }
 
         const sourceGroupIds = {};
-        selectedIdsRef.current.forEach((selectedId) => {
+        unlockedSelectedIds.forEach((selectedId) => {
             const sourceShape = imagesRef.current.find((img) => img.id === selectedId);
             if (sourceShape && sourceShape.groupId && !sourceGroupIds[sourceShape.groupId]) {
                 sourceGroupIds[sourceShape.groupId] = createDerivedGroupId(sourceShape.groupId);
@@ -2938,12 +3047,15 @@ function Home() {
                                         height={stageHeight} />
                                 )}
                                 {images.map((shape) => {
+                                    const isUnlocked = shape.draggable !== false;
+                                    const isPrimarySelected = isUnlocked && shape.id === selectedId && selectedIds.length === 0;
+                                    const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
                                         shapeProps={shape}
-                                        isSelected={shape.id === selectedId && selectedIds.length === 0}
-                                        showSelectionFrame={selectedIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0)}
+                                        isSelected={isPrimarySelected}
+                                        showSelectionFrame={hasSelectionFrame}
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {
@@ -2953,10 +3065,13 @@ function Home() {
                                             if (evt && evt.evt && (evt.evt.shiftKey || evt.evt.ctrlKey || evt.evt.metaKey)) {
                                                 return;
                                             }
-                                            if (evt && evt.evt && evt.evt.__draggingSelection && selectedIdsRef.current.length > 1 && selectedIdsRef.current.includes(shape.id)) {
+                                            if (evt && evt.evt && evt.evt.__draggingSelection && getUnlockedSelectedIds().length > 1 && getUnlockedSelectedIds().includes(shape.id)) {
                                                 return;
                                             }
-                                            const groupSelectionIds = getExpandedSelectionIds(shape);
+                                            const groupSelectionIds = getExpandedSelectionIds(shape).filter((id) => {
+                                                const currentShape = imagesRef.current.find((item) => item.id === id);
+                                                return currentShape && currentShape.draggable !== false;
+                                            });
                                             if (groupSelectionIds.length > 1) {
                                                 selectShapes(groupSelectionIds);
                                                 selectedIdsRef.current = groupSelectionIds;
