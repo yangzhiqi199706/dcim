@@ -280,7 +280,37 @@ function echart(images, selectedId,alarmData) {
                 } else if (chartInfo.cat === 'bar') {// Comment translated to English.
                     var barChart = echarts.init(element);
                     let top = 20;
-                    let data = chartInfo.data;
+                    let sourceData = Array.isArray(chartInfo.data) ? chartInfo.data : [];
+                    let data = sourceData.map((series) => ({
+                        ...series,
+                        data: Array.isArray(series.data) ? [...series.data] : []
+                    }));
+                    let xdata = Array.isArray(chartInfo.xdata) ? [...chartInfo.xdata] : [];
+                    const shouldSortBar = chartInfo.sortEnable === '2' && data.length > 0 && xdata.length > 0;
+                    if (shouldSortBar) {
+                        const sortSeriesIndex = chartInfo.sortTarget === 'first' ? 0 : parseInt(chartInfo.sortTarget, 10) || 0;
+                        const safeSortSeriesIndex = sortSeriesIndex >= 0 && sortSeriesIndex < data.length ? sortSeriesIndex : 0;
+                        const baseSeries = data[safeSortSeriesIndex];
+                        const rows = xdata.map((name, index) => ({
+                            name,
+                            index,
+                            sortValue: Number(baseSeries && Array.isArray(baseSeries.data) ? baseSeries.data[index] : 0) || 0
+                        }));
+                        rows.sort((a, b) => {
+                            if (b.sortValue === a.sortValue) {
+                                return a.index - b.index;
+                            }
+                            return chartInfo.sortOrder === 'asc' ? a.sortValue - b.sortValue : b.sortValue - a.sortValue;
+                        });
+                        xdata = rows.map((row) => row.name);
+                        data = data.map((series) => ({
+                            ...series,
+                            data: rows.map((row) => {
+                                const currentValue = Array.isArray(series.data) ? series.data[row.index] : 0;
+                                return currentValue === undefined ? 0 : currentValue;
+                            })
+                        }));
+                    }
                     let legenddata = [];
                     if (data) {
                         data.forEach(element => {
@@ -359,7 +389,7 @@ function echart(images, selectedId,alarmData) {
                                 }
                             },
                             type: 'category',
-                            data: chartInfo.xdata
+                            data: xdata
                         },
                         yAxis: {
                             axisLine: {// Comment translated to English.

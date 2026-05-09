@@ -101,20 +101,24 @@ function ItemBox(props) {
 
     const changeSelectedNav = (id) => {
         setSelectedNav(id);
+        const localizedBasicComponents = localizeDeep(BasicComponents);
         switch (id) {
             case 1:
-                setSelectedData(localizeDeep(BasicComponents));
+                setSelectedData(localizedBasicComponents.filter((item) => item.moduleJson && item.moduleJson.children && item.moduleJson.children[0] && item.moduleJson.children[0].className !== 'Echart'));
                 break;
             case 2:
-                setSelectedData(localizeDeep(ScreenTemplate));
+                setSelectedData(localizedBasicComponents.filter((item) => item.moduleJson && item.moduleJson.children && item.moduleJson.children[0] && item.moduleJson.children[0].className === 'Echart'));
                 break;
             case 3:
-                getImgData('tpl');
+                setSelectedData(localizeDeep(ScreenTemplate));
                 break;
             case 4:
-                getImgData('system');
+                getImgData('tpl');
                 break;
             case 5:
+                getImgData('system');
+                break;
+            case 6:
                 getImgData('upload');
                 break;
             case 0:
@@ -521,7 +525,7 @@ function ItemBox(props) {
                 ))}
             </ul>
             <div>
-                {selectedNav === 5 && (
+                {selectedNav === 6 && (
                     <>
                         <div className="galleryToolbar uploadBtn">
                             <div className="galleryToolbarLeft">
@@ -560,7 +564,7 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {selectedNav === 3 && (
+                {selectedNav === 4 && (
                     <>
                         <div className="uploadBtn">
                             <Button className="delBtn" type="primary" danger onClick={() => setshowTplDelbtn(1)} style={showTplDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
@@ -705,7 +709,7 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 4) && selectedData.map((v, index) => (
+                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5) && selectedData.map((v, index) => (
                     <div className="itmeOne" key={index}>
                         <img
                             className="galleryThumb"
@@ -715,7 +719,7 @@ function ItemBox(props) {
                                 props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
                             }}
                         />
-                        {selectedNav !== 3 && <div>{v.moduleName}</div>}
+                        {v.moduleName && <div>{v.moduleName}</div>}
                     </div>
                 ))}
             </div>

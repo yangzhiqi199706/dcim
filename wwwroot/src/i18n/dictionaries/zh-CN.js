@@ -51,6 +51,7 @@
     pageTemplate: '页面模板',
     myPages: '我的页面',
     basicComponents: '基础组件',
+    chartComponents: '图表组件',
     templateComponents: '模板组件',
     uploadImage: '上传图片',
     deleteConfirmPrefix: '确认删除《',

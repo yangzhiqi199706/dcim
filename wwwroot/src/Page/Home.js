@@ -155,11 +155,15 @@ function Home() {
 
     const buildStageJson = () => {
         let nextStageJson = stageRef.current.toJSON();
-        if (backgroundImage) {
-            let newjson = JSON.parse(nextStageJson);
+        let newjson = JSON.parse(nextStageJson);
+        const shapeMap = {};
+        imagesRef.current.forEach((shape) => {
+            shapeMap[shape.id] = shape;
+        });
+        if (newjson && newjson.children && newjson.children[0] && Array.isArray(newjson.children[0].children)) {
             newjson.children[0].children.forEach(element => {
                 if (element.attrs.id === 'canvasBackground') {
-                    if (backgroundImage.indexOf('#') === -1) {
+                    if (backgroundImage && backgroundImage.indexOf('#') === -1) {
                         if (backgroundImage.indexOf('/public/') > 0) {
                             element.attrs.fillPatternImage = backgroundImage.split('/public/')[1];
                         } else {
@@ -167,10 +171,15 @@ function Home() {
                         }
                     }
                     element.attrs.alarmCatch = alarmCatchRef.current;
+                    return;
+                }
+                const currentShape = shapeMap[element.attrs.id];
+                if (currentShape) {
+                    element.attrs = JSON.parse(JSON.stringify(currentShape));
                 }
             });
-            nextStageJson = JSON.stringify(newjson);
         }
+        nextStageJson = JSON.stringify(newjson);
         stagejson = nextStageJson;
         return nextStageJson;
     };
@@ -766,12 +775,24 @@ function Home() {
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
     };
 
     const unlockSelectedShapes = () => {
-        const lockedSelectedIds = Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0
-            ? selectedIdsRef.current.filter((id) => !isShapeUnlocked(id))
-            : (selectedIdRef.current !== null && !isShapeUnlocked(selectedIdRef.current) ? [selectedIdRef.current] : []);
+        let lockedSelectedIds = [];
+        if (Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0) {
+            lockedSelectedIds = selectedIdsRef.current.filter((id) => !isShapeUnlocked(id));
+        } else if (selectedIdRef.current !== null && !isShapeUnlocked(selectedIdRef.current)) {
+            lockedSelectedIds = [selectedIdRef.current];
+        } else {
+            lockedSelectedIds = imagesRef.current
+                .filter((shape) => shape.draggable === false)
+                .map((shape) => shape.id);
+        }
         if (lockedSelectedIds.length === 0) return;
 
         const nextImages = imagesRef.current.map((shape) => (
@@ -784,6 +805,11 @@ function Home() {
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
     };
 
 
@@ -2382,6 +2408,19 @@ function Home() {
         lastSavedStageJsonRef.current = typeof serializedStage === 'string' ? serializedStage : '';
         setSaveStatusText('已保存');
         scheduleIdleAutoSave();
+        multiDragRef.current = {
+            active: false,
+            draggedId: null,
+            startPositions: {},
+            pendingPositions: null,
+        };
+        clearSnapGuides();
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
+        settoolType(null);
         setImages(tplimages);
         imagesRef.current = tplimages;
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
