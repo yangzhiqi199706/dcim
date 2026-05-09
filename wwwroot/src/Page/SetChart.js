@@ -7,9 +7,56 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // echarts.use([LineChart, BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, TitleComponent]);
 
+const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
+
+const initChart = (element) => {
+    if (!element) return null;
+    const existChart = echarts.getInstanceByDom(element);
+    if (existChart) {
+        try {
+            const painterType = existChart.getZr() && existChart.getZr().painter && existChart.getZr().painter.getType
+                ? existChart.getZr().painter.getType()
+                : '';
+            const wantType = isFirefox ? 'svg' : 'canvas';
+            if (painterType === wantType || !painterType) {
+                return existChart;
+            }
+        } catch (e) {
+            // fall through to recreate
+        }
+        existChart.dispose();
+    }
+    return echarts.init(element, null, { renderer: isFirefox ? 'svg' : 'canvas' });
+};
+
+const normalizeOptionForStableRender = (option) => {
+    if (!option || typeof option !== 'object') return option;
+    option.animation = false;
+    option.animationDuration = 0;
+    option.animationDurationUpdate = 0;
+    option.animationEasing = 'linear';
+    option.animationEasingUpdate = 'linear';
+    option.stateAnimation = { duration: 0 };
+    return option;
+};
+
+const safeSetOption = (chart, option) => {
+    if (!chart || !option) return;
+    try {
+        const stableOption = normalizeOptionForStableRender(option);
+        chart.setOption(stableOption, {
+            notMerge: true,
+            lazyUpdate: true,
+            silent: true
+        });
+    } catch (e) {
+        console.error('echarts setOption failed', e);
+    }
+};
+
 // Comment translated to English.
 const getAlarmData = async (element, chartInfo, alarmDataList) => {
-    var alarmpieChart = echarts.init(element);
+    var alarmpieChart = initChart(element);
     // let res = await httpsend.getData('GroupAlarmStatisticKey', {
     //     "startDateTime": "1970-01-01 00:00:00",
     //     "endDateTime": "2099-12-31 23:59:59",
@@ -23,20 +70,32 @@ const getAlarmData = async (element, chartInfo, alarmDataList) => {
         {name: t('auto.k0141'), value: 0},
         {name: t('auto.k0142'), value: 0}
     ];
-    if (alarmDataList) {
+    if (alarmDataList && Array.isArray(alarmDataList.data)) {
+        const levelCount = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 };
+        alarmDataList.data.forEach((item) => {
+            const rawLevel = (
+                item && item.AlarmLevel !== undefined ? item.AlarmLevel
+                    : (item && item.alarmLevel !== undefined ? item.alarmLevel : (item ? item.level : undefined))
+            );
+            const level = rawLevel === undefined || rawLevel === null ? '' : String(rawLevel).trim();
+            if (Object.prototype.hasOwnProperty.call(levelCount, level)) {
+                levelCount[level] += 1;
+            }
+        });
         alarmdata = [
-            {name: t('auto.k0138'), value: alarmDataList.data.filter(v=>v.AlarmLevel==='1').length},
-            {name: t('auto.k0139'), value: alarmDataList.data.filter(v=>v.AlarmLevel==='2').length},
-            {name: t('auto.k0140'), value: alarmDataList.data.filter(v=>v.AlarmLevel==='3').length},
-            {name: t('auto.k0141'), value: alarmDataList.data.filter(v=>v.AlarmLevel==='4').length},
-            {name: t('auto.k0142'), value: alarmDataList.data.filter(v=>v.AlarmLevel==='5').length}
-        ]
+            { name: t('auto.k0138'), value: levelCount['1'] },
+            { name: t('auto.k0139'), value: levelCount['2'] },
+            { name: t('auto.k0140'), value: levelCount['3'] },
+            { name: t('auto.k0141'), value: levelCount['4'] },
+            { name: t('auto.k0142'), value: levelCount['5'] }
+        ];
     }
+    const seriesAlarmData = alarmdata.filter((item) => Number(item.value) !== 0);
     let data = [
         {
             type: 'pie',
             radius: '70%',
-            data: alarmdata,
+            data: seriesAlarmData,
             label: {
                 position: 'inside',
                 color: chartInfo.dataColor
@@ -77,7 +136,7 @@ const getAlarmData = async (element, chartInfo, alarmDataList) => {
         },
         series: data
     };
-    alarmpieoption && alarmpieChart.setOption(alarmpieoption);
+    safeSetOption(alarmpieChart, alarmpieoption);
 }
 // Comment translated to English.
 function echart(images, selectedId,alarmData) {
@@ -88,11 +147,10 @@ function echart(images, selectedId,alarmData) {
             var element = chartlist[i];
             let findimg = getImgIndex(images, element);
             if (findimg > -1 && images[findimg] && images[findimg].id) {
-                if (document.getElementById(images[findimg].id)) echarts.dispose(document.getElementById(images[findimg].id));
                 // Comment translated to English.
                 let chartInfo = images[findimg].moduleJson.children[0].attrs;
                 if (chartInfo.cat === 'gauge') {// Comment translated to English.
-                    var gaugeChart = echarts.init(element);
+                    var gaugeChart = initChart(element);
                     var gaugeoption = {
                         grid: {
                             left: 0,
@@ -166,9 +224,9 @@ function echart(images, selectedId,alarmData) {
                             }
                         ]
                     };
-                    gaugeChart.setOption(gaugeoption);
+                    safeSetOption(gaugeChart, gaugeoption);
                 } else if (chartInfo.cat === 'line') {// Comment translated to English.
-                    var lineChart = echarts.init(element);
+                    var lineChart = initChart(element);
                     let top = 20;
                     let data = chartInfo.data;
                     let legenddata = [];
@@ -276,9 +334,9 @@ function echart(images, selectedId,alarmData) {
                         series: data
                     };
 
-                    lineoption && lineChart.setOption(lineoption);
+                    safeSetOption(lineChart, lineoption);
                 } else if (chartInfo.cat === 'bar') {// Comment translated to English.
-                    var barChart = echarts.init(element);
+                    var barChart = initChart(element);
                     let top = 20;
                     let data = chartInfo.data;
                     let legenddata = [];
@@ -389,9 +447,9 @@ function echart(images, selectedId,alarmData) {
                         series: data
                     };
 
-                    baroption && barChart.setOption(baroption);
+                    safeSetOption(barChart, baroption);
                 } else if (chartInfo.cat === 'pie') {// Comment translated to English.
-                    var pieChart = echarts.init(element);
+                    var pieChart = initChart(element);
                     let data = [
                         {
                             type: 'pie',
@@ -438,11 +496,11 @@ function echart(images, selectedId,alarmData) {
                         series: data
                     };
 
-                    pieoption && pieChart.setOption(pieoption);
+                    safeSetOption(pieChart, pieoption);
                 } else if (chartInfo.cat === 'alarmpie') {// Comment translated to English.
                     getAlarmData(element, chartInfo, alarmData);
                 } else if (chartInfo.cat === 'huan') {// Comment translated to English.
-                    var huanChart = echarts.init(element);
+                    var huanChart = initChart(element);
                     var huanoption = {
                         tooltip: {
                             trigger: 'item'
@@ -489,9 +547,9 @@ function echart(images, selectedId,alarmData) {
                         ]
                     };
 
-                    huanoption && huanChart.setOption(huanoption);
+                    safeSetOption(huanChart, huanoption);
                 } else if (chartInfo.cat === 'pue') {// Comment translated to English.
-                    var pueChart = echarts.init(element);
+                    var pueChart = initChart(element);
                     var pueoption = {
                         grid: {
                             left: 0,
@@ -593,7 +651,7 @@ function echart(images, selectedId,alarmData) {
                             }
                         ]
                     };
-                    pueoption && pueChart.setOption(pueoption);
+                    safeSetOption(pueChart, pueoption);
                 }
             }
         }

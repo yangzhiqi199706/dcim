@@ -36,6 +36,8 @@
     deleteSuccess: '删除成功!',
     importSuccess: '导入成功!',
     importFailed: '导入失败!',
+    duplicatePageSkipped: '页面已存在，已跳过新增页面',
+    exportNotZipWarning: '导出接口未返回 zip，请重启本地 Node 接口后重试',
     deleteFailed: '删除失败!',
     removePageFileFailed: 'page文件删除失败，请联系技术人员!',
     editPage: '编辑页面',

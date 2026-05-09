@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useReducer, useRef, useCallback } from 'react';
+﻿import React, { memo, useState, useEffect, useReducer } from 'react';
 import { Close, Lock, PermMedia } from '@mui/icons-material';
 import httpsend from '../Assets/httpsend';
 import { Select, Button } from 'antd';
@@ -168,10 +168,80 @@ const ElementAttr = memo((props) => {
     const [MyImages, setMyImages] = useState([]);// Comment translated to English.
     const [DefImages, setDefImages] = useState([]);// Comment translated to English.
     const [ShowImagesIndex, setShowImagesIndex] = useState(0);// Comment translated to English.
-    const [hoverPreviewImg, setHoverPreviewImg] = useState(null);
-    const [hoverPreviewKey, setHoverPreviewKey] = useState('');
 
-    const [dataSelect, setdataSelect] = useState();// Comment translated to English.
+    const [dataSelect, setdataSelect] = useState({
+        all: [],
+        datadata: [],
+        statedata: [],
+        alarmdata: []
+    });// Comment translated to English.
+
+    const normalizeValue = (v) => (v === undefined || v === null ? '' : String(v).trim());
+
+    const getDataKeyFirst = () => {
+        if (!shapeAttr.attrs.dataKey || shapeAttr.attrs.dataKey.length === 0) return null;
+        return shapeAttr.attrs.dataKey[0] || null;
+    };
+
+    const resolveCommandCategory = (typeRaw) => {
+        const typeText = normalizeValue(typeRaw).toUpperCase();
+        const prefix = typeText.charAt(0);
+
+        // Rule requested by user: A=analog(data), B=state, C=alarm.
+        if (prefix === 'A') return 'datadata';
+        if (prefix === 'B') return 'statedata';
+        if (prefix === 'C') return 'alarmdata';
+        return '';
+    };
+
+    const buildParaDataSelect = (rows = []) => {
+        const placeholder = { data: t('auto.k0512') };
+        const all = [];
+        const datadata = [];
+        const statedata = [];
+        const alarmdata = [];
+
+        const seenAll = new Set();
+        const seenData = new Set();
+        const seenState = new Set();
+        const seenAlarm = new Set();
+
+        const pushUnique = (arr, seen, text) => {
+            if (!text || seen.has(text)) return;
+            seen.add(text);
+            arr.push({ data: text });
+        };
+
+        rows.forEach((row) => {
+            const desc = normalizeValue(
+                row && (row.CommandDesc || row.commandDesc || row.CommandName || row.commandName || row.Desc || row.desc)
+            );
+            if (!desc) return;
+
+            pushUnique(all, seenAll, desc);
+            const cmdType = row && (row.CommandType || row.commandType || row.CmdType || row.cmdType || row.Type || row.type);
+            const category = resolveCommandCategory(cmdType, desc);
+
+            if (category === 'datadata') pushUnique(datadata, seenData, desc);
+            if (category === 'statedata') pushUnique(statedata, seenState, desc);
+            if (category === 'alarmdata') pushUnique(alarmdata, seenAlarm, desc);
+        });
+
+        return {
+            all: [placeholder].concat(all),
+            // Keep category lists strict, do not fallback to all.
+            datadata: [placeholder].concat(datadata),
+            statedata: [placeholder].concat(statedata),
+            alarmdata: [placeholder].concat(alarmdata)
+        };
+    };
+
+    const getDataSelectOptionsByAttrCode = (attrCode) => {
+        if (attrCode === 'datadata') return dataSelect.datadata || [];
+        if (attrCode === 'statedata') return dataSelect.statedata || [];
+        if (attrCode === 'alarmdata') return dataSelect.alarmdata || [];
+        return dataSelect.all || [];
+    };
 
     const [clickType, setclickType] = useState(newclicktype);// Comment translated to English.
     const [eleLink, seteleLink] = useState((dragShape.clickEvnt && dragShape.clickEvnt.length > 0 && dragShape.clickEvnt[0].hasOwnProperty('link')) ? dragShape.clickEvnt[0]['link'] : null);// Comment translated to English.
@@ -180,126 +250,31 @@ const ElementAttr = memo((props) => {
     const [savePagePid, setsavePagePid] = useState((dragShape.clickEvnt && dragShape.clickEvnt.length > 0 && dragShape.clickEvnt[0].hasOwnProperty('weblink')) ? dragShape.clickEvnt[0]['weblink'] : null);// Comment translated to English.
     const [savePagePname, setsavePagePname] = useState();// Comment translated to English.
     const [videoChannel, setvideoChannel] = useState((dragShape.clickEvnt && dragShape.clickEvnt.length > 0 && dragShape.clickEvnt[0].hasOwnProperty('videoChannel')) ? dragShape.clickEvnt[0]['videoChannel'] : null);// Comment translated to English.
-    const [dialogPositions, setDialogPositions] = useState({});
-    const dialogRefs = useRef({});
-    const draggingDialogIdRef = useRef('');
-    const dragOffsetRef = useRef({ x: 0, y: 0 });
-
-    const handleDialogMouseMove = useCallback((e) => {
-        const dialogId = draggingDialogIdRef.current;
-        if (!dialogId) return;
-        const dialog = dialogRefs.current[dialogId];
-        if (!dialog) return;
-
-        const rect = dialog.getBoundingClientRect();
-        const canvasBody = document.querySelector('.canvasBody');
-        const boundaryRect = canvasBody ? canvasBody.getBoundingClientRect() : {
-            left: 0,
-            top: 0,
-            right: window.innerWidth,
-            bottom: window.innerHeight,
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        const dialogWidth = Math.min(rect.width, boundaryRect.width || rect.width);
-        const dialogHeight = Math.min(rect.height, boundaryRect.height || rect.height);
-        const minLeft = boundaryRect.left;
-        const maxLeft = Math.max(minLeft, boundaryRect.right - dialogWidth);
-        const minTop = boundaryRect.top;
-        const maxTop = Math.max(minTop, boundaryRect.bottom - dialogHeight);
-        const nextLeft = Math.min(Math.max(e.clientX - dragOffsetRef.current.x, minLeft), maxLeft);
-        const nextTop = Math.min(Math.max(e.clientY - dragOffsetRef.current.y, minTop), maxTop);
-
-        setDialogPositions((prev) => ({
-            ...prev,
-            [dialogId]: {
-                left: nextLeft,
-                top: nextTop
-            }
-        }));
-    }, []);
-
-    const handleDialogMouseUp = useCallback(() => {
-        draggingDialogIdRef.current = '';
-        window.removeEventListener('mousemove', handleDialogMouseMove);
-        window.removeEventListener('mouseup', handleDialogMouseUp);
-    }, [handleDialogMouseMove]);
-
-    const handleDialogMouseDown = useCallback((dialogId, e) => {
-        if (e.button !== 0) return;
-        const dialog = dialogRefs.current[dialogId];
-        if (!dialog) return;
-
-        const rect = dialog.getBoundingClientRect();
-        draggingDialogIdRef.current = dialogId;
-        dragOffsetRef.current = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        };
-
-        window.addEventListener('mousemove', handleDialogMouseMove);
-        window.addEventListener('mouseup', handleDialogMouseUp);
-    }, [handleDialogMouseMove, handleDialogMouseUp]);
-
-    const getDialogStyle = useCallback((dialogId, visible) => {
-        if (!visible) return { display: 'none' };
-        const position = dialogPositions[dialogId];
-        if (!position) return { display: 'block' };
-        return {
-            display: 'block',
-            left: position.left,
-            top: position.top,
-            transform: 'none'
-        };
-    }, [dialogPositions]);
-
-    useEffect(() => {
-        return () => {
-            window.removeEventListener('mousemove', handleDialogMouseMove);
-            window.removeEventListener('mouseup', handleDialogMouseUp);
-        };
-    }, [handleDialogMouseMove, handleDialogMouseUp]);
-
-    useEffect(() => {
-        draggingDialogIdRef.current = '';
-        window.removeEventListener('mousemove', handleDialogMouseMove);
-        window.removeEventListener('mouseup', handleDialogMouseUp);
-        setshowDevBox(0);
-        setshowParamBox(0);
-        setshowParamsBox(0);
-        setshowPagesBox(0);
-        setshowEventsBox(0);
-        setshowImgBox(0);
-        setshowGifImgBox(0);
-        setshowClickBox(0);
-        setDialogPositions({});
-        setHoverPreviewImg(null);
-        setHoverPreviewKey('');
-    }, [props.currentPageId, handleDialogMouseMove, handleDialogMouseUp]);
 
     // Comment translated to English.
 
+    const paraClassName = shapeAttr.children && shapeAttr.children[0] ? shapeAttr.children[0].className : '';
+    const dataKeyFirst = getDataKeyFirst();
+    const paraDevKey = dataKeyFirst ? (dataKeyFirst.key || dataKeyFirst.devkey || '') : '';
+
     useEffect(() => {// Comment translated to English.
-        // Comment translated to English.
-        if (shapeAttr.children[0].className === 'paraHtml' && shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0) {
-            getdataSelect();
-        }
         async function getdataSelect() {
+            if (paraClassName !== 'paraHtml' || !paraDevKey) {
+                setdataSelect(buildParaDataSelect([]));
+                return;
+            }
             let res = await httpsend.getData('GetDeviceCommandListKey', {
-                DevID: shapeAttr.attrs.dataKey[0].key,
+                DevID: paraDevKey,
                 ComboBox: '1'
-            })
-            if (res) {
-                let datasel = [{
-                    "data": t('auto.k0512')
-                }];
-                res.data.forEach(one => {
-                    datasel.push({ "data": one.CommandDesc ? one.CommandDesc : t('auto.k0514') })
-                })
-                setdataSelect(datasel);
+            });
+            if (res && Array.isArray(res.data)) {
+                setdataSelect(buildParaDataSelect(res.data));
+            } else {
+                setdataSelect(buildParaDataSelect([]));
             }
         }
-    }, []);
+        getdataSelect();
+    }, [paraClassName, paraDevKey]);
 
     // Comment translated to English.
     useEffect(() => {
@@ -405,7 +380,7 @@ const ElementAttr = memo((props) => {
                 }
 
                 // Comment translated to English.
-                if (paramDevId && val.id === paramDevId.split('&')[0]) {
+                if (paramDevId && String(val.id) === String(paramDevId).split('&')[0]) {
                     let paramArr = [];
                     val.DeviceLastDataArr.forEach((item) => {
                         let LastReceiveData = item.data.replace(/'/g, '"');
@@ -527,25 +502,21 @@ const ElementAttr = memo((props) => {
         }
     }
     useEffect(() => {
-        if (showDevBox === 1 || showParamBox === 1 || showParamsBox === 1 || showClickBox === 1 || showPagesBox === 1 || showEventsBox === 1) {
+        const hasOpenLayer = showDevBox === 1 || showParamBox === 1 || showParamsBox === 1 || showClickBox === 1 || showPagesBox === 1 || showEventsBox === 1;
+        if (hasOpenLayer) {
             getevData();
             if (showParamBox === 1 || showParamsBox === 1) getParamData();
             if (showClickBox === 1 || showPagesBox === 1) getPageListData();
             if (showClickBox === 1) getVideoListData();
-        }
-        if (showDevBox === 0 || showParamBox === 0 || showParamsBox === 0 || showClickBox === 0 || showPagesBox === 0 || showEventsBox === 0) {
+        } else {
             setdevList([]);// Comment translated to English.
             setparamsList([]);
             setcommandList([]);
             setpagesList([]);// Comment translated to English.
             setvideoList([]);// Comment translated to English.
-            if (showParamBox === 0) {
-                setcusparamList([]);
-                setsavePagePidSel([]);
-            }
-            if (showParamsBox === 0) {
-                setcusparamsList([]);
-            }
+            setcusparamList([]);
+            setsavePagePidSel([]);
+            setcusparamsList([]);
         }
     }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox]);
 
@@ -1151,6 +1122,7 @@ const ElementAttr = memo((props) => {
                     </div>)
                 }
                 if (a.attrType === 'dataSelect') {// Comment translated to English.
+                    const selectOptions = getDataSelectOptionsByAttrCode(a.attrCode);
                     attrList.push(<div className="attrBox" key={unikey}>
                         <label>{a.attrName}</label>
                         <select
@@ -1158,7 +1130,7 @@ const ElementAttr = memo((props) => {
                             data-attrcode={a.attrCode}
                             data-attrtype={a.attrType}
                             data-attrwhere={a.attrWhere}>
-                            {dataSelect && dataSelect.map((va, n) => {
+                            {selectOptions && selectOptions.map((va, n) => {
                                 if (val.attrs[a.attrCode] && va.data === val.attrs[a.attrCode]) {
                                     return <option value={va.data} selected key={n}>{va.data}</option>
                                 } else {
@@ -1249,8 +1221,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0002'} id="chooseClick" ref={(node) => { dialogRefs.current.chooseClick = node; }} style={getDialogStyle('chooseClick', showClickBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseClick', e)}>{t('auto.k0477')}</div>
+        <div className="layui-layer" key={shapeId + '0002'} id="chooseClick" style={showClickBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0477')}</div>
             <div className="layui-layer-content">
                 <div className="attrBox">
                     <label>{t('auto.k0478')}</label>
@@ -1466,8 +1438,8 @@ const ElementAttr = memo((props) => {
     </div>)
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0005'} id="chooseDev" ref={(node) => { dialogRefs.current.chooseDev = node; }} style={getDialogStyle('chooseDev', showDevBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseDev', e)}>{t('auto.k0490')}</div>
+        <div className="layui-layer" key={shapeId + '0005'} id="chooseDev" style={showDevBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0490')}</div>
             <div className="layui-layer-content">
                 <div>
                     <label>{t('auto.k0491')}</label>
@@ -1505,8 +1477,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0003'} id="chooseParam" ref={(node) => { dialogRefs.current.chooseParam = node; }} style={getDialogStyle('chooseParam', showParamBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseParam', e)}>{t('auto.k0492')}</div>
+        <div className="layui-layer" key={shapeId + '0003'} id="chooseParam" style={showParamBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0492')}</div>
             <ul className="layui-nav">
                 {ShowParaIndex === 0 &&
                     <>
@@ -1597,8 +1569,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0006'} id="chooseParams" ref={(node) => { dialogRefs.current.chooseParams = node; }} style={getDialogStyle('chooseParams', showParamsBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseParams', e)}>{t('auto.k0498')}</div>
+        <div className="layui-layer" key={shapeId + '0006'} id="chooseParams" style={showParamsBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0498')}</div>
             <ul className="layui-nav">
                 {ShowParasIndex === 0 &&
                     <>
@@ -1686,8 +1658,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0008'} id="choosePage" ref={(node) => { dialogRefs.current.choosePage = node; }} style={getDialogStyle('choosePage', showPagesBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('choosePage', e)}>{t('auto.k0502')}</div>
+        <div className="layui-layer" key={shapeId + '0008'} id="choosePage" style={showPagesBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0502')}</div>
             <div className="layui-layer-content">
                 <div>
                     <label>{t('auto.k0503')}</label>
@@ -1728,8 +1700,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0009'} id="chooseEvents" ref={(node) => { dialogRefs.current.chooseEvents = node; }} style={getDialogStyle('chooseEvents', showEventsBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseEvents', e)}>{t('auto.k0504')}</div>
+        <div className="layui-layer" key={shapeId + '0009'} id="chooseEvents" style={showEventsBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0504')}</div>
             <ul className="layui-nav">
                 {ShowEventIndex === 0 &&
                     <>
@@ -1816,8 +1788,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0004'} id="chooseImg" ref={(node) => { dialogRefs.current.chooseImg = node; }} style={getDialogStyle('chooseImg', showImgBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseImg', e)}>{t('auto.k0508')}</div>
+        <div className="layui-layer" key={shapeId + '0004'} id="chooseImg" style={showImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0508')}</div>
             <ul className="layui-nav">
                 {ShowImagesIndex === 0 &&
                     <>
@@ -1833,51 +1805,21 @@ const ElementAttr = memo((props) => {
                 }
 
             </ul>
-            {ShowImagesIndex === 0 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => { setHoverPreviewImg(null); setHoverPreviewKey(''); }}>
-                <div className="selImgBox">
-                    {
-                        MyImages.map((imgs, n) => {
-                            let unikey = shapeId + '0004' + n;
-                            return (<img
-                                src={imgs.img}
-                                key={unikey}
-                                data-attrcode="image"
-                                data-attrwhere="myImage"
-                                onMouseEnter={() => {
-                                    setHoverPreviewImg(imgs.img)
-                                    setHoverPreviewKey(unikey)
-                                }}
-                                onClick={(e) => setimgChange(imgs.img, e)}
-                                alt={imgs.img}
-                                style={hoverPreviewKey === unikey ? { border: '2px solid red' } : undefined}
-                            />)
-                        })
-                    }
-                </div>
-                <div className="selImgPreview">
-                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>请选择左侧图片进行预览</span>}
-                </div>
+            {ShowImagesIndex === 0 && <div className="layui-layer-content">
+                {
+                    MyImages.map((imgs, n) => {
+                        let unikey = shapeId + '0004' + n;
+                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => setimgChange(imgs.img, e)} alt={imgs.img} />)
+                    })
+                }
             </div>}
-            {ShowImagesIndex === 1 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
-                <div className="selImgBox">
-                    {
-                        DefImages.map((imgs, n) => {
-                            let unikey = shapeId + '0004' + n;
-                            return (<img
-                                src={imgs.img}
-                                key={unikey}
-                                data-attrcode="image"
-                                data-attrwhere="myImage"
-                                onMouseEnter={() => setHoverPreviewImg(imgs.img)}
-                                onClick={(e) => setimgChange(imgs.img, e)}
-                                alt={imgs.img}
-                            />)
-                        })
-                    }
-                </div>
-                <div className="selImgPreview">
-                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>请选择左侧图片进行预览</span>}
-                </div>
+            {ShowImagesIndex === 1 && <div className="layui-layer-content">
+                {
+                    DefImages.map((imgs, n) => {
+                        let unikey = shapeId + '0004' + n;
+                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => setimgChange(imgs.img, e)} alt={imgs.img} />)
+                    })
+                }
             </div>}
             <span className="layui-layer-setwin" onClick={() => { setshowImgBox(0); setimgUrlId(0); }}>
                 <Close />
@@ -1894,28 +1836,15 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" ref={(node) => { dialogRefs.current.chooseGifImg = node; }} style={getDialogStyle('chooseGifImg', showGifImgBox === 1)}>
-            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseGifImg', e)}>{t('auto.k0511')}</div>
-            <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
-                <div className="selImgBox">
-                    {
-                        MyImages.map((imgs, n) => {
-                            let unikey = shapeId + '0007' + n;
-                            return (<img
-                                src={imgs.img}
-                                key={unikey}
-                                data-attrcode="image"
-                                data-attrwhere="myImage"
-                                onMouseEnter={() => setHoverPreviewImg(imgs.img)}
-                                onClick={(e) => dispatch({ type: "patch", formData: { val: imgs.img, name: "statusSelectColor", id: imgUrlId } })}
-                                alt={imgs.img}
-                            />)
-                        })
-                    }
-                </div>
-                <div className="selImgPreview">
-                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>图片预览</span>}
-                </div>
+        <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" style={showGifImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
+            <div className="layui-layer-title">{t('auto.k0511')}</div>
+            <div className="layui-layer-content">
+                {
+                    MyImages.map((imgs, n) => {
+                        let unikey = shapeId + '0007' + n;
+                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => dispatch({ type: "patch", formData: { val: imgs.img, name: "statusSelectColor", id: imgUrlId } })} alt={imgs.img} />)
+                    })
+                }
             </div>
             <span className="layui-layer-setwin" onClick={() => { setshowGifImgBox(0); setimgUrlId(0); }}>
                 <Close />

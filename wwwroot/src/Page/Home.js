@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Stage, Layer, Rect, Transformer, Text, Group, Line } from "react-konva";
+import { Stage, Layer, Rect, Transformer, Text, Group } from "react-konva";
 import httpsend from '../Assets/httpsend';
 import ToolList from "./ToolList";
 import ItemBox from "./ItemBox";
@@ -16,8 +16,6 @@ import { buildMainApiUrl } from '../config/endpoints';
 import { t } from '../i18n';
 
 import Konva from "konva";
-
-const SNAP_GUIDE_OFFSET = 24;
 
 let history = [];
 let historyStep = -1;
@@ -37,13 +35,18 @@ if (!loginState && !isPreview) {
     // checkToken();
 }
 
-let previewjson;// Comment translated to English.
-const PAGE_DESIGNER_CLIPBOARD_KEY = 'page_designer_clipboard';
-
+const normalizeStageSize = (value, fallback) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return fallback;
+    }
+    return Math.round(parsed);
+};
 
 function Home() {
     const stageRef = useRef();
     const containerRef = useRef();
+    const previewDataRef = useRef(null);
 
     // Comment translated to English.
     const [dragUrl, setDragUrl] = useState();
@@ -70,12 +73,6 @@ function Home() {
         y2: 0
     });
     const oldPos = useRef(null);
-    const multiDragRef = useRef({
-        active: false,
-        draggedId: null,
-        startPositions: {},
-        pendingPositions: null,
-    });
     // Comment translated to English.
     const [toolType, settoolType] = useState(null);
     // Comment translated to English.
@@ -115,670 +112,30 @@ function Home() {
     const stageWidthRef = useRef(stageWidth);
     const [stageHeight, setstageHeight] = useState(1080);
     const stageHeightRef = useRef(stageHeight);
+    const safeStageWidth = normalizeStageSize(stageWidth, 1920);
+    const safeStageHeight = normalizeStageSize(stageHeight, 1080);
     // Comment translated to English.
     const [canvasScale, setcanvasScale] = useState(100);
-    const [snapEnabled, setSnapEnabled] = useState(true);
-    const [snapThreshold, setSnapThreshold] = useState(6);
-    const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
-    const [tabFlash, setTabFlash] = useState('');
-    const [saveStatusText, setSaveStatusText] = useState('已保存');
-    const [lastAutoSaveTime, setLastAutoSaveTime] = useState('');
-    const pendingPageSwitchRef = useRef(null);
-    const lastSavedStageJsonRef = useRef('');
-    const saveStatusTimerRef = useRef(null);
-    const autoSaveTimerRef = useRef(null);
-
-    const formatTime = (date = new Date()) => {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    };
-
-    const setSavedStatus = (text = '已保存') => {
-        if (saveStatusTimerRef.current) {
-            clearTimeout(saveStatusTimerRef.current);
-            saveStatusTimerRef.current = null;
-        }
-        setSaveStatusText(text);
-        if (text === '已自动保存') {
-            setLastAutoSaveTime(formatTime());
-        } else if (text === '已保存') {
-            setLastAutoSaveTime('');
-        }
-        if (text !== '已修改') {
-            saveStatusTimerRef.current = setTimeout(() => {
-                setSaveStatusText('已保存');
-                saveStatusTimerRef.current = null;
-            }, 1800);
-        }
-    };
-
-    const buildStageJson = () => {
-        let nextStageJson = stageRef.current.toJSON();
-        if (backgroundImage) {
-            let newjson = JSON.parse(nextStageJson);
-            newjson.children[0].children.forEach(element => {
-                if (element.attrs.id === 'canvasBackground') {
-                    if (backgroundImage.indexOf('#') === -1) {
-                        if (backgroundImage.indexOf('/public/') > 0) {
-                            element.attrs.fillPatternImage = backgroundImage.split('/public/')[1];
-                        } else {
-                            element.attrs.fillPatternImage = backgroundImage;
-                        }
-                    }
-                    element.attrs.alarmCatch = alarmCatchRef.current;
-                }
-            });
-            nextStageJson = JSON.stringify(newjson);
-        }
-        stagejson = nextStageJson;
-        return nextStageJson;
-    };
-
-    const silentSaveExistingPage = async () => {
-        if (!savePageId || savePageId === '0' || savePageType !== '1' || !savePageTxt) return true;
-        const savejson = buildStageJson();
-        let res = await httpsend.getData('ChangeDmpageKey', { id: savePageId });
-        if (!res || res.code !== 100) {
-            message.error(t('auto.k0445'));
-            return false;
-        }
-        let res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
-        if (!res2 || res2.code !== 100) {
-            message.error(t('auto.k0444'));
-            return false;
-        }
-        lastSavedStageJsonRef.current = savejson;
-        setSavedStatus('已自动保存');
-        return true;
-    };
-
-    const createAndSavePage = async ({ silent = false } = {}) => {
-        if (!savePageType) {
-            if (!silent) message.error(t('auto.k0408'));
-            return { ok: false, needInfo: true };
-        }
-        if (!savePageName) {
-            if (!silent) message.error(t('auto.k0409'));
-            return { ok: false, needInfo: true };
-        }
-        if (!savePagePid) {
-            if (!silent) message.error(t('auto.k0410'));
-            return { ok: false, needInfo: true };
-        }
-        if (!savePageIndex) {
-            if (!silent) message.error(t('auto.k0411'));
-            return { ok: false, needInfo: true };
-        }
-        if (savePageType === '3' && !savePageLink) {
-            if (!silent) message.error(t('auto.k0412'));
-            return { ok: false, needInfo: true };
-        }
-        const savefilename = (new Date().getTime()).toString();
-        const pageContent = buildStageJson();
-        let res = await httpsend.getData('CreateDmpageKey', {
-            PageType: savePageType,
-            PageName: savePageName,
-            pid: savePagePid,
-            PageIndex: savePageIndex,
-            ProId: 0,
-            PageTop: -1,
-            PageTxt: savePageType === '3' ? savePageLink : savefilename,
-        });
-        if (!res || res.code !== 100) {
-            if (!silent) message.error(t('auto.k0445'));
-            return { ok: false, needInfo: false };
-        }
-        if (savePageType === '1') {
-            let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: pageContent });
-            if (!fileres || fileres.code !== 100) {
-                if (!silent) message.error(t('auto.k0444'));
-                return { ok: false, needInfo: false };
-            }
-        }
-        setsavePageId(res.data.id);
-        setsavePageTxt(res.data.PageTxt);
-        lastSavedStageJsonRef.current = pageContent;
-        if (silent) {
-            setSavedStatus('已自动保存');
-        } else {
-            setSavedStatus('已保存');
-        }
-        if (!silent) {
-            message.success(t('auto.k0443'));
-        }
-        return { ok: true, needInfo: false };
-    };
-
-    const tryAutoSaveBeforeSwitch = async () => {
-        const currentStageJson = buildStageJson();
-        const hasSavedSnapshot = !!lastSavedStageJsonRef.current;
-        const isDirty = !hasSavedSnapshot || currentStageJson !== lastSavedStageJsonRef.current;
-        if (!isDirty) return true;
-        if (savePageId && savePageId !== '0') {
-            const saved = await silentSaveExistingPage();
-            if (saved) {
-                lastSavedStageJsonRef.current = currentStageJson;
-            }
-            return saved;
-        }
-        const hasContent = Array.isArray(imagesRef.current) && imagesRef.current.length > 0;
-        const hasBackground = !!backgroundImage;
-        if (!hasContent && !hasBackground) return true;
-        const createResult = await createAndSavePage({ silent: true });
-        if (createResult.ok) {
-            lastSavedStageJsonRef.current = currentStageJson;
-            return true;
-        }
-        if (createResult.needInfo) {
-            setshowsavePageBox(1);
-            return false;
-        }
-        return false;
-    };
-
-    const continuePendingPageSwitch = useRef(async () => { });
 
     // Comment translated to English.
-    const runIdleAutoSave = async (scheduledPageId) => {
-        if (isPreview) return;
-        if (!scheduledPageId || String(savePageId || '') !== String(scheduledPageId)) return;
-        const currentStageJson = buildStageJson();
-        const hasSavedSnapshot = !!lastSavedStageJsonRef.current;
-        const isDirty = !hasSavedSnapshot || currentStageJson !== lastSavedStageJsonRef.current;
-        if (!isDirty) {
-            scheduleIdleAutoSave();
-            return;
-        }
-        if (savePageId && savePageId !== '0') {
-            const saved = await silentSaveExistingPage();
-            if (saved) {
-                lastSavedStageJsonRef.current = currentStageJson;
-            }
-            scheduleIdleAutoSave();
-            return;
-        }
-        const hasContent = Array.isArray(imagesRef.current) && imagesRef.current.length > 0;
-        const hasBackground = !!backgroundImage;
-        if (!hasContent && !hasBackground) {
-            scheduleIdleAutoSave();
-            return;
-        }
-        const infoReady = !!(savePageType && savePageName && savePagePid && savePageIndex && (savePageType !== '3' || savePageLink));
-        if (!infoReady) {
-            scheduleIdleAutoSave();
-            return;
-        }
-        const createResult = await createAndSavePage({ silent: true });
-        if (createResult.ok) {
-            lastSavedStageJsonRef.current = currentStageJson;
-        }
-        scheduleIdleAutoSave();
-    };
-
-    const scheduleIdleAutoSave = () => {
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = null;
-        }
-        if (isPreview || !savePageType) return;
-        const scheduledPageId = savePageId || '__draft__';
-        autoSaveTimerRef.current = setTimeout(() => {
-            runIdleAutoSave(scheduledPageId);
-        }, 5 * 60 * 1000);
-    };
-
-    const getStructureItemLabel = (shape, index = 0) => {
-        if (!shape || !shape.moduleJson) return `元素 ${index + 1}`;
-        const firstChild = shape.moduleJson.children && shape.moduleJson.children[0] ? shape.moduleJson.children[0] : null;
-        const attrs = firstChild && firstChild.attrs ? firstChild.attrs : {};
-        return attrs.text || attrs.name || firstChild.className || `元素 ${index + 1}`;
-    };
-
-    useEffect(() => {
-        return () => {
-            if (saveStatusTimerRef.current) {
-                clearTimeout(saveStatusTimerRef.current);
-            }
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!stageRef.current) return;
-        const currentStageJson = buildStageJson();
-        if (!lastSavedStageJsonRef.current) {
-            setSaveStatusText('已保存');
-            return;
-        }
-        setSaveStatusText(currentStageJson === lastSavedStageJsonRef.current ? '已保存' : '已修改');
-    }, [images, backgroundImage, alarmCatch, stageWidth, stageHeight]);
-
-    useEffect(() => {
-        scheduleIdleAutoSave();
-    }, [savePageId, savePageType]);
-
-    useEffect(() => {
-        continuePendingPageSwitch.current = async () => {
-            const pending = pendingPageSwitchRef.current;
-            if (!pending) return;
-            pendingPageSwitchRef.current = null;
-            await handleItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type, { skipAutoSave: true });
-        };
-    }, [dragUrl, dragAttrs, savePageId, savePageType, savePageTxt, backgroundImage]);
-
-    const getInterfaceStructure = () => {
-        const groupMap = {};
-        const singles = [];
-
-        images.forEach((shape, index) => {
-            const item = {
-                id: shape.id,
-                label: getStructureItemLabel(shape, index),
-                groupId: shape.groupId || '',
-            };
-
-            if (shape.groupId) {
-                if (!groupMap[shape.groupId]) {
-                    groupMap[shape.groupId] = {
-                        groupId: shape.groupId,
-                        label: `组合 ${Object.keys(groupMap).length + 1}`,
-                        members: [],
-                    };
-                }
-                groupMap[shape.groupId].members.push(item);
-            } else {
-                singles.push(item);
-            }
-        });
-
-        return {
-            singles,
-            groups: Object.values(groupMap),
-        };
-    };
-
-    const getShapeGroupId = (shapeOrId) => {
-        const shape = typeof shapeOrId === 'string'
-            ? imagesRef.current.find((item) => item.id === shapeOrId)
-            : shapeOrId;
-        return shape && shape.groupId ? shape.groupId : '';
-    };
-
-    const getGroupMemberIds = (groupId) => {
-        if (!groupId) return [];
-        return imagesRef.current.filter((item) => item.groupId === groupId).map((item) => item.id);
-    };
-
-    const isShapeUnlocked = (shapeOrId) => {
-        const shape = typeof shapeOrId === 'string'
-            ? imagesRef.current.find((item) => item.id === shapeOrId)
-            : shapeOrId;
-        return !!(shape && shape.draggable !== false);
-    };
-    const getExpandedSelectionIds = (shapeOrId) => {
-        const shape = typeof shapeOrId === 'string'
-            ? imagesRef.current.find((item) => item.id === shapeOrId)
-            : shapeOrId;
-        if (!shape) return [];
-        if (!shape.groupId) {
-            return [shape.id];
-        }
-        const memberIds = getGroupMemberIds(shape.groupId);
-        return memberIds.length > 0 ? memberIds : [shape.id];
-    };
-
-    const getUnlockedExpandedSelectionIds = (shapeOrId) => {
-        const expandedIds = getExpandedSelectionIds(shapeOrId);
-        return expandedIds.filter((id) => isShapeUnlocked(id));
-    };
-
-    const createDerivedGroupId = (sourceGroupId) => {
-        if (!sourceGroupId) return null;
-        return `group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    };
-
-    const expandDragSelectionIds = (ids, draggedShapeId) => {
-        const result = new Set();
-        const baseIds = Array.isArray(ids) ? ids : [];
-        const mergedIds = [...new Set([...(draggedShapeId ? [draggedShapeId] : []), ...baseIds])];
-
-        mergedIds.forEach((id) => {
-            const memberIds = getUnlockedExpandedSelectionIds(id);
-            memberIds.forEach((memberId) => result.add(memberId));
-        });
-
-        return Array.from(result);
-    };
-
-    const groupSelectedShapes = () => {
-        if (!Array.isArray(selectedIdsRef.current) || selectedIdsRef.current.length < 2) return;
-        const groupId = `group_${Date.now()}`;
-        const nextImages = imagesRef.current.map((shape) => (
-            selectedIdsRef.current.includes(shape.id)
-                ? { ...shape, groupId }
-                : shape
-        ));
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-    };
-    const isSelectionSingleGroup = () => {
-        if (!Array.isArray(selectedIdsRef.current) || selectedIdsRef.current.length === 0) return false;
-        const groupIds = [...new Set(selectedIdsRef.current.map((id) => getShapeGroupId(id)).filter(Boolean))];
-        return groupIds.length === 1 && selectedIdsRef.current.every((id) => getShapeGroupId(id) === groupIds[0]);
-    };
-
-
-    const ungroupSelectedShapes = () => {
-        if (!isSelectionSingleGroup()) return;
-        const groupId = getShapeGroupId(selectedIdsRef.current[0]);
-        const memberIds = getGroupMemberIds(groupId);
-        const nextImages = imagesRef.current.map((shape) => (
-            memberIds.includes(shape.id)
-                ? { ...shape, groupId: null }
-                : shape
-        ));
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-        selectShapes(memberIds);
-        selectedIdsRef.current = memberIds;
-    };
-
-    const canGroupSelection = selectedIds.length >= 2;
-    const canUngroupSelection = isSelectionSingleGroup();
-
-    const selectStructureTarget = (shapeId, useGroupSelection = true) => {
-        const shape = imagesRef.current.find((item) => item.id === shapeId);
-        if (!shape) return;
-
-        const targetIds = useGroupSelection ? getExpandedSelectionIds(shapeId) : [shapeId];
-        if (targetIds.length > 1) {
-            selectShapes(targetIds);
-            selectedIdsRef.current = targetIds;
-        } else {
-            selectShapes([]);
-            selectedIdsRef.current = [];
-        }
-
-        setSelectedId(shapeId);
-        selectedIdRef.current = shapeId;
-        setDragShape(shape);
-    };
-
-    const scrollToStructureTarget = (shapeId, useGroupSelection = true) => {
-        const stage = stageRef.current ? stageRef.current.getStage() : null;
-        const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
-        if (!stage || !scroller) return;
-
-        const targetIds = useGroupSelection ? getExpandedSelectionIds(shapeId) : [shapeId];
-        const rects = targetIds
-            .map((id) => stage.findOne('#' + id))
-            .filter(Boolean)
-            .map((node) => node.getClientRect());
-
-        if (rects.length === 0) return;
-
-        const left = Math.min(...rects.map((rect) => rect.x));
-        const top = Math.min(...rects.map((rect) => rect.y));
-        const right = Math.max(...rects.map((rect) => rect.x + rect.width));
-        const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
-        const padding = 40;
-
-        const targetScrollLeft = Math.max(0, left - padding);
-        const targetScrollTop = Math.max(0, top - padding);
-
-        if (left < scroller.scrollLeft || right > scroller.scrollLeft + scroller.clientWidth) {
-            scroller.scrollLeft = targetScrollLeft;
-        }
-        if (top < scroller.scrollTop || bottom > scroller.scrollTop + scroller.clientHeight) {
-            scroller.scrollTop = targetScrollTop;
-        }
-    };
-
-    useEffect(() => {
-        if (!savePageId || savePageId === '0') return;
-        setshowIndex(1);
-        setTabFlash('component');
-        const timer = setTimeout(() => {
-            setTabFlash('');
-        }, 650);
-        return () => clearTimeout(timer);
-    }, [savePageId]);
-
-    const handleStructureItemClick = (shapeId, useGroupSelection = true) => {
-        if (!shapeId) return;
-        selectStructureTarget(shapeId, useGroupSelection);
-        scrollToStructureTarget(shapeId, useGroupSelection);
-        setshowIndex(1);
-        setTabFlash('component');
-        setTimeout(() => {
-            setTabFlash('');
-        }, 650);
-    };
-
-    const selectAllShapes = () => {
-        const allIds = imagesRef.current.map((shape) => shape.id);
-        selectShapes(allIds);
-        selectedIdsRef.current = allIds;
-        if (allIds.length > 0) {
-            setSelectedId(allIds[0]);
-            selectedIdRef.current = allIds[0];
-            const firstShape = imagesRef.current.find((shape) => shape.id === allIds[0]);
-            setDragShape(firstShape || null);
-        }
-    };
-
-    const getClipboardSelectionShapes = () => {
-        let targetIds = [];
-        if (selectedIdsRef.current.length > 0) {
-            targetIds = expandDragSelectionIds(selectedIdsRef.current, null);
-        } else if (selectedIdRef.current !== null) {
-            targetIds = getUnlockedExpandedSelectionIds(selectedIdRef.current);
-        }
-        if (!Array.isArray(targetIds) || targetIds.length === 0) {
-            return [];
-        }
-        return imagesRef.current.filter((shape) => targetIds.includes(shape.id));
-    };
-
-    const writeClipboard = (shapes) => {
-        const payload = {
-            type: 'page-elements',
-            copiedAt: Date.now(),
-            sourcePageId: savePageId,
-            elements: JSON.parse(JSON.stringify(shapes || [])),
-        };
-        localStorage.setItem(PAGE_DESIGNER_CLIPBOARD_KEY, JSON.stringify(payload));
-    };
-
-    const readClipboard = () => {
-        const raw = localStorage.getItem(PAGE_DESIGNER_CLIPBOARD_KEY);
-        if (!raw) return null;
-        try {
-            const payload = JSON.parse(raw);
-            if (!payload || payload.type !== 'page-elements' || !Array.isArray(payload.elements)) {
-                return null;
-            }
-            return payload;
-        } catch (error) {
-            return null;
-        }
-    };
-
-    const getClipboardBounds = (elements) => {
-        if (!Array.isArray(elements) || elements.length === 0) return null;
-        const metricsList = elements.map((shape) => getShapeRenderMetrics(shape, null)).filter(Boolean);
-        if (metricsList.length === 0) return null;
-
-        const left = Math.min(...metricsList.map((item) => item.left));
-        const top = Math.min(...metricsList.map((item) => item.top));
-        const right = Math.max(...metricsList.map((item) => item.right));
-        const bottom = Math.max(...metricsList.map((item) => item.bottom));
-
-        return {
-            left,
-            top,
-            right,
-            bottom,
-            width: right - left,
-            height: bottom - top,
-            centerX: left + (right - left) / 2,
-            centerY: top + (bottom - top) / 2,
-        };
-    };
-
-    const getViewportCenterOnCanvas = () => {
-        const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
-        if (!scroller) {
-            return {
-                x: stageWidth / 2,
-                y: stageHeight / 2,
-            };
-        }
-
-        const scrollLeft = scroller.scrollLeft || 0;
-        const scrollTop = scroller.scrollTop || 0;
-        const centerX = (scrollLeft + scroller.clientWidth / 2) / (stageDimensions.scalex || 1);
-        const centerY = (scrollTop + scroller.clientHeight / 2) / (stageDimensions.scaley || 1);
-
-        return {
-            x: centerX,
-            y: centerY,
-        };
-    };
-
-    const copySelectionToClipboard = () => {
-        const selectionShapes = getClipboardSelectionShapes();
-        if (selectionShapes.length === 0) {
-            message.warning('当前没有可复制的未锁定元素');
-            return;
-        }
-        writeClipboard(selectionShapes);
-        message.success(`已复制 ${selectionShapes.length} 个元素`);
-    };
-
-    const cutSelectionToClipboard = () => {
-        const selectionShapes = getClipboardSelectionShapes();
-        if (selectionShapes.length === 0) return;
-        writeClipboard(selectionShapes);
-        const deleteIds = new Set(selectionShapes.map((shape) => shape.id));
-        const nextImages = imagesRef.current.filter((shape) => !deleteIds.has(shape.id));
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-        selectShapes([]);
-        selectedIdsRef.current = [];
-        setSelectedId(null);
-        selectedIdRef.current = null;
-        setDragShape(null);
-        settoolType(null);
-        message.success(`已剪切 ${selectionShapes.length} 个元素`);
-    };
-    const pasteClipboardSelection = () => {
-        const payload = readClipboard();
-        if (!payload || !payload.elements || payload.elements.length === 0) {
-            message.warning('暂无可粘贴内容');
-            return;
-        }
-
-        const groupIdMap = {};
-        const pastedIds = [];
-        const nextImages = JSON.parse(JSON.stringify(imagesRef.current));
-        const clipboardBounds = getClipboardBounds(payload.elements);
-        const viewportCenter = getViewportCenterOnCanvas();
-        const offsetX = clipboardBounds ? (viewportCenter.x - clipboardBounds.centerX + 8) : 8;
-        const offsetY = clipboardBounds ? (viewportCenter.y - clipboardBounds.centerY + 8) : 8;
-
-        payload.elements.forEach((shape, index) => {
-            const newId = `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 6)}`;
-            let nextGroupId = shape.groupId || null;
-            if (shape.groupId) {
-                if (!groupIdMap[shape.groupId]) {
-                    groupIdMap[shape.groupId] = createDerivedGroupId(shape.groupId);
-                }
-                nextGroupId = groupIdMap[shape.groupId];
-            }
-            const nextShape = {
-                ...shape,
-                id: newId,
-                x: Number(shape.x || 0) + offsetX,
-                y: Number(shape.y || 0) + offsetY,
-                groupId: nextGroupId,
-            };
-            pastedIds.push(newId);
-            nextImages.push(nextShape);
-        });
-
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-        selectShapes(pastedIds);
-        selectedIdsRef.current = pastedIds;
-        if (pastedIds.length > 0) {
-            setSelectedId(pastedIds[0]);
-            selectedIdRef.current = pastedIds[0];
-            const pastedShape = nextImages.find((shape) => shape.id === pastedIds[0]);
-            setDragShape(pastedShape || null);
-        }
-        message.success(`已粘贴 ${pastedIds.length} 个元素`);
-    };
-
-    const toggleSelectionLockState = () => {
-        const targetIds = selectedIdsRef.current.length > 0
-            ? selectedIdsRef.current
-            : (selectedIdRef.current !== null ? [selectedIdRef.current] : []);
-        if (targetIds.length === 0) return;
-
-        const targetShapes = imagesRef.current.filter((shape) => targetIds.includes(shape.id));
-        if (targetShapes.length === 0) return;
-
-        const allLocked = targetShapes.every((shape) => shape.draggable === false);
-        const nextImages = imagesRef.current.map((shape) => (
-            targetIds.includes(shape.id)
-                ? { ...shape, draggable: allLocked ? true : false }
-                : shape
-        ));
-
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-    };
-
-
     const getevData = async (callback) => {
         let res = await httpsend.getData('GetDeviceListKey', {
             ComboBox: "all"
         });
         let devList = [];
         if (res) {
-            res.data.forEach((val) => {
+            res.data.forEach((val, n) => {
                 devList.push({
                     value: val.id,
                     label: val.DeviceName,
                     code: val.ProtocolCode,
                     codeName: val.ProtocolName,
-                    onlyCode: val.OnlyCode,
+                    onlyCode: val.OnlyCode,// Comment translated to English.
                 })
             })
             callback(devList)
         }
-    };
-
+    }
     useEffect(() => {
         if (resetBox) {
             getevData(function (devList) {
@@ -786,29 +143,39 @@ function Home() {
                 imagesRef.current.forEach(shapeProps => {
                     if (shapeProps.moduleJson && shapeProps.moduleJson.attrs.dataKey) {
                         let dataKey = shapeProps.moduleJson.attrs.dataKey;
-                        if (dataKey && dataKey.length === 1) {
+                        if (dataKey && dataKey.length === 1) {// Comment translated to English.
                             dataKey.forEach((el) => {
+                                // Comment translated to English.
                                 if (el.key || el.deveventskey) {
-                                    let findpagedevindex = pagedev.findIndex(v => (v.value === el.key || v.value === el.deveventskey))
+                                    const currentKey = el.key || el.deveventskey;
+                                    const currentKeyStr = String(currentKey);
+                                    // Comment translated to English.
+                                    let findpagedevindex = pagedev.findIndex(v => String(v.value) === currentKeyStr)
                                     if (findpagedevindex === -1) {
-                                        let finddevindex = devList.findIndex(v => (v.value === el.key || v.value === el.deveventskey))
+                                        // Comment translated to English.
+                                        // Comment translated to English.
+                                        let finddevindex = devList.findIndex(v => String(v.value) === currentKeyStr)
                                         if (finddevindex === -1) {
-                                            let finddevonlyindex = devList.findIndex(v => (v.onlyCode === el.key || v.onlyCode === el.deveventskey))
+                                            // Comment translated to English.
+                                            let finddevonlyindex = devList.findIndex(v => String(v.onlyCode) === currentKeyStr)
                                             if (finddevonlyindex !== -1) {
                                                 pagedev.push({
                                                     value: devList[finddevonlyindex]['onlyCode'],
                                                     label: devList[finddevonlyindex]['label'],
                                                     code: devList[finddevonlyindex]['code'],
                                                     codeName: devList[finddevonlyindex]['codeName'],
+                                                    // children: devList.filter(v => (v.codeName === devList[finddevindex]['codeName']))
                                                     children: devList
                                                 })
                                             }
                                         } else {
                                             pagedev.push({
-                                                value: el.key ? el.key : el.deveventskey,
+                                                value: currentKey,
                                                 label: devList[finddevindex]['label'],
                                                 code: devList[finddevindex]['code'],
                                                 codeName: devList[finddevindex]['codeName'],
+                                                // children: devList.filter(v => (v.codeName === devList[finddevindex]['codeName']))
+                                                // children: devList.filter(v => (v.value !== devList[finddevindex]['value']))
                                                 children: devList
                                             })
                                         }
@@ -818,15 +185,15 @@ function Home() {
                         }
                     }
                 })
+                // console.log(pagedev)
                 setpagedevList(pagedev);
             });
         } else {
-            setpagedevList([]);
+            setpagedevList([]);// Comment translated to English.
         }
     }, [resetBox]);
-    const filterOption = (input, option) => (option && option.label).toLowerCase().includes(input.toLowerCase());
     const ondataDevOptionSearch = (value) => { };
-
+    const filterOption = (input, option) => (option && option.label).toLowerCase().includes(input.toLowerCase());
     // Comment translated to English.
     // Comment translated to English.
     // const [showUrlBox, setshowUrlBox] = useState(false);
@@ -845,512 +212,17 @@ function Home() {
         scalex: 1,
         scaley: 1
     });
-    const [snapGuides, setSnapGuides] = useState({
-        vertical: null,
-        horizontal: null,
-    });
-
-    const clearSnapGuides = () => {
-        setSnapGuides({
-            vertical: null,
-            horizontal: null,
-        });
-    };
-
-    const getShapeRenderMetrics = (shape, stageNode) => {
-        if (!shape || !shape.moduleJson || !shape.moduleJson.children || shape.moduleJson.children.length === 0) {
-            return null;
-        }
-
-        const groupAttr = shape.moduleJson.children[0].attrs || {};
-        const groupName = groupAttr.name;
-        let width = shape.width || shape.moduleJson.width || 0;
-        let height = shape.height || shape.moduleJson.height || 0;
-        let borderWidth = Number(groupAttr.strokeWidth || 0);
-
-        if (groupName === 'rectBackground' && shape.moduleJson.children[3] && shape.moduleJson.children[3].attrs) {
-            const rectAttrs = shape.moduleJson.children[3].attrs;
-            width = rectAttrs.width || width;
-            height = rectAttrs.height || height;
-            borderWidth = Number(rectAttrs.strokeWidth || borderWidth || 0);
-        } else {
-            if (groupAttr.width) width = groupAttr.width;
-            if (groupAttr.height) height = groupAttr.height;
-        }
-
-        const scaleX = shape.scaleX || 1;
-        const scaleY = shape.scaleY || 1;
-        let actualWidth = width * scaleX;
-        let actualHeight = height * scaleY;
-
-        if (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') {
-            actualWidth += borderWidth * scaleX;
-            actualHeight += borderWidth * scaleY;
-        }
-
-        const x = Number(shape.x || 0);
-        const y = Number(shape.y || 0);
-
-        return {
-            x,
-            y,
-            width: actualWidth,
-            height: actualHeight,
-            left: x,
-            centerX: x + actualWidth / 2,
-            right: x + actualWidth,
-            top: y,
-            centerY: y + actualHeight / 2,
-            bottom: y + actualHeight,
-        };
-    };
-
-    const buildStageGuideCandidates = () => ({
-        vertical: [0, stageWidth / 2, stageWidth],
-        horizontal: [0, stageHeight / 2, stageHeight],
-    });
-
-    const buildGroupMetricsFromIds = (ids, positionMap = null) => {
-        if (!Array.isArray(ids) || ids.length === 0) return null;
-        const stage = stageRef.current ? stageRef.current.getStage() : null;
-        const metricsList = ids.map((id) => {
-            const shape = imagesRef.current.find((item) => item.id === id);
-            if (!shape) return null;
-            const stageNode = stage ? stage.findOne('#' + id) : null;
-            const positionOverride = positionMap && positionMap[id] ? positionMap[id] : null;
-            return getShapeRenderMetrics(
-                positionOverride ? { ...shape, x: positionOverride.x, y: positionOverride.y } : shape,
-                stageNode,
-            );
-        }).filter(Boolean);
-
-        if (metricsList.length === 0) return null;
-
-        const left = Math.min(...metricsList.map((item) => item.left));
-        const top = Math.min(...metricsList.map((item) => item.top));
-        const right = Math.max(...metricsList.map((item) => item.right));
-        const bottom = Math.max(...metricsList.map((item) => item.bottom));
-
-        return {
-            x: left,
-            y: top,
-            left,
-            top,
-            right,
-            bottom,
-            width: right - left,
-            height: bottom - top,
-            centerX: left + (right - left) / 2,
-            centerY: top + (bottom - top) / 2,
-        };
-    };
-
-    const buildGuideCandidates = (excludeIds = []) => {
-        const stage = stageRef.current ? stageRef.current.getStage() : null;
-        const excluded = new Set(excludeIds);
-        const candidates = {
-            vertical: [],
-            horizontal: [],
-        };
-
-        imagesRef.current.forEach((shape) => {
-            if (!shape || excluded.has(shape.id)) return;
-            const stageNode = stage ? stage.findOne('#' + shape.id) : null;
-            const metrics = getShapeRenderMetrics(shape, stageNode);
-            if (!metrics) return;
-
-            candidates.vertical.push({ value: metrics.left, top: metrics.top, bottom: metrics.bottom });
-            candidates.vertical.push({ value: metrics.centerX, top: metrics.top, bottom: metrics.bottom });
-            candidates.vertical.push({ value: metrics.right, top: metrics.top, bottom: metrics.bottom });
-
-            candidates.horizontal.push({ value: metrics.top, left: metrics.left, right: metrics.right });
-            candidates.horizontal.push({ value: metrics.centerY, left: metrics.left, right: metrics.right });
-            candidates.horizontal.push({ value: metrics.bottom, left: metrics.left, right: metrics.right });
-        });
-
-        const stageGuides = buildStageGuideCandidates();
-        stageGuides.vertical.forEach((value) => {
-            candidates.vertical.push({ value, top: 0, bottom: stageHeight });
-        });
-        stageGuides.horizontal.forEach((value) => {
-            candidates.horizontal.push({ value, left: 0, right: stageWidth });
-        });
-
-        return candidates;
-    };
-
-    const getSnappedMetrics = (metrics, excludeIds = []) => {
-        const candidates = buildGuideCandidates(excludeIds);
-        const verticalEdges = [
-            { type: 'left', value: metrics.left },
-            { type: 'centerX', value: metrics.centerX },
-            { type: 'right', value: metrics.right },
-        ];
-        const horizontalEdges = [
-            { type: 'top', value: metrics.top },
-            { type: 'centerY', value: metrics.centerY },
-            { type: 'bottom', value: metrics.bottom },
-        ];
-
-        const matchX = getBestSnapMatch(verticalEdges, candidates.vertical, 'x');
-        const matchY = getBestSnapMatch(horizontalEdges, candidates.horizontal, 'y');
-
-        let snappedX = metrics.x;
-        let snappedY = metrics.y;
-
-        if (matchX) {
-            snappedX += matchX.guide.value - matchX.edge.value;
-        }
-        if (matchY) {
-            snappedY += matchY.guide.value - matchY.edge.value;
-        }
-
-        const nextMetrics = {
-            ...metrics,
-            x: snappedX,
-            y: snappedY,
-            left: snappedX,
-            right: snappedX + metrics.width,
-            top: snappedY,
-            bottom: snappedY + metrics.height,
-            centerX: snappedX + metrics.width / 2,
-            centerY: snappedY + metrics.height / 2,
-        };
-
-        return {
-            matchX,
-            matchY,
-            snappedMetrics: nextMetrics,
-        };
-    };
-
-    const applyMultiDragPositions = (positionMap) => {
-        if (!positionMap) return;
-        Object.keys(positionMap).forEach((id) => {
-            const stage = stageRef.current ? stageRef.current.getStage() : null;
-            const node = stage ? stage.findOne('#' + id) : null;
-            if (node) {
-                node.position(positionMap[id]);
-            }
-        });
-    };
-
-    const commitMultiDragPositions = (positionMap) => {
-        if (!positionMap) return;
-        const nextImages = imagesRef.current.map((shape) => (
-            positionMap[shape.id]
-                ? { ...shape, x: positionMap[shape.id].x, y: positionMap[shape.id].y }
-                : shape
-        ));
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-        selectShapes([...selectedIdsRef.current]);
-    };
-
-
-
-    const getBestSnapMatch = (edges, guideCandidates, axis) => {
-        let bestMatch = null;
-
-        edges.forEach((edge) => {
-            guideCandidates.forEach((guide) => {
-                const distance = Math.abs(edge.value - guide.value);
-                if (distance > snapThreshold) return;
-                if (!bestMatch || distance < bestMatch.distance) {
-                    bestMatch = {
-                        axis,
-                        edge,
-                        guide,
-                        distance,
-                    };
-                }
-            });
-        });
-
-        return bestMatch;
-    };
-
-    const buildSnapGuideLine = (snapX, snapY, metrics, matchX, matchY) => {
-        return {
-            vertical: matchX ? {
-                x: snapX,
-                y1: Math.min(metrics.top, matchX.guide.top) - SNAP_GUIDE_OFFSET,
-                y2: Math.max(metrics.bottom, matchX.guide.bottom) + SNAP_GUIDE_OFFSET,
-                isStageGuide: matchX.guide.top === 0 && matchX.guide.bottom === stageHeight,
-            } : null,
-            horizontal: matchY ? {
-                y: snapY,
-                x1: Math.min(metrics.left, matchY.guide.left) - SNAP_GUIDE_OFFSET,
-                x2: Math.max(metrics.right, matchY.guide.right) + SNAP_GUIDE_OFFSET,
-                isStageGuide: matchY.guide.left === 0 && matchY.guide.right === stageWidth,
-            } : null,
-        };
-    };
-
-    const applySnapForShape = (node, shape) => {
-        if (!node || !shape) return;
-        const stage = stageRef.current ? stageRef.current.getStage() : null;
-        const stageNode = stage ? stage.findOne('#' + shape.id) : null;
-        const metrics = getShapeRenderMetrics({ ...shape, x: node.x(), y: node.y() }, stageNode || node);
-        if (!metrics) return;
-
-        if (!snapEnabled) {
-            const boundedPosition = getBoundedDragPosition(metrics, metrics.x, metrics.y);
-            node.position(boundedPosition);
-            clearSnapGuides();
-            return;
-        }
-
-        const { matchX, matchY, snappedMetrics } = getSnappedMetrics(metrics, [shape.id]);
-        const boundedPosition = getBoundedDragPosition(snappedMetrics, snappedMetrics.x, snappedMetrics.y);
-        const boundedMetrics = {
-            ...snappedMetrics,
-            x: boundedPosition.x,
-            y: boundedPosition.y,
-            left: boundedPosition.x,
-            right: boundedPosition.x + snappedMetrics.width,
-            top: boundedPosition.y,
-            bottom: boundedPosition.y + snappedMetrics.height,
-            centerX: boundedPosition.x + snappedMetrics.width / 2,
-            centerY: boundedPosition.y + snappedMetrics.height / 2,
-        };
-
-        node.position({
-            x: boundedMetrics.x,
-            y: boundedMetrics.y,
-        });
-
-        if (matchX || matchY) {
-            setSnapGuides(buildSnapGuideLine(
-                matchX ? matchX.guide.value : null,
-                matchY ? matchY.guide.value : null,
-                boundedMetrics,
-                matchX,
-                matchY,
-            ));
-            return;
-        }
-
-        clearSnapGuides();
-    };
-
-    const handleShapeDragMove = (e, shape) => {
-        const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
-        const isMultiDrag = Array.isArray(expandedSelectedIds) && expandedSelectedIds.length > 1 && expandedSelectedIds.includes(shape.id);
-
-        if (!isMultiDrag) {
-            multiDragRef.current = {
-                active: false,
-                draggedId: null,
-                startPositions: {},
-                pendingPositions: null,
-            };
-            applySnapForShape(e.target, shape);
-            return;
-        }
-
-        if (!snapEnabled) {
-            clearSnapGuides();
-        }
-
-        if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
-            const startPositions = {};
-            expandedSelectedIds.forEach((id) => {
-                const currentShape = imagesRef.current.find((item) => item.id === id);
-                if (currentShape) {
-                    startPositions[id] = {
-                        x: currentShape.x,
-                        y: currentShape.y,
-                    };
-                }
-            });
-            selectedIdsRef.current = expandedSelectedIds;
-            selectShapes(expandedSelectedIds);
-            multiDragRef.current = {
-                active: true,
-                draggedId: shape.id,
-                startPositions,
-                pendingPositions: null,
-            };
-        }
-
-        const startPosition = multiDragRef.current.startPositions[shape.id];
-        if (!startPosition) {
-            applySnapForShape(e.target, shape);
-            return;
-        }
-
-        let deltaX = e.target.x() - startPosition.x;
-        let deltaY = e.target.y() - startPosition.y;
-        let nextPositions = {};
-        expandedSelectedIds.forEach((id) => {
-            const basePos = multiDragRef.current.startPositions[id];
-            if (basePos) {
-                nextPositions[id] = {
-                    x: basePos.x + deltaX,
-                    y: basePos.y + deltaY,
-                };
-            }
-        });
-
-        if (snapEnabled) {
-            const groupMetrics = buildGroupMetricsFromIds(expandedSelectedIds, nextPositions);
-            if (groupMetrics) {
-                const { matchX, matchY, snappedMetrics } = getSnappedMetrics(groupMetrics, expandedSelectedIds);
-                if (matchX || matchY) {
-                    const offsetX = snappedMetrics.x - groupMetrics.x;
-                    const offsetY = snappedMetrics.y - groupMetrics.y;
-                    nextPositions = Object.keys(nextPositions).reduce((acc, id) => {
-                        acc[id] = {
-                            x: nextPositions[id].x + offsetX,
-                            y: nextPositions[id].y + offsetY,
-                        };
-                        return acc;
-                    }, {});
-                    setSnapGuides(buildSnapGuideLine(
-                        matchX ? matchX.guide.value : null,
-                        matchY ? matchY.guide.value : null,
-                        snappedMetrics,
-                        matchX,
-                        matchY,
-                    ));
-                } else {
-                    clearSnapGuides();
-                }
-            }
-        }
-
-        nextPositions = getBoundedMultiDragPositions(nextPositions, expandedSelectedIds);
-        applyMultiDragPositions(nextPositions);
-        multiDragRef.current.pendingPositions = nextPositions;
-    };
-
     // Comment translated to English.
-    const getAlignmentUnits = (ids) => {
-        if (!Array.isArray(ids) || ids.length === 0) return [];
-        const units = [];
-        const visited = new Set();
-
-        ids.forEach((id) => {
-            if (visited.has(id)) return;
-            const shape = imagesRef.current.find((item) => item.id === id);
-            if (!shape) return;
-
-            const groupId = getShapeGroupId(shape);
-            if (groupId) {
-                const memberIds = ids.filter((selectedId) => getShapeGroupId(selectedId) === groupId);
-                memberIds.forEach((memberId) => visited.add(memberId));
-                const metrics = buildGroupMetricsFromIds(memberIds);
-                if (metrics) {
-                    units.push({
-                        key: groupId,
-                        memberIds,
-                        metrics,
-                        isGroup: true,
-                    });
-                }
-                return;
-            }
-
-            visited.add(id);
-            const stage = stageRef.current ? stageRef.current.getStage() : null;
-            const stageNode = stage ? stage.findOne('#' + id) : null;
-            const metrics = getShapeRenderMetrics(shape, stageNode);
-            if (metrics) {
-                units.push({
-                    key: id,
-                    memberIds: [id],
-                    metrics,
-                    isGroup: false,
-                });
-            }
-        });
-
-        return units;
-    };
-
-
-
-    const getBoundedDragPosition = (metrics, x, y) => {
-        if (!metrics) {
-            return { x, y };
-        }
-
-        const maxX = Math.max(0, stageWidth - metrics.width);
-        const maxY = Math.max(0, stageHeight - metrics.height);
-
-        return {
-            x: Math.min(Math.max(0, x), maxX),
-            y: Math.min(Math.max(0, y), maxY),
-        };
-    };
-
-    const getBoundedMultiDragPositions = (positionMap, ids) => {
-        if (!positionMap || !Array.isArray(ids) || ids.length === 0) return positionMap;
-        const groupMetrics = buildGroupMetricsFromIds(ids, positionMap);
-        if (!groupMetrics) return positionMap;
-
-        const boundedGroup = getBoundedDragPosition(groupMetrics, groupMetrics.x, groupMetrics.y);
-        const offsetX = boundedGroup.x - groupMetrics.x;
-        const offsetY = boundedGroup.y - groupMetrics.y;
-
-        if (offsetX === 0 && offsetY === 0) {
-            return positionMap;
-        }
-
-        return Object.keys(positionMap).reduce((acc, id) => {
-            acc[id] = {
-                x: positionMap[id].x + offsetX,
-                y: positionMap[id].y + offsetY,
-            };
-            return acc;
-        }, {});
-    };
-
-    const getBoundedTransformerBox = (oldBox, newBox) => {
-        if (!newBox) return oldBox;
-        if (newBox.width < 5 || newBox.height < 5) {
-            return oldBox;
-        }
-
-        let nextBox = {
-            ...newBox,
-        };
-
-        if (nextBox.x < 0) {
-            nextBox.width += nextBox.x;
-            nextBox.x = 0;
-        }
-        if (nextBox.y < 0) {
-            nextBox.height += nextBox.y;
-            nextBox.y = 0;
-        }
-
-        if (nextBox.x + nextBox.width > stageWidth) {
-            nextBox.width = stageWidth - nextBox.x;
-        }
-        if (nextBox.y + nextBox.height > stageHeight) {
-            nextBox.height = stageHeight - nextBox.y;
-        }
-
-        if (nextBox.width < 5 || nextBox.height < 5) {
-            return oldBox;
-        }
-
-        return nextBox;
-    };
-
     const handleResize = (stageWidth, stageHeight) => {
+        const normalizedWidth = normalizeStageSize(stageWidth, 1920);
+        const normalizedHeight = normalizeStageSize(stageHeight, 1080);
         // let sceneWidth = containerRef.current.clientWidth;
         // let scale = sceneWidth / stageWidth;
         let sceneWidth = window.innerWidth;//1730
         // alert(sceneWidth);
         // let sceneHeight = window.innerHeight;//829
         // let scaley = sceneHeight / stageHeight;
-        let scalex = sceneWidth / stageWidth;
+        let scalex = sceneWidth / normalizedWidth;
         console.log(new Date() + t('auto.k0334'))
         // console.log(stageWidth)
         // console.log(stageHeight)
@@ -1358,8 +230,8 @@ function Home() {
         // console.log(stageWidth * scalex)
         // console.log(stageHeight * scalex)
         setStageDimensions({
-            width: stageWidth * scalex,
-            height: stageHeight * scalex,
+            width: normalizedWidth * scalex,
+            height: normalizedHeight * scalex,
             scalex: scalex,
             scaley: scalex,
         });
@@ -1414,25 +286,38 @@ function Home() {
     }
     // Comment translated to English.
     useEffect(() => {
+        let isDisposed = false;
+        const intervalTimers = [];
+        const timeoutTimers = [];
+        const registerInterval = (callback, delay) => {
+            const id = setInterval(() => {
+                if (!isDisposed) {
+                    callback();
+                }
+            }, delay);
+            intervalTimers.push(id);
+            return id;
+        };
+        const registerTimeout = (callback, delay) => {
+            const id = setTimeout(() => {
+                if (!isDisposed) {
+                    callback();
+                }
+            }, delay);
+            timeoutTimers.push(id);
+            return id;
+        };
+        const clearAllTimers = () => {
+            intervalTimers.forEach((id) => clearInterval(id));
+            timeoutTimers.forEach((id) => clearTimeout(id));
+            intervalTimers.length = 0;
+            timeoutTimers.length = 0;
+        };
+
+        // Comment translated to English.
         const onKeyDown = (e) => {
-            if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
-                e.preventDefault();
-                ungroupSelectedShapes();
-            } else if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
-                copySelectionToClipboard();
-            } else if (e.ctrlKey && (e.key === 'X' || e.key === 'x')) {
-                cutSelectionToClipboard();
-            } else if (e.ctrlKey && (e.key === 'V' || e.key === 'v')) {
-                pasteClipboardSelection();
-            } else if (e.ctrlKey && (e.key === 'A' || e.key === 'a')) {
-                e.preventDefault();
-                selectAllShapes();
-            } else if (e.ctrlKey && (e.key === 'J' || e.key === 'j')) {
-                e.preventDefault();
-                groupSelectedShapes();
-            } else if (e.ctrlKey && (e.key === 'K' || e.key === 'k')) {
-                e.preventDefault();
-                toggleSelectionLockState();
+            if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
+                handleToolChange('copy');
             } else if (e.ctrlKey && e.key === 'ArrowUp') {
                 handleToolChange('up');
             } else if (e.ctrlKey && (e.key === 'Z' || e.key === 'z')) {
@@ -1443,21 +328,54 @@ function Home() {
                 handleToolChange('top');
             } else if (e.ctrlKey && (e.key === 'B' || e.key === 'b')) {
                 handleToolChange('bottom');
+                // } else if (e.key === 'A') {
+                //     handleToolChange('alginleft');
+                // } else if (e.key === 'D') {
+                //     handleToolChange('alginright');
+                // } else if (e.key === 'W') {
+                //     handleToolChange('algintop');
+                // } else if (e.key === 'S') {
+                //     handleToolChange('alginbottom');
+                // } else if (e.key === 'Q') {
+                //     handleToolChange('algincenter');
+                // } else if (e.key === 'E') {
+                //     handleToolChange('alginvertical');
+            } else if (e.ctrlKey && (e.key === 'L' || e.key === 'l')) {
+                handleToolChange('lock');
+            } else if (e.ctrlKey && (e.key === 'N' || e.key === 'n')) {
+                handleToolChange('unlock');
             } else if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
                 if (savePageId !== '0' && savePageType === '1') {
                     savePage('page')
                 }
             } else if (e.key === 'Delete') {
                 handleToolChange('del');
+                // } else if (e.key === 'F' || e.key === 'f') {
+                //     if (!document.fullscreenElement) {
+                // Comment translated to English.
+                //         document.documentElement.requestFullscreen().then(() => {
+                //             handleResize(stageWidthRef.current, stageHeightRef.current);
+                //         });
+                //     }
             } else {
                 return;
             }
         }
         window.addEventListener('keydown', onKeyDown);
-        return () => {
-            window.removeEventListener('keydown', onKeyDown);
-        }
-    }, [savePageId, savePageType, images, selectedIds, selectedId]);    useEffect(() => {
+        // Comment translated to English.
+        // const checkFull = () => {
+        //     if (!document.webkitIsFullScreen && !document.mozFullScreen && !document.msFullscreenElement) {
+        // Comment translated to English.
+        //         handleResize(stageWidthRef.current, stageHeightRef.current);
+        //     } else {
+        // Comment translated to English.
+        //     }
+        // };
+        // window.addEventListener("webkitfullscreenchange", checkFull);
+        // window.addEventListener("mozfullscreenchange", checkFull);
+        // window.addEventListener("fullscreenchange", checkFull);
+        // window.addEventListener("MSFullscreenChange", checkFull);
+
         // Comment translated to English.
         async function gettxtdata() {
             let conres = await httpsend.getDataLocal('imgData', { action: 'page', name: txttitle })
@@ -1796,10 +714,11 @@ function Home() {
             getSystemStartTime();
 
             // Comment translated to English.
-            const setNewView = (previewjson) => {
+            const setNewView = () => {
                 // Comment translated to English.
                 let startviewTime = new Date().getTime();
                 let tplimages = [];
+                const previewjson = previewDataRef.current;
                 if (previewjson) {
                     previewjson.children[0].children.forEach((element) => {
                         if (element.attrs.id !== 'canvasBackground' && element.attrs.moduleJson) {
@@ -1814,7 +733,7 @@ function Home() {
                     });
                 }
                 let newtplimages = PreviewDeal.PreviewDeal(tplimages, procotol, allDevcom, historyData, paramData, allsnmplist, historyparamData, alarmData);
-                setTimeout(() => {
+                registerTimeout(() => {
                     // Comment translated to English.
                     let endviewTime = new Date().getTime();
                     console.log(t('auto.k0337') + (parseInt(endviewTime) - parseInt(startviewTime)))
@@ -1830,21 +749,24 @@ function Home() {
             // Comment translated to English.
             const getPageInfo = async () => {
                 if (txttitle) {
-                    previewjson = await gettxtdata();
+                    previewDataRef.current = await gettxtdata();
                 } else {
-                    previewjson = JSON.parse(JSON.parse(localStorage.getItem('stageJson')));
+                    previewDataRef.current = JSON.parse(JSON.parse(localStorage.getItem('stageJson')));
                 }
+                if (isDisposed) return;
+                const previewjson = previewDataRef.current;
                 if (previewjson) {
                     await getHisDevId(previewjson.children[0].children);
+                    if (isDisposed) return;
                     handlepredata(previewjson);// Comment translated to English.
-                    setNewView(previewjson)// Comment translated to English.
+                    setNewView()// Comment translated to English.
                 } else {
                     message.error(txttitle + t('auto.k0339'));
                 }
             };
             getPageInfo();
 
-            var devtime = setInterval(async () => {
+            var devtime = registerInterval(async () => {
                 // console.log(allDevcom)
                 // console.log(devtime)
                 if (allDevcom && allDevcom.data && devtime) {
@@ -1854,7 +776,7 @@ function Home() {
                     // Comment translated to English.
                     // Comment translated to English.
                     // Comment translated to English.
-                    setNewView(previewjson);
+                    setNewView();
                     // setTimeout(() => {
                     console.log(t('auto.k0342'));
                     console.log('DevID');
@@ -1863,14 +785,14 @@ function Home() {
                     console.log(DevSpareID)
                     if (DevID.length !== 0 || Object.keys(DevSpareID).length > 0) {
                         console.log(t('auto.k0343') + new Date())
-                        var historytime = setInterval(() => {
+                        var historytime = registerInterval(() => {
                             if (historyData && historyData.msg) {// Comment translated to English.
                                 clearInterval(historytime);
                                 // havehis = true;
                                 setPageView();
                                 console.log(t('auto.k0344') + new Date())
                                 // Comment translated to English.
-                                pageHistoryTime = setInterval(() => {
+                                pageHistoryTime = registerInterval(() => {
                                     console.log(txttitle + t('auto.k0345'));
                                     getHistoryData(DevID.join(','), DevIDParam.join(','), DevSpareID);
                                 }, 600000)
@@ -1883,7 +805,7 @@ function Home() {
                     }
                     if (DevParID.length !== 0) {
                         console.log(t('auto.k0347') + new Date())
-                        var historyparamtime = setInterval(() => {
+                        var historyparamtime = registerInterval(() => {
                             if (historyparamData && historyparamData.msg) {// Comment translated to English.
                                 clearInterval(historyparamtime);
                                 // havehispar = true;
@@ -1891,7 +813,7 @@ function Home() {
                                 console.log(t('auto.k0348') + new Date())
                                 // Comment translated to English.
                                 // Comment translated to English.
-                                pageparamHistoryTime = setInterval(() => {
+                                pageparamHistoryTime = registerInterval(() => {
                                     let todayDate = getDateTime(new Date(new Date()));
                                     console.log(txttitle + t('auto.k0349') + pageparamHistoryDate);
                                     console.log(txttitle + t('auto.k0350') + todayDate);
@@ -1913,7 +835,7 @@ function Home() {
                     }
                     if (DevSnmp.length !== 0) {
                         console.log(t('auto.k0353') + new Date())
-                        var snmptime = setInterval(() => {
+                        var snmptime = registerInterval(() => {
                             if (allsnmplist && allsnmplist.msg) {// Comment translated to English.
                                 clearInterval(snmptime);
                                 // havesnmp=true;
@@ -1928,7 +850,7 @@ function Home() {
                     }
                     if (DevPar.length !== 0) {
                         console.log(t('auto.k0356') + new Date())
-                        var cuspartime = setInterval(() => {
+                        var cuspartime = registerInterval(() => {
                             if (paramData && paramData.msg) {// Comment translated to English.
                                 clearInterval(cuspartime);
                                 setPageView();
@@ -1946,16 +868,16 @@ function Home() {
                         // setImagesdata(JSON.parse(JSON.stringify(newtplimages)));
                         // imagesRef.current = JSON.parse(JSON.stringify(newtplimages));
                         // setChart(JSON.parse(JSON.stringify(newtplimages)), null);
-                        setNewView(previewjson);
+                        setNewView();
                     }
                 }
                 console.log(t('auto.k0359') + new Date())
             }, 10)
-            pageTime = setInterval(() => {
+            pageTime = registerInterval(() => {
                 if (allDev.length !== 0) getAllcom(allDev.join(','));
                 if (DevPar.length !== 0) getParamData();
                 if (alarmCatchRef.current === '1') getAlarmData();
-                setNewView(previewjson);
+                setNewView();
                 pageTimecalc++;
                 console.log(pageTimecalc);
             }, 10000)
@@ -1965,6 +887,9 @@ function Home() {
         // window.addEventListener("resize", handleResize, false);
         // return () => window.addEventListener("resize", handleResize, false);
         return () => {
+            isDisposed = true;
+            window.removeEventListener("keydown", onKeyDown);
+            clearAllTimers();
             clearInterval(pageTime);
             if (pageHistoryTime) clearInterval(pageHistoryTime);
             if (pageparamHistoryTime) clearInterval(pageparamHistoryTime);
@@ -1973,13 +898,10 @@ function Home() {
 
     // Comment translated to English.
     useEffect(() => {
-        if (!layerRef.current || !transformRefids.current) {
-            return;
+        const nodes = selectedIds.map((id) => layerRef.current.findOne("#" + id));
+        if (transformRefids.current) {
+            transformRefids.current.nodes(nodes);
         }
-        const nodes = selectedIds
-            .map((id) => layerRef.current.findOne("#" + id))
-            .filter(Boolean);
-        transformRefids.current.nodes(nodes);
     }, [selectedIds]);
 
     // Comment translated to English.
@@ -2032,13 +954,6 @@ function Home() {
         // const clickedOnEmpty = e.target === e.target.getStage();
         // if (clickedOnEmpty) {
         console.log("remove all selections")
-        multiDragRef.current = {
-            active: false,
-            draggedId: null,
-            startPositions: {},
-            pendingPositions: null,
-        };
-        clearSnapGuides();
         selectShapes([]);
         selectedIdsRef.current = [];
         setSelectedId(null);
@@ -2069,37 +984,39 @@ function Home() {
             return;
         }
         // do we pressed shift or ctrl?
-        const metaPressed = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey;
+        const metaPressed = e.evt.shiftKey;
         const isSelected = tr.nodes().indexOf(e.target) >= 0;
         const isDrag = e.target.parent.attrs.draggable;
-        const clickedShapeId = e.target.parent.attrs.id;
-        const clickedSelectionIds = getExpandedSelectionIds(clickedShapeId);
         // Comment translated to English.
         if (!isDrag) { message.error(t('auto.k0361')); return; }
         if (!metaPressed && !isSelected) {
+            // if no key pressed and the node is not selected
+            // Comment translated to English.
             selectShapes([]);
             selectedIdsRef.current = [];
-            if (clickedSelectionIds.length > 1) {
-                selectShapes(clickedSelectionIds);
-                selectedIdsRef.current = clickedSelectionIds;
-                setSelectedId(clickedShapeId);
-                selectedIdRef.current = clickedShapeId;
-                const clickedShape = imagesRef.current.find((item) => item.id === clickedShapeId);
-                setDragShape(clickedShape || null);
-            }
             return;
-        } else if (metaPressed && isSelected) {
+        } else if (metaPressed && isSelected) {// Comment translated to English.
+            // if we pressed keys and node was selected
+            // we need to remove it from selection:
             selectShapes((oldShapes) => {
-                let ids = oldShapes.filter((oldId) => !clickedSelectionIds.includes(oldId))
+                let ids = oldShapes.filter((oldId) => oldId !== e.target.parent.attrs.id)
                 selectedIdsRef.current = ids;
                 return ids;
             });
 
         } else if (metaPressed && !isSelected) {
+            // add the node into selection
             selectShapes((oldShapes) => {
-                const nextIds = [...new Set([...oldShapes, ...clickedSelectionIds])];
-                selectedIdsRef.current = nextIds;
-                return nextIds;
+                let resShapes = oldShapes;
+                if (oldShapes.indexOf(selectedId) === -1) {
+                    let isDragIndex = images.findIndex((findid) => selectedId === findid.id)
+                    if (isDragIndex !== -1) {
+                        let isDrag = images[isDragIndex].draggable;// Comment translated to English.
+                        if (isDrag) resShapes = [...resShapes, selectedId];
+                    }
+                }
+                selectedIdsRef.current = [...resShapes, e.target.parent.attrs.id];
+                return [...resShapes, e.target.parent.attrs.id];
             });
         }
         layer.draw();
@@ -2172,7 +1089,6 @@ function Home() {
             }
         });
         let ids = elements.map((el) => el.attrs.id);
-        ids = expandDragSelectionIds(ids, null);
         selectShapes(ids);
         selectedIdsRef.current = ids;
         updateSelectionRect('remove');
@@ -2181,24 +1097,14 @@ function Home() {
 
     // Comment translated to English.
     // Comment translated to English.
-    const handleItemDragUrl = async (dragUrl, dragAttrs, type, options = {}) => {
+    const handleItemDragUrl = async (dragUrl, dragAttrs, type) => {
         setDragUrl(dragUrl);
-        const { skipAutoSave = false } = options;
-        if (type && !skipAutoSave) {
-            pendingPageSwitchRef.current = {
-                dragUrl,
-                dragAttrs,
-                type,
-            };
-            const canSwitch = await tryAutoSaveBeforeSwitch();
-            if (!canSwitch) {
-                return false;
-            }
-            pendingPageSwitchRef.current = null;
-        }
         if (type) {
             let conres = await httpsend.getDataLocal('imgData', { action: 'page', name: type.split('&')[0] });
             if (conres) {
+                // seteditPageId(type.split('&')[3]);
+                // seteditPageName(type.split('&')[2]);
+                // seteditPageType(type.split('&')[4]);
                 setsavePageTxt(type.split('&')[0]);
                 setsavePageId(type.split('&')[3]);
                 setsavePageName(type.split('&')[2]);
@@ -2212,13 +1118,13 @@ function Home() {
                     dealStringPage('');
                 } else {
                     setDragAttrs(conres.data[0].moduleJson);
+                    // Comment translated to English.
                     dealStringPage(conres.data[0].moduleJson);
                 }
             }
         } else {
             setDragAttrs(dragAttrs);
         }
-        return true;
     };
     // Comment translated to English.
     const dealStringPage = (dragAttrs) => {
@@ -2271,10 +1177,6 @@ function Home() {
                 }
             });
         }
-        const serializedStage = JSON.stringify(dargJson || '');
-        lastSavedStageJsonRef.current = typeof serializedStage === 'string' ? serializedStage : '';
-        setSaveStatusText('已保存');
-        scheduleIdleAutoSave();
         setImages(tplimages);
         imagesRef.current = tplimages;
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
@@ -2336,7 +1238,6 @@ function Home() {
     // Comment translated to English.
     // Comment translated to English.
     const handleShapeChange = (newShapeProps, id) => {
-        clearSnapGuides();
         let imagesToUpdate = images;
         const findIndex = images.findIndex((img) => img.id === newShapeProps.id);
         let singleImageToUpdate = imagesToUpdate[findIndex];
@@ -2373,8 +1274,7 @@ function Home() {
                         ...newShapeProps,
                         x: newShapeProps.x + 5,
                         y: newShapeProps.y + 5,
-                        id: eleId,
-                        groupId: createDerivedGroupId(newShapeProps.groupId)
+                        id: eleId
                     }
                     let imagesToUpdate = images;
                     imagesToUpdate.push(shape);
@@ -2418,244 +1318,254 @@ function Home() {
         settoolType(null);
     };
     // Comment translated to English.
-    const getDistributedUnitTargets = (units, axis) => {
-        if (!Array.isArray(units) || units.length === 0) return {};
-        if (units.length === 1) {
-            return { [units[0].key]: axis === 'x' ? units[0].metrics.x : units[0].metrics.y };
-        }
-
-        const sortedUnits = [...units].sort((a, b) => (
-            axis === 'x'
-                ? a.metrics.x - b.metrics.x
-                : a.metrics.y - b.metrics.y
-        ));
-
-        const firstUnit = sortedUnits[0];
-        const lastUnit = sortedUnits[sortedUnits.length - 1];
-        const start = axis === 'x' ? firstUnit.metrics.x : firstUnit.metrics.y;
-        const end = axis === 'x'
-            ? lastUnit.metrics.x + lastUnit.metrics.width
-            : lastUnit.metrics.y + lastUnit.metrics.height;
-        const totalSize = sortedUnits.reduce((sum, unit) => sum + (axis === 'x' ? unit.metrics.width : unit.metrics.height), 0);
-        const gap = sortedUnits.length > 1 ? (end - start - totalSize) / (sortedUnits.length - 1) : 0;
-
-        const targets = {};
-        let cursor = start;
-        sortedUnits.forEach((unit) => {
-            targets[unit.key] = cursor;
-            cursor += (axis === 'x' ? unit.metrics.width : unit.metrics.height) + gap;
-        });
-        return targets;
-    };
-
     const handleMultiToolBack = (type) => {
-        if (type === 'del') {
-            const deleteIds = new Set(selectedIdsRef.current);
-            const nextImages = imagesRef.current.filter((shape) => !deleteIds.has(shape.id));
-            setImages(JSON.parse(JSON.stringify(nextImages)));
-            imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-            historyStep += 1;
-            history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-            setChart(imagesRef.current, selectedIdRef.current, null);
-            selectShapes([]);
-            selectedIdsRef.current = [];
-            setSelectedId(null);
-            selectedIdRef.current = null;
-            setDragShape(null);
-            settoolType(null);
-            return;
-        }
-
-        if (type === 'lock' || type === 'unlock') {
-            const targetDraggable = type === 'unlock';
-            const targetIds = new Set(selectedIdsRef.current);
-            const nextImages = imagesRef.current.map((shape) => (
-                targetIds.has(shape.id)
-                    ? { ...shape, draggable: targetDraggable }
-                    : shape
-            ));
-            setImages(JSON.parse(JSON.stringify(nextImages)));
-            imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-            historyStep += 1;
-            history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-            setChart(imagesRef.current, selectedIdRef.current, null);
-            selectShapes([...targetIds]);
-            selectedIdsRef.current = [...targetIds];
-            settoolType(null);
-            return;
-        }
-
         let tr = transformRefids.current;
-        const alignmentUnits = getAlignmentUnits(selectedIdsRef.current);
-        if (!tr || alignmentUnits.length === 0) {
-            settoolType(null);
-            return;
+        const stage = stageRef.current.getStage();
+        let w = tr.width();
+        let h = tr.height();
+        // Comment translated to English.
+        // Comment translated to English.
+        // Comment translated to English.
+        // Comment translated to English.
+        // Comment translated to English.
+        let xl = tr.x();//left
+        let xr = tr.x() + w;//right
+        let yt = tr.y();//top
+        let yb = tr.y() + h;//bottom
+        let xr2 = tr.x() + (w / 2);
+        let yt2 = tr.y() + (h / 2);
+        let maxh = 0, maxw = 0, totalw = 0, totalh = 0, newxSelectedIds = [], newySelectedIds = [];
+        if (type.indexOf('equal') >= 0) {// Comment translated to English.
+            selectedIdsRef.current.forEach((ids, n) => {
+                const findIndex = imagesRef.current.findIndex((img) => img.id === ids);
+                const singnodeId = stage.findOne('#' + ids);
+                if (singnodeId && findIndex !== -1) {
+                    let singleImage = imagesRef.current[findIndex];
+                    let groupAttr = singleImage.moduleJson.children[0].attrs;
+                    let groupName = groupAttr.name;
+                    if (groupName === 'rectBackground') {
+                        groupAttr = singleImage.moduleJson.children[3].attrs;
+                    }
+                    let findWidth = groupAttr.width ? groupAttr.width : singnodeId.children[0].textWidth + 20;
+                    let findHeight = groupAttr.height ? groupAttr.height : singnodeId.children[0].textHeight + 20;
+                    let width = findWidth * (singleImage.scaleX ? singleImage.scaleX : 1);
+                    let height = findHeight * (singleImage.scaleY ? singleImage.scaleY : 1);
+                    let borderWidth = groupAttr.strokeWidth;// Comment translated to English.
+
+                    if (n !== selectedIdsRef.current.length - 1) {
+                        width = (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? width + borderWidth * (singleImage.scaleX ? singleImage.scaleX : 1) : width;
+                        height = (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? height + borderWidth * (singleImage.scaleY ? singleImage.scaleY : 1) : height;
+                    }
+                    if (maxh < height) {
+                        maxh = height;
+                    }
+                    if (maxw < width) {
+                        maxw = width;
+                    }
+                    totalw += width;
+                    totalh += height;
+
+                    newxSelectedIds.push({// Comment translated to English.
+                        id: ids,
+                        x: singleImage.x
+                    });
+                    newySelectedIds.push({
+                        id: ids,
+                        y: singleImage.y
+                    })
+                }
+            })
         }
+        console.log(t('auto.k0367') + w)
+        console.log(t('auto.k0368') + totalw)
+        console.log(t('auto.k0369') + h)
+        console.log(t('auto.k0370') + totalh)
 
-        const firstUnit = alignmentUnits[0];
-        const anchorCenterX = firstUnit ? firstUnit.metrics.centerX : 0;
-        const anchorCenterY = firstUnit ? firstUnit.metrics.centerY : 0;
+        let stepx = (w - totalw) / (selectedIdsRef.current.length - 1);// Comment translated to English.
+        let stepy = (h - totalh) / (selectedIdsRef.current.length - 1);
+        console.log(t('auto.k0371') + stepx)
+        console.log(t('auto.k0372') + stepy)
 
-        const xl = tr.x();
-        const xr = tr.x() + tr.width();
-        const yt = tr.y();
-        const yb = tr.y() + tr.height();
-
-        let maxh = 0, maxw = 0;
-        let newxUnits = [], newyUnits = [];
-
-        if (type.indexOf('equal') >= 0) {
-            alignmentUnits.forEach((unit) => {
-                const width = unit.metrics.width;
-                const height = unit.metrics.height;
-                if (maxh < height) maxh = height;
-                if (maxw < width) maxw = width;
-                newxUnits.push({ key: unit.key, x: unit.metrics.x });
-                newyUnits.push({ key: unit.key, y: unit.metrics.y });
-            });
-        }
-
-        let orderedUnitKeys = [];
+        let neworderIds = [];// Comment translated to English.
+        // Comment translated to English.
         if (type === "equallevel") {
-            newxUnits = newxUnits.sort((a, b) => a.x - b.x);
-            newxUnits.forEach((item) => orderedUnitKeys.push(item.key));
+            newxSelectedIds = newxSelectedIds.sort(function (a, b) {
+                return a.x - b.x;
+            });
+            newxSelectedIds.forEach((id) => {
+                neworderIds.push(id.id);
+            })
+            // Comment translated to English.
         } else if (type === "equalvertical") {
-            newyUnits = newyUnits.sort((a, b) => a.y - b.y);
-            newyUnits.forEach((item) => orderedUnitKeys.push(item.key));
+            newySelectedIds = newySelectedIds.sort(function (a, b) {
+                return a.y - b.y;
+            });
+            newySelectedIds.forEach((id) => {
+                neworderIds.push(id.id);
+            })
         } else {
-            orderedUnitKeys = alignmentUnits.map((unit) => unit.key);
+            neworderIds = selectedIdsRef.current;
         }
-
-        const sourceGroupIds = {};
-        selectedIdsRef.current.forEach((selectedId) => {
-            const sourceShape = imagesRef.current.find((img) => img.id === selectedId);
-            if (sourceShape && sourceShape.groupId && !sourceGroupIds[sourceShape.groupId]) {
-                sourceGroupIds[sourceShape.groupId] = createDerivedGroupId(sourceShape.groupId);
-            }
-        });
-
+        let newy = 0;// Comment translated to English.
+        let newx = 0;
         let copyids = [];
-        let nextImages = JSON.parse(JSON.stringify(imagesRef.current));
-        const unitMap = {};
-        alignmentUnits.forEach((unit) => {
-            unitMap[unit.key] = unit;
-        });
-        const equalLevelTargets = type === 'equallevel' ? getDistributedUnitTargets(alignmentUnits, 'x') : {};
-        const equalVerticalTargets = type === 'equalvertical' ? getDistributedUnitTargets(alignmentUnits, 'y') : {};
-
-        orderedUnitKeys.forEach((unitKey) => {
-            const unit = unitMap[unitKey];
-            if (!unit) return;
-
-            const width = unit.metrics.width;
-            const height = unit.metrics.height;
-            let targetX = unit.metrics.x;
-            let targetY = unit.metrics.y;
-
-            switch (type) {
-                case "alginleft":
-                    targetX = xl;
-                    break;
-                case "alginright":
-                    targetX = xr - width;
-                    break;
-                case "algintop":
-                    targetY = yt;
-                    break;
-                case "alginbottom":
-                    targetY = yb - height;
-                    break;
-                case "alginvertical":
-                    targetX = anchorCenterX - (width / 2);
-                    break;
-                case "algincenter":
-                    targetY = anchorCenterY - (height / 2);
-                    break;
-                case "equalvertical":
-                    targetY = equalVerticalTargets[unit.key] !== undefined ? equalVerticalTargets[unit.key] : unit.metrics.y;
-                    break;
-                case "equallevel":
-                    targetX = equalLevelTargets[unit.key] !== undefined ? equalLevelTargets[unit.key] : unit.metrics.x;
-                    break;
-                default:
-                    break;
-            }
-
-            const offsetX = targetX - unit.metrics.x;
-            const offsetY = targetY - unit.metrics.y;
-
-            unit.memberIds.forEach((memberId) => {
-                const findIndex = nextImages.findIndex((img) => img.id === memberId);
-                if (findIndex === -1) return;
-                let singleImageToUpdate = JSON.parse(JSON.stringify(nextImages[findIndex]));
-
+        neworderIds.forEach((ids, n) => {
+            let imagesToUpdate = imagesRef.current;
+            const findIndex = imagesRef.current.findIndex((img) => img.id === ids);
+            const singnodeId = stage.findOne('#' + ids);
+            // console.log(singnodeId)
+            if (singnodeId && findIndex !== -1) {
+                let singleImageToUpdate = JSON.parse(JSON.stringify(imagesToUpdate))[findIndex];
+                // Comment translated to English.
+                let groupAttr = singleImageToUpdate.moduleJson.children[0].attrs;
+                let groupName = groupAttr.name;
+                if (groupName === 'rectBackground') {
+                    groupAttr = singleImageToUpdate.moduleJson.children[3].attrs;
+                }
+                let findWidth = groupAttr.width ? groupAttr.width : singnodeId.children[0].textWidth + 20;
+                let findHeight = groupAttr.height ? groupAttr.height : singnodeId.children[0].textHeight + 20;
+                let width = findWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1);
+                let height = findHeight * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1);
+                let borderWidth = groupAttr.strokeWidth / 2;// Comment translated to English.
                 switch (type) {
-                    case "copys": {
-                        const eleId = parseInt(new Date().getTime()).toString() + copyids.length;
+                    case "copys":
+                        let eleId = parseInt(new Date().getTime()).toString() + n// Comment translated to English.
                         singleImageToUpdate = {
                             ...singleImageToUpdate,
                             x: singleImageToUpdate.x + 5,
                             y: singleImageToUpdate.y + 5,
-                            id: eleId,
-                            groupId: singleImageToUpdate.groupId ? sourceGroupIds[singleImageToUpdate.groupId] : singleImageToUpdate.groupId
+                            id: eleId
                         };
                         copyids.push(eleId);
-                        nextImages.push(singleImageToUpdate);
+                        console.log(t('auto.k0373'));
                         break;
-                    }
-                    case "equalhight":
+                    case "alginleft":
+                        // Comment translated to English.
                         singleImageToUpdate = {
                             ...singleImageToUpdate,
-                            scaleY: singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY * (maxh / height) : (maxh / height)
+                            x: (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? xl + borderWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1) : xl
                         };
-                        nextImages[findIndex] = singleImageToUpdate;
+                        console.log(t('auto.k0374'));
+                        break;
+                    case "alginright":
+                        // Comment translated to English.
+                        // Comment translated to English.
+                        // Comment translated to English.
+                        singleImageToUpdate = {
+                            ...singleImageToUpdate,
+                            x: parseFloat(((groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? (xr - borderWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1)) : xr) - width)
+                            // x: parseFloat(xr - width)
+                        };
+                        console.log(t('auto.k0375'));
+                        break;
+                    case "algintop":
+                        singleImageToUpdate = {
+                            ...singleImageToUpdate,
+                            y: (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? yt + borderWidth * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1) : yt
+                        };
+                        console.log(t('auto.k0376'));
+                        break;
+                    case "alginbottom":
+                        singleImageToUpdate = {
+                            ...singleImageToUpdate,
+                            y: parseFloat(((groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? (yb - borderWidth * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1)) : yb) - height)
+                        };
+                        console.log(t('auto.k0377'));
+                        break;
+                    case "alginvertical":
+                        singleImageToUpdate = {
+                            ...singleImageToUpdate,
+                            x: parseFloat(xr2 - (width / 2))
+                        };
+                        console.log(t('auto.k0378'));
+                        break;
+                    case "algincenter":
+                        singleImageToUpdate = {
+                            ...singleImageToUpdate,
+                            y: parseFloat(yt2 - (height / 2))
+                        };
+                        console.log(t('auto.k0379'));
+                        break;
+                    case "equalhight":
+                        if (maxh !== height) {
+                            singleImageToUpdate = {
+                                ...singleImageToUpdate,
+                                scaleY: maxh / height
+                            };
+                        }
+                        console.log(t('auto.k0380'));
                         break;
                     case "equalwidth":
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            scaleX: singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX * (maxw / width) : (maxw / width)
-                        };
-                        nextImages[findIndex] = singleImageToUpdate;
+                        if (maxw !== width) {
+                            singleImageToUpdate = {
+                                ...singleImageToUpdate,
+                                scaleX: maxw / height
+                            };
+                        }
+                        console.log(t('auto.k0381'));
                         break;
                     case "equal":
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            scaleY: singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY * (maxh / height) : (maxh / height),
-                            scaleX: singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX * (maxw / width) : (maxw / width)
-                        };
-                        nextImages[findIndex] = singleImageToUpdate;
+                        if (maxh !== height || maxw !== width) {
+                            singleImageToUpdate = {
+                                ...singleImageToUpdate,
+                                scaleY: maxh / height,
+                                scaleX: maxw / width
+                            };
+                        }
+                        console.log(t('auto.k0382'));
                         break;
-                    default:
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            x: singleImageToUpdate.x + offsetX,
-                            y: singleImageToUpdate.y + offsetY,
-                        };
-                        nextImages[findIndex] = singleImageToUpdate;
+                    case "equalvertical":
+                        if (newy !== 0) {
+                            singleImageToUpdate = {
+                                ...singleImageToUpdate,
+                                y: newy
+                            };
+                        }
+                        //     height=((groupName==='myShape' || groupName==='buttonRect' || groupName==='rectBackground')?(height+0.5*(singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1)):height)
+                        newy = singleImageToUpdate.y + height + stepy// Comment translated to English.
+                        console.log(t('auto.k0383'));
                         break;
+                    case "equallevel":
+                        if (newx !== 0) {
+                            singleImageToUpdate = {
+                                ...singleImageToUpdate,
+                                x: newx
+                            };
+                        }
+                        // width=((groupName==='myShape' || groupName==='buttonRect' || groupName==='rectBackground')?(width-0.5*(singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1)):width)
+                        newx = singleImageToUpdate.x + width + stepx// Comment translated to English.
+                        console.log(t('auto.k0384'));
+                        break;
+                    default: break;
                 }
-            });
-        });
-
-        setImages(JSON.parse(JSON.stringify(nextImages)));
-        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
-        historyStep += 1;
-        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        setChart(imagesRef.current, selectedIdRef.current, null);
-        if (type === 'copys') {
-            selectShapes(copyids);
-            selectedIdsRef.current = copyids;
-        }
+                if (type === 'copys') {
+                    imagesToUpdate.push(JSON.parse(JSON.stringify(singleImageToUpdate)));
+                } else {
+                    imagesToUpdate[findIndex] = singleImageToUpdate;
+                }
+                setImages(JSON.parse(JSON.stringify(imagesToUpdate)));
+                imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
+            }
+            if (n + 1 === neworderIds.length) {
+                historyStep += 1;
+                history.push(JSON.parse(JSON.stringify(imagesToUpdate)));
+                setChart(imagesRef.current, selectedIdRef.current, null);
+                if (type === 'copys') {
+                    selectShapes(copyids);
+                    selectedIdsRef.current = copyids;
+                }
+            }
+        })
         settoolType(null);
-    };
-
+    }
     // Comment translated to English.
     const handleToolChange = async (type) => {
-        if (type === 'copy') {
-            copySelectionToClipboard();
-            return;
-        }
         if (type === 'undo') {
+            // Comment translated to English.
+            // Comment translated to English.
+            //     return;
+            // }
+            // Comment translated to English.
             history = Array.from(new Set(history));
             historyStep = history.length - 1;
             if (historyStep < 1) {
@@ -2676,9 +1586,15 @@ function Home() {
             setChart(imagesRef.current, selectedIdRef.current, null);
             console.log(t('auto.k0386'));
         } else {
+            // Comment translated to English.
             if (selectedIdRef.current !== null || selectedIdsRef.current.length !== 0) {
                 if (selectedIdsRef.current.length !== 0) {
-                    handleMultiToolBack(type);
+                    if (type === 'copy') {
+                        settoolType('copys');
+                        handleMultiToolBack('copys');
+                    } else {
+                        handleMultiToolBack(type);
+                    }
                 } else {
                     settoolType(type);
                 }
@@ -2779,59 +1695,32 @@ function Home() {
             {!isPreview &&
                 <>
                     <div className="top">
-                        <div className="topLeft">
-                            <label>{t('auto.k0387')}</label>
-                        </div>
-                        <div className="topCenter">
-                            <div className="topGroup topToolList">
-                                <ToolList
-                                    MultiSelect={selectedIds.length !== 0}
-                                    handleTool={(type) => {
-                                        handleToolChange(type);
-                                    }} />
-                            </div>
-                            <div className="topGroup topControls">
-                                <Button type={snapEnabled ? 'primary' : 'default'} onClick={() => {
-                                    setSnapEnabled((prev) => {
-                                        if (prev) {
-                                            clearSnapGuides();
-                                        }
-                                        return !prev;
-                                    });
-                                }}>{snapEnabled ? '磁吸开' : '磁吸关'}</Button>
-                                <select className="topControl" value={String(snapThreshold)} onChange={(e) => setSnapThreshold(Number(e.target.value))}>
-                                    <option value="4">4px</option>
-                                    <option value="6">6px</option>
-                                    <option value="8">8px</option>
-                                    <option value="10">10px</option>
-                                </select>
-                                <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>组合</Button>
-                                <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>取消组合</Button>
-                            </div>
-                        </div>
-                        <div className="topRight">
-                            <span className={`saveStatus ${saveStatusText === '已修改' ? 'dirty' : ''}`}>{saveStatusText === '已自动保存' && lastAutoSaveTime ? `${saveStatusText} · ${lastAutoSaveTime}` : saveStatusText}</span>
-                            <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('page')}>{t('auto.k0391')}</Button>}
-                            <Button type="primary" className="topActionBtn" onClick={() => savePage('editpage')}>{t('auto.k0392')}</Button>
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setresetBox(true)}>{t('auto.k0393')}</Button>}
-                        </div>
+                        <label>{t('auto.k0387')}</label>
+                        <ToolList
+                            MultiSelect={selectedIds.length !== 0}
+                            handleTool={(type) => {
+                                handleToolChange(type);
+                            }} />
+                        <Button type="primary" className="toolBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
+                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
+                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
+                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => savePage('page')}>{t('auto.k0391')}</Button>}
+                        {/* Comment translated to English. */}
+                        {/* Comment translated to English. */}
+                        <Button type="primary" className="toolBtn" onClick={() => savePage('editpage')}>{t('auto.k0392')}</Button>
+                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => setresetBox(true)}>{t('auto.k0393')}</Button>}
                     </div>
                     <ItemBox
                         onChangeDragUrl={handleItemDragUrl}
                         isChanged={savePageId} />
                     <div className="eleAttrs">
                         <ul>
-                            <li className={`${showIndex === 1 ? 'check' : ''} ${tabFlash === 'component' ? 'tabFlash' : ''}`.trim()} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
+                            <li className={showIndex === 1 ? 'check' : ''} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
                             <li className={showIndex === 2 ? 'check' : ''} onClick={() => setshowIndex(2)}>{t('auto.k0395')}</li>
-                            <li className={showIndex === 3 ? 'check' : ''} onClick={() => setshowIndex(3)}>界面属性</li>
                         </ul>
                         {showIndex === 1 &&
                             <ElementAttr
                                 MultiSelect={selectedIds.length !== 0}
-                                currentPageId={savePageId}
                                 dragShape={dragShape}
                                 onChange={(dragShape, clickEvnt) => {
                                     handleShapeChange(dragShape, clickEvnt);
@@ -2848,54 +1737,6 @@ function Home() {
                                     addToBackground(backgroundUrl);
                                 }} />
                             </>}
-                        {showIndex === 3 && (() => {
-                            const structure = getInterfaceStructure();
-                            return (
-                                <div className="interfaceAttrs">
-                                    <div className="attrTitle">未组合元素</div>
-                                    {structure.singles.length === 0 && <div className="attrBox">暂无未组合元素</div>}
-                                    {structure.singles.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="attrBox interfaceItem"
-                                            onMouseEnter={() => setHoverHighlightIds([item.id])}
-                                            onMouseLeave={() => setHoverHighlightIds([])}
-                                            onClick={() => handleStructureItemClick(item.id, false)}
-                                        >
-                                            <label>{item.label}</label>
-                                            <span>{item.id}</span>
-                                        </div>
-                                    ))}
-                                    <div className="attrTitle">组合元素</div>
-                                    {structure.groups.length === 0 && <div className="attrBox">暂无组合</div>}
-                                    {structure.groups.map((group) => (
-                                        <div key={group.groupId} className="interfaceGroup">
-                                            <div
-                                                className="attrBox interfaceGroupTitle"
-                                                onMouseEnter={() => setHoverHighlightIds(group.members.map((member) => member.id))}
-                                                onMouseLeave={() => setHoverHighlightIds([])}
-                                                onClick={() => handleStructureItemClick(group.members.length > 0 ? group.members[0].id : '', true)}
-                                            >
-                                                <label>{group.label}</label>
-                                                <span>{group.members.length} 个元素</span>
-                                            </div>
-                                            {group.members.map((item) => (
-                                                <div
-                                                    key={item.id}
-                                                    className="attrBox interfaceItem interfaceItemChild"
-                                                    onMouseEnter={() => setHoverHighlightIds([item.id])}
-                                                    onMouseLeave={() => setHoverHighlightIds([])}
-                                                    onClick={() => handleStructureItemClick(item.id, true)}
-                                                >
-                                                    <label>{item.label}</label>
-                                                    <span>{item.id}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </div>
-                            );
-                        })()}
                     </div>
                     <div
                         className="canvasBody"
@@ -2911,8 +1752,8 @@ function Home() {
                         </div>
                         {savePageId === '0' && <Stage
                             className="canvasStage canvasStage2"
-                            width={stageWidth}
-                            height={stageHeight}
+                            width={safeStageWidth}
+                            height={safeStageHeight}
                             scaleX={stageDimensions.scalex}
                             scaleY={stageDimensions.scaley}
                             ref={stageRef}
@@ -2925,8 +1766,8 @@ function Home() {
                         </Stage>}
                         {savePageId !== '0' && (savePageType === '1' ? <Stage
                             className="canvasStage canvasStage2"
-                            width={stageWidth}
-                            height={stageHeight}
+                            width={safeStageWidth}
+                            height={safeStageHeight}
                             scaleX={stageDimensions.scalex}
                             scaleY={stageDimensions.scaley}
                             ref={stageRef}
@@ -2941,8 +1782,8 @@ function Home() {
                                 {(backgroundImage && typeof backgroundImage === "string") && (
                                     <SvgBackground
                                         backgroundUrl={backgroundImage}
-                                        width={stageWidth}
-                                        height={stageHeight} />
+                                        width={safeStageWidth}
+                                        height={safeStageHeight} />
                                 )}
                                 {images.map((shape) => {
                                     return (<ConElement
@@ -2950,104 +1791,46 @@ function Home() {
                                         key={shape.id}
                                         shapeProps={shape}
                                         isSelected={shape.id === selectedId && selectedIds.length === 0}
-                                        showSelectionFrame={selectedIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0)}
-                                        isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
                                         }}
-                                        onSelect={(evt) => {
-                                            if (evt && evt.evt && (evt.evt.shiftKey || evt.evt.ctrlKey || evt.evt.metaKey)) {
-                                                return;
-                                            }
-                                            if (evt && evt.evt && evt.evt.__draggingSelection && selectedIdsRef.current.length > 1 && selectedIdsRef.current.includes(shape.id)) {
-                                                return;
-                                            }
-                                            const groupSelectionIds = getExpandedSelectionIds(shape);
-                                            if (groupSelectionIds.length > 1) {
-                                                selectShapes(groupSelectionIds);
-                                                selectedIdsRef.current = groupSelectionIds;
-                                                setSelectedId(shape.id);
-                                                selectedIdRef.current = shape.id;
-                                                setDragShape(shape);
-                                                return;
-                                            }
+                                        onSelect={() => {
                                             if (selectedId !== shape.id) {
                                                 setSelectedId(null);
                                                 setDragShape(null);
                                                 setTimeout(() => {
+                                                    // Comment translated to English.
                                                     setSelectedId(shape.id);
                                                     selectedIdRef.current = shape.id;
                                                     setDragShape(shape);
+                                                    // console.log(shape)
                                                 });
                                             }
-                                        }}
-                                        onDragMove={(e, currentShape) => {
-                                            handleShapeDragMove(e, currentShape);
                                         }}
                                         onChange={(newShapeProps) => {
                                             // Comment translated to English.
                                             // console.log(newShapeProps)
-                                            if (multiDragRef.current.active && multiDragRef.current.draggedId === shape.id && multiDragRef.current.pendingPositions) {
-                                                commitMultiDragPositions(multiDragRef.current.pendingPositions);
-                                                multiDragRef.current = {
-                                                    active: false,
-                                                    draggedId: null,
-                                                    startPositions: {},
-                                                    pendingPositions: null,
-                                                };
-                                                clearSnapGuides();
-                                                return;
-                                            }
                                             handleShapeChange(newShapeProps, shape.id);
                                         }} />
                                     );
                                 })}
-                                {snapGuides.vertical && (
-                                    <Line
-                                        points={[
-                                            snapGuides.vertical.x,
-                                            snapGuides.vertical.y1,
-                                            snapGuides.vertical.x,
-                                            snapGuides.vertical.y2,
-                                        ]}
-                                        stroke={snapGuides.vertical.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        strokeWidth={snapGuides.vertical.isStageGuide ? 2 : 1}
-                                        dash={snapGuides.vertical.isStageGuide ? [10, 6] : [6, 4]}
-                                        shadowColor={snapGuides.vertical.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        shadowBlur={snapGuides.vertical.isStageGuide ? 4 : 2}
-                                        listening={false}
-                                    />
-                                )}
-                                {snapGuides.horizontal && (
-                                    <Line
-                                        points={[
-                                            snapGuides.horizontal.x1,
-                                            snapGuides.horizontal.y,
-                                            snapGuides.horizontal.x2,
-                                            snapGuides.horizontal.y,
-                                        ]}
-                                        stroke={snapGuides.horizontal.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        strokeWidth={snapGuides.horizontal.isStageGuide ? 2 : 1}
-                                        dash={snapGuides.horizontal.isStageGuide ? [10, 6] : [6, 4]}
-                                        shadowColor={snapGuides.horizontal.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        shadowBlur={snapGuides.horizontal.isStageGuide ? 4 : 2}
-                                        listening={false}
-                                    />
-                                )}
                                 <Transformer
                                     ref={transformRefids}
                                     flipEnabled={false}
-                                    borderEnabled={false}
-                                    anchorSize={0}
-                                    rotateEnabled={false}
-                                    boundBoxFunc={(oldBox, newBox) => getBoundedTransformerBox(oldBox, newBox)} />
+                                    boundBoxFunc={(oldBox, newBox) => {
+                                        if (newBox.width < 5 || newBox.height < 5) {
+                                            return oldBox;
+                                        }
+                                        return newBox;
+
+                                    }} />
                                 <Rect fill="rgba(0,0,255,0.5)" ref={selectionRectRef} />
                             </Layer>
                         </Stage> : <Stage
                             className="canvasStage canvasStage2"
-                            width={stageWidth}
-                            height={stageHeight}
+                            width={safeStageWidth}
+                            height={safeStageHeight}
                             scaleX={stageDimensions.scalex}
                             scaleY={stageDimensions.scaley}
                             ref={stageRef}
@@ -3097,9 +1880,9 @@ function Home() {
                             </div>
                             {savePageType === '1' && <div>
                                 <label>{t('auto.k0403')}</label>
-                                <input style={{ width: '76px' }} type="text" onChange={(e) => setstageWidth(e.target.value)} defaultValue={stageWidth} />
+                                <input style={{ width: '76px' }} type="text" onChange={(e) => setstageWidth(normalizeStageSize(e.target.value, safeStageWidth))} defaultValue={stageWidth} />
                                 <span> * </span>
-                                <input style={{ width: '76px' }} type="text" onChange={(e) => setstageHeight(e.target.value)} defaultValue={stageHeight} />
+                                <input style={{ width: '76px' }} type="text" onChange={(e) => setstageHeight(normalizeStageSize(e.target.value, safeStageHeight))} defaultValue={stageHeight} />
                             </div>}
                             <div>
                                 <label>{t('auto.k0404')}</label>
@@ -3118,36 +1901,73 @@ function Home() {
                                 <input style={{ width: '167px' }} type="text" onChange={(e) => setsavePageLink(e.target.value)} defaultValue={savePageLink} />
                             </div>}
                         </div>
-                        <span className="layui-layer-setwin" onClick={() => {
-                            pendingPageSwitchRef.current = null;
-                            setshowsavePageBox(0)
-                        }}>
+                        <span className="layui-layer-setwin" onClick={() => setshowsavePageBox(0)}>
                             <Close />
                         </span>
                         <div className="layui-layer-btn">
                             <Button type="primary" onClick={async () => {
-                                const createResult = await createAndSavePage();
-                                if (!createResult.ok) {
+                                if (!savePageType) {
+                                    message.error(t('auto.k0408'));
                                     return;
                                 }
-                                console.log(t('auto.k0413'))
-                                setStageDimensions({
-                                    width: stageWidth,
-                                    height: stageHeight,
-                                    scalex: 1,
-                                    scaley: 1,
+                                if (!savePageName) {
+                                    message.error(t('auto.k0409'));
+                                    return;
+                                }
+                                if (!savePagePid) {
+                                    message.error(t('auto.k0410'));
+                                    return;
+                                }
+                                if (!savePageIndex) {
+                                    message.error(t('auto.k0411'));
+                                    return;
+                                }
+                                if (savePageType === '3' && !savePageLink) {
+                                    message.error(t('auto.k0412'));
+                                    return;
+                                }
+                                let savefilename = (new Date().getTime()).toString();
+                                let res = await httpsend.getData('CreateDmpageKey', {
+                                    PageType: savePageType,
+                                    PageName: savePageName,
+                                    pid: savePagePid,
+                                    PageIndex: savePageIndex,
+                                    ProId: 0,
+                                    PageTop: -1,
+                                    PageTxt: savePageType === '3' ? savePageLink : savefilename,
                                 });
-                                setcanvasScale(100);
-                                setImages([]);
-                                setBackgroundImage(null);
-                                setalarmCatch('1')
-                                alarmCatchRef.current = '1';
-                                imagesRef.current = [];
-                                setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-                                historyStep = -1;
-                                history = [];
-                                await continuePendingPageSwitch.current();
-                                scheduleIdleAutoSave();
+                                if (res.code === 100) {
+                                    console.log(t('auto.k0413'))
+                                    setStageDimensions({
+                                        width: stageWidth,
+                                        height: stageHeight,
+                                        scalex: 1,
+                                        scaley: 1,
+                                    });
+                                    setcanvasScale(100);
+                                    setsavePageId(res.data.id);
+                                    setsavePageTxt(res.data.PageTxt);
+                                    setImages([]);
+                                    setBackgroundImage(null);
+                                    setalarmCatch('1')
+                                    alarmCatchRef.current = '1';
+                                    imagesRef.current = [];
+                                    setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
+                                    historyStep = -1;
+                                    history = [];
+                                    if (savePageType === '1') {// Comment translated to English.
+                                        let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
+                                        if (fileres.code === 100) {
+                                            message.success(t('auto.k0443'));
+                                        } else {
+                                            message.error(t('auto.k0444'));
+                                        }
+                                    } else {
+                                        message.success(t('auto.k0443'));
+                                    }
+                                } else {
+                                    message.error(t('auto.k0445'));
+                                }
                                 setshowsavePageBox(0);
                             }}>{t('auto.k0202')}</Button>
                         </div>
@@ -3167,7 +1987,7 @@ function Home() {
                         </span>
                         <div className="layui-layer-btn">
                             <Button type="primary" onClick={async () => {
-                                let savejson = buildStageJson();
+                                let savejson = JSON.stringify(stagejson);
                                 // let savefilename = (new Date().getTime()).toString();
                                 // Comment translated to English.
                                 if (savePageId && savePageName) {
@@ -3182,15 +2002,11 @@ function Home() {
                                             let res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
                                             if (res2.code === 100) {
                                                 message.success(t('auto.k0443'));
-                                                lastSavedStageJsonRef.current = savejson;
-                                                scheduleIdleAutoSave();
                                             } else {
                                                 message.error(t('auto.k0444'));
                                             }
                                         } else {
                                             message.success(t('auto.k0443'));
-                                            lastSavedStageJsonRef.current = savejson;
-                                            scheduleIdleAutoSave();
                                         }
                                     } else {
                                         message.error(t('auto.k0445'));
@@ -3263,7 +2079,7 @@ function Home() {
                                             if (dataKey && dataKey.length === 1) {
                                                 dataKey.forEach((el) => {
                                                     // Comment translated to English.
-                                                    let findpagedevindex = pagedevList.findIndex(v => (v.value === el.key || v.value === el.deveventskey))
+                                                    let findpagedevindex = pagedevList.findIndex(v => String(v.value) === String(el.key || el.deveventskey))
                                                     if (findpagedevindex !== -1 && pagedevList[findpagedevindex]['newid']) {
                                                         if (el.key) el.key = pagedevList[findpagedevindex]['newid'];
                                                         if (el.deveventskey) el.deveventskey = pagedevList[findpagedevindex]['newid'];
@@ -3305,8 +2121,8 @@ function Home() {
                         {(backgroundImage && typeof backgroundImage === "string") && (
                             <SvgBackground
                                 backgroundUrl={backgroundImage}
-                                width={stageWidth}
-                                height={stageHeight}
+                                width={safeStageWidth}
+                                height={safeStageHeight}
                             />
                         )}
                         {imagesstatic && imagesstatic.map((shape) => {

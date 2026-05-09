@@ -13,23 +13,158 @@ import PreviewGif from "./PreviewGif.js";
 
 const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResize, isSwiper }) => {
     // console.log(shapeProps);
-
-    // Comment translated to English.
-    if (shapeProps.moduleJson.clickEvnt) {
-        shapeProps.clickEvnt = shapeProps.moduleJson.clickEvnt
-    }
+    const clickEvnt = shapeProps.clickEvnt || (shapeProps.moduleJson && shapeProps.moduleJson.clickEvnt) || [];
+    const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     const groupRef = useRef();
     const [divTab, setdivTab] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     // const [imgurl, setimgurl] = useState((shapeProps.moduleJson.children.length > 0 && shapeProps.moduleJson.children[0].className === 'Image') ? shapeProps.moduleJson.children[0].attrs.image : (shapeProps.src.indexOf('http') > -1 ? '../Images/' + shapeProps.src.split('/Images/')[0] : shapeProps.src));
     const [imgurl, setimgurl] = useState('Images/icon/full.png');// Comment translated to English.
     // Comment translated to English.
-    const [timeText, settimeText] = useState();// Comment translated to English.
+    const curTimeNodeRef = useRef(null);
+    const curTimeTextRef = useRef('');
+    const [curTimeInitText, setCurTimeInitText] = useState('');
     // Comment translated to English.
     const [backBtn, setbackBtn] = useState(false);
     const [dealweblink, setdealweblink] = useState();// Comment translated to English.
     const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);// Comment translated to English.
     const [dealVideo, setdealVideo] = useState();// Comment translated to English.
+
+    const pad2 = (value) => {
+        const num = Number(value);
+        return num < 10 ? ('0' + num) : String(num);
+    };
+
+    const sanitizeCanvasText = (value) => {
+        const raw = value == null ? '' : String(value);
+        return raw.replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
+    };
+
+    const getCurTimeTextByType = (type) => {
+        let date = new Date();
+        let y = date.getFullYear();
+        let m = pad2(date.getMonth() + 1);
+        let d = pad2(date.getDate());
+        let hh = pad2(date.getHours());
+        let mm = pad2(date.getMinutes());
+        let ss = pad2(date.getSeconds());
+        let dateSlash = y + '/' + m + '/' + d;
+        let dateDash = y + '-' + m + '-' + d;
+        let time = hh + ':' + mm + ':' + ss;
+        switch (String(type)) {
+            case '1': return sanitizeCanvasText(dateSlash + ' ' + time); // y/m/d h:m:s
+            case '2': return sanitizeCanvasText(dateDash + ' ' + time); // y-m-d h:m:s
+            case '3': return sanitizeCanvasText(dateSlash); // y/m/d
+            case '4': return sanitizeCanvasText(dateDash); // y-m-d
+            case '5': return sanitizeCanvasText(time); // h:m:s
+            default: return sanitizeCanvasText(dateSlash + ' ' + time);
+        }
+    };
+
+    const normalizeTextAttrs = (attrs) => {
+        if (!attrs || !Object.prototype.hasOwnProperty.call(attrs, 'text')) {
+            return attrs;
+        }
+        return {
+            ...attrs,
+            text: attrs.text == null ? '' : String(attrs.text),
+        };
+    };
+
+    const toPositiveNumber = (value, fallback) => {
+        const num = Number(value);
+        if (!Number.isFinite(num) || num <= 0) {
+            return fallback;
+        }
+        return num;
+    };
+
+    const toNonNegativeNumber = (value, fallback) => {
+        const num = Number(value);
+        if (!Number.isFinite(num) || num < 0) {
+            return fallback;
+        }
+        return num;
+    };
+
+    const sanitizeKonvaAttrs = (nodeType, attrs) => {
+        if (!attrs) {
+            return attrs;
+        }
+        if (nodeType !== 'Text') {
+            return attrs;
+        }
+        const next = {
+            ...attrs,
+            text: attrs.text == null ? '' : String(attrs.text),
+            fontSize: toPositiveNumber(attrs.fontSize, 18),
+            lineHeight: toPositiveNumber(attrs.lineHeight, 1),
+            padding: toNonNegativeNumber(attrs.padding, 0),
+            letterSpacing: Number.isFinite(Number(attrs.letterSpacing)) ? Number(attrs.letterSpacing) : 0,
+        };
+        next.fontFamily = (typeof attrs.fontFamily === 'string' && attrs.fontFamily.trim()) ? attrs.fontFamily : 'Arial';
+        next.fontStyle = (typeof attrs.fontStyle === 'string' && attrs.fontStyle.trim()) ? attrs.fontStyle : 'normal';
+        next.fontVariant = (typeof attrs.fontVariant === 'string' && attrs.fontVariant.trim()) ? attrs.fontVariant : 'normal';
+        if (attrs.width !== undefined) {
+            next.width = toPositiveNumber(attrs.width, 1);
+        }
+        if (attrs.height !== undefined) {
+            next.height = toPositiveNumber(attrs.height, 1);
+        }
+        if (attrs.wrap !== undefined && attrs.wrap !== 'word' && attrs.wrap !== 'char' && attrs.wrap !== 'none') {
+            next.wrap = 'word';
+        }
+        return next;
+    };
+
+    const renderFirefoxTextFallback = (attrs, key, overrideText) => {
+        const textValue = sanitizeCanvasText(overrideText == null ? attrs.text : overrideText);
+        const fontSize = toPositiveNumber(attrs.fontSize, 18);
+        const lineHeight = toPositiveNumber(attrs.lineHeight, 1);
+        const padding = toNonNegativeNumber(attrs.padding, 0);
+        const left = Number.isFinite(Number(attrs.x)) ? Number(attrs.x) : 0;
+        const top = Number.isFinite(Number(attrs.y)) ? Number(attrs.y) : 0;
+        const width = attrs.width !== undefined ? toPositiveNumber(attrs.width, 1) : undefined;
+        const height = attrs.height !== undefined ? toPositiveNumber(attrs.height, 1) : undefined;
+        const wrap = attrs.wrap || 'word';
+        const align = attrs.align || 'left';
+        const textColor = attrs.fill || '#000';
+
+        const textStyle = {
+            fontFamily: attrs.fontFamily || 'Arial',
+            fontSize: fontSize + 'px',
+            fontStyle: attrs.fontStyle || 'normal',
+            lineHeight: lineHeight,
+            textAlign: align === 'justify' ? 'justify' : align,
+            color: textColor,
+            whiteSpace: wrap === 'none' ? 'pre' : 'pre-wrap',
+            wordBreak: wrap === 'char' ? 'break-all' : 'break-word',
+            overflow: 'hidden',
+            padding: padding + 'px',
+            boxSizing: 'border-box',
+            width: width ? (width + 'px') : 'auto',
+            height: height ? (height + 'px') : 'auto',
+            opacity: attrs.opacity !== undefined ? attrs.opacity : 1,
+        };
+
+        return <Html
+            key={key}
+            transform
+            groupProps={{
+                x: left,
+                y: top,
+                rotation: Number.isFinite(Number(attrs.rotation)) ? Number(attrs.rotation) : 0,
+                scaleX: Number.isFinite(Number(attrs.scaleX)) ? Number(attrs.scaleX) : 1,
+                scaleY: Number.isFinite(Number(attrs.scaleY)) ? Number(attrs.scaleY) : 1,
+                skewX: Number.isFinite(Number(attrs.skewX)) ? Number(attrs.skewX) : 0,
+                skewY: Number.isFinite(Number(attrs.skewY)) ? Number(attrs.skewY) : 0,
+            }}
+            divProps={{ style: { pointerEvents: "none" } }}
+        >
+            <div style={textStyle}>{textValue}</div>
+        </Html>;
+    };
+
     useEffect(() => {
         let newshapeProps = JSON.parse(JSON.stringify(shapeProps));
         if (newshapeProps.moduleJson.children && newshapeProps.moduleJson.children[0].attrs.alarmSwitch === '2') {
@@ -43,15 +178,49 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
         }
     }, [])
 
+    useEffect(() => {
+        const children = (shapeProps && shapeProps.moduleJson && shapeProps.moduleJson.children) ? shapeProps.moduleJson.children : [];
+        const curTimeNode = children.find((item) => item && item.attrs && item.attrs.name === 'curTime');
+        if (!curTimeNode) {
+            curTimeTextRef.current = '';
+            setCurTimeInitText('');
+            return undefined;
+        }
+
+        const tick = () => {
+            const nextText = getCurTimeTextByType(curTimeNode.attrs.type);
+            curTimeTextRef.current = nextText;
+            if (isFirefox) {
+                setCurTimeInitText((prev) => (prev === nextText ? prev : nextText));
+                return;
+            }
+            if (curTimeNodeRef.current) {
+                try {
+                    curTimeNodeRef.current.text(nextText);
+                    const layer = curTimeNodeRef.current.getLayer();
+                    if (layer) {
+                        layer.batchDraw();
+                    }
+                } catch (e) {
+                    console.error('curTime update failed', e);
+                }
+            }
+        };
+        tick();
+
+        const timerId = setInterval(tick, 1000);
+        return () => clearInterval(timerId);
+    }, [shapeProps, isFirefox]);
+
     const dealClick = async () => {
         // Comment translated to English.
         // Comment translated to English.
         // Comment translated to English.
         // Comment translated to English.
-        if (shapeProps.clickEvnt[0]['link'] || shapeProps.clickEvnt[0]['weblink'] || shapeProps.clickEvnt[0]['pagekey']) {
+        if (clickEvnt[0]['link'] || clickEvnt[0]['weblink'] || clickEvnt[0]['pagekey']) {
             setbackBtn(true);
-            if (shapeProps.clickEvnt[0]['weblink']) {
-                let conres = await httpsend.getData('GetDmpageDetailKey', { id: shapeProps.clickEvnt[0]['weblink'] });
+            if (clickEvnt[0]['weblink']) {
+                let conres = await httpsend.getData('GetDmpageDetailKey', { id: clickEvnt[0]['weblink'] });
                 if (conres) {
                     if (conres.data) {
                         setdealweblink(httpsend.mainURL() + 'index.html?type=preview&title=' + conres.data.PageTxt)
@@ -61,7 +230,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                     }
                 }
             }
-            if (shapeProps.clickEvnt[0]['pagekey']) {
+            if (clickEvnt[0]['pagekey']) {
                 // Comment translated to English.
                 let textIds = [];
                 // Comment translated to English.
@@ -69,17 +238,17 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                 let ani = shapeProps.moduleJson.children[0].attrs.ani;
                 let anitime = shapeProps.moduleJson.children[0].attrs.anitime;
                 let anispeed = shapeProps.moduleJson.children[0].attrs.anispeed;
-                shapeProps.clickEvnt.forEach((item, index) => {
+                clickEvnt.forEach((item, index) => {
                     textIds.push(item['pagekey']);
                 })
                 // setplayimgurl('Images/icon/playend.png');
                 setdealweblink(httpsend.viewURL() + '/donghuan-dcim-swiper.html?ids=' + textIds.join(',') + '&ani=' + ani + '&anitime=' + anitime + '&anispeed=' + anispeed);
             }
-        } else if (shapeProps.clickEvnt[0]['newlink']) {
+        } else if (clickEvnt[0]['newlink']) {
             const w = window.open('about:blank');
-            w.location.href = shapeProps.clickEvnt[0]['newlink'];
+            w.location.href = clickEvnt[0]['newlink'];
             // Comment translated to English.
-        } else if (shapeProps.clickEvnt[0]['full']) {
+        } else if (clickEvnt[0]['full']) {
             if (!document.fullscreenElement) {
                 // Comment translated to English.
                 document.documentElement.requestFullscreen().then(() => {
@@ -95,9 +264,9 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                     });
                 }
             }
-        } else if (shapeProps.clickEvnt[0]['videoChannel']) {
+        } else if (clickEvnt[0]['videoChannel']) {
             let videoIds = [];
-            shapeProps.clickEvnt.forEach((item, index) => {
+            clickEvnt.forEach((item, index) => {
                 videoIds.push(item['videoChannel']);
             })
             showVideoModal(httpsend.viewURL() + 'donghuan-dcim-video.html?ids=' + videoIds.join(','));
@@ -113,10 +282,10 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
     }
 
     const dealCommandSend = async () => {
-        if (shapeProps.clickEvnt.length > 0) {
-            for (let i = 0; i < shapeProps.clickEvnt.length; i++) {
-                // shapeProps.clickEvnt.forEach(async (element, n) => {
-                let element = shapeProps.clickEvnt[i];
+        if (clickEvnt.length > 0) {
+            for (let i = 0; i < clickEvnt.length; i++) {
+                // clickEvnt.forEach(async (element, n) => {
+                let element = clickEvnt[i];
                 let onlycode = await httpsend.getData('GetDeviceDetailKey', {
                     id: element.devkey,
                     token: 'b57b88e5af6331d7b9d7151119ccbfda'
@@ -152,7 +321,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                 } else {
                     await httpsend.getData('CreateDeviceCommandSendKey', paramCommand);
                 }
-                if (i + 1 === shapeProps.clickEvnt.length) {
+                if (i + 1 === clickEvnt.length) {
                     console.log(t('auto.k0205'))
                     message.success(t('auto.k0205'));
                 }
@@ -215,9 +384,9 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                 ref={groupRef}
                 name="group"
                 draggable={false}
-                // onClick={() => shapeProps.clickEvnt ? setIsModalOpen(true) : null}
-                onClick={() => (shapeProps.clickEvnt && shapeProps.clickEvnt.length > 0) ? dealClick() : null}
-                onTap={() => (shapeProps.clickEvnt && shapeProps.clickEvnt.length > 0) ? dealClick() : null}
+                // onClick={() => clickEvnt ? setIsModalOpen(true) : null}
+                onClick={() => (clickEvnt && clickEvnt.length > 0) ? dealClick() : null}
+                onTap={() => (clickEvnt && clickEvnt.length > 0) ? dealClick() : null}
             >
                 {shapeProps.moduleJson.children.map((img, i) => {
                     const Ele = img.className;
@@ -231,7 +400,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                         }
                     }
                     if (Ele === 'Image') {
-                        if (shapeProps.clickEvnt && shapeProps.clickEvnt.length > 0 && shapeProps.clickEvnt[0].full) {// Comment translated to English.
+                        if (clickEvnt && clickEvnt.length > 0 && clickEvnt[0].full) {// Comment translated to English.
                             return <PreviewImage key={i} width={img.attrs.width} height={img.attrs.height} imgSRC={imgurl} /> // Comment translated to English.
                         } else if (img.attrs.name === 'pageIn') {
                             if (img.attrs.URL) {
@@ -311,6 +480,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                         let ropeAlarmRange = 1;
                         let realarmPos = 0;
                         let ropeAlarmRangeTxt = '';
+                        let leakHaveAlarm = img.attrs.haveAlarm;
                         // Comment translated to English.
                         if (img.attrs.data >= img.attrs.ropeStart && img.attrs.data <= img.attrs.ropeEnd) {
                             let totalW = parseFloat(img.attrs.ropeEnd) - parseFloat(img.attrs.ropeStart);
@@ -326,15 +496,15 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                             // console.log(ropeAlarmRange)
                             // console.log(alarmPos)
                         } else {
-                            img.attrs.haveAlarm = '0';
+                            leakHaveAlarm = '0';
                         }
                         return <Fragment key={i}>
                             <Html divProps={{ style: { pointerEvents: "none" } }}>
                                 <div className="rope" style={{ width: img.attrs.width, height: img.attrs.height }}>
                                     {/* Comment translated to English. */}
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeDirection === '2' && <div className="ropeRed ropeRev" style={{ width: ropeAlarmRange, right: alarmPos }}>
+                                    {leakHaveAlarm === '1' && img.attrs.ropeDirection === '2' && <div className="ropeRed ropeRev" style={{ width: ropeAlarmRange, right: alarmPos }}>
                                         <img src="../Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeDirection === '1' && <div className="ropeRed" style={{ width: ropeAlarmRange, left: alarmPos }}>
+                                    {leakHaveAlarm === '1' && img.attrs.ropeDirection === '1' && <div className="ropeRed" style={{ width: ropeAlarmRange, left: alarmPos }}>
                                         <img src="../Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
                                     {/* Comment translated to English. */}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '1' && <div className="ropeNumTop ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeStart}</div>}
@@ -354,7 +524,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '1' && img.attrs.ropeDataShowPos === '3' && <div className="ropeNumLeft ropeNumE" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeEnd}</div>}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '1' && img.attrs.ropeDataShowPos === '4' && <div className="ropeNumRight ropeNumE" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeEnd}</div>}
 
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '1' && img.attrs.ropeDirection === '1' && <div className="bubble bubbleTop" style={{ left: alarmPos - 22 }}>
+                                    {leakHaveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '1' && img.attrs.ropeDirection === '1' && <div className="bubble bubbleTop" style={{ left: alarmPos - 22 }}>
                                         <div>
                                             <label>{t('auto.k0206')}</label>
                                             <span>{img.attrs.data}</span>m
@@ -365,7 +535,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                         </div>
                                     </div>
                                     }
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '2' && img.attrs.ropeDirection === '1' && <div className="bubble bubbleBottom" style={{ left: alarmPos - 22 }}>
+                                    {leakHaveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '2' && img.attrs.ropeDirection === '1' && <div className="bubble bubbleBottom" style={{ left: alarmPos - 22 }}>
                                         <div>
                                             <label>{t('auto.k0206')}</label>
                                             <span>{img.attrs.data}</span>m
@@ -376,7 +546,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                         </div>
                                     </div>
                                     }
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '1' && img.attrs.ropeDirection === '2' && <div className="bubble bubbleTop" style={{ left: realarmPos - 38 }}>
+                                    {leakHaveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '1' && img.attrs.ropeDirection === '2' && <div className="bubble bubbleTop" style={{ left: realarmPos - 38 }}>
                                         <div>
                                             <label>{t('auto.k0206')}</label>
                                             <span>{img.attrs.data}</span>m
@@ -387,7 +557,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                         </div>
                                     </div>
                                     }
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '2' && img.attrs.ropeDirection === '2' && <div className="bubble bubbleBottom" style={{ left: realarmPos - 38 }}>
+                                    {leakHaveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '2' && img.attrs.ropeDirection === '2' && <div className="bubble bubbleBottom" style={{ left: realarmPos - 38 }}>
                                         <div>
                                             <label>{t('auto.k0206')}</label>
                                             <span>{img.attrs.data}</span>m
@@ -398,7 +568,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                         </div>
                                     </div>
                                     }
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '3' && <div className="bubble bubbleLeft">
+                                    {leakHaveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '3' && <div className="bubble bubbleLeft">
                                         <div>
                                             <label>{t('auto.k0206')}</label>
                                             <span>{img.attrs.data}</span>m
@@ -409,7 +579,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                         </div>
                                     </div>
                                     }
-                                    {img.attrs.haveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '4' && <div className="bubble bubbleRight">
+                                    {leakHaveAlarm === '1' && img.attrs.ropeAlarmBoxShow === '2' && img.attrs.ropeAlarmBoxPos === '4' && <div className="bubble bubbleRight">
                                         <div>
                                             <label>{t('auto.k0206')}</label>
                                             <span>{img.attrs.data}</span>m
@@ -532,44 +702,52 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                         </Fragment>
                     } else {
                         // console.log(Ele);
+                        const safeAttrs = sanitizeKonvaAttrs(Ele, img.attrs);
+                        let textForRender = safeAttrs.text;
+                        if (img.attrs.name === 'curTime') {
+                            textForRender = String((isFirefox ? curTimeInitText : curTimeTextRef.current) || getCurTimeTextByType(img.attrs.type) || '');
+                        } else if (img.attrs.name === 'runDay') {
+                            textForRender = getcalculateDays();
+                        } else if (safeAttrs.text === t('auto.k0012')) {
+                            textForRender = t('auto.k0217');
+                        }
+                        if (isFirefox && (Ele === 'Text' || Ele === 'TextPath')) {
+                            return renderFirefoxTextFallback(safeAttrs, i, textForRender);
+                        }
                         if (img.attrs.name === 'curTime') {// Comment translated to English.
-                            setInterval(() => {
-                                let date = new Date();
-                                let newdate = date.toLocaleString('chinese', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) // Comment translated to English.
-
-                                switch (img.attrs.type) {
-                                    case '1': img.attrs.text = newdate; break;//y/m/d h:m:s
-                                    case '2': img.attrs.text = newdate.replaceAll('/', '-'); break;//y-m-d h:m:s
-                                    case '3': img.attrs.text = newdate.split(' ')[0]; break;//y/m/d
-                                    case '4': img.attrs.text = newdate.split(' ')[0].replaceAll('/', '-'); break;//y-m-d
-                                    case '5': img.attrs.text = newdate.split(' ')[1]; break;//h:m:s
-                                    default: break;
-                                }
-
-                                settimeText(img.attrs.text);
-                            }, 1000);
                             return <Ele
                                 key={i}
-                                {...img.attrs}
-                                text={timeText}
+                                ref={(node) => {
+                                    if (node && !isFirefox) {
+                                        curTimeNodeRef.current = node;
+                                    }
+                                }}
+                                {...safeAttrs}
+                                text={textForRender}
                             />
                         } else if (img.attrs.name === 'runDay') {// Comment translated to English.
-                            img.attrs.text = getcalculateDays();
+                            const runDayAttrs = {
+                                ...safeAttrs,
+                                text: textForRender,
+                            };
                             return <Ele
                                 key={i}
-                                {...img.attrs}
+                                {...normalizeTextAttrs(runDayAttrs)}
                             />
                         } else {
-                            if (img.attrs.text === t('auto.k0012')) {
-                                img.attrs.text = t('auto.k0217');
+                            if (safeAttrs.text === t('auto.k0012')) {
+                                const pendingAttrs = {
+                                    ...safeAttrs,
+                                    text: textForRender,
+                                };
                                 return <Ele
                                     key={i}
-                                    {...img.attrs}
+                                    {...normalizeTextAttrs(pendingAttrs)}
                                 />
                             } else {
                                 return <Ele
                                     key={i}
-                                    {...img.attrs}
+                                    {...normalizeTextAttrs(safeAttrs)}
                                 />
                             }
                         }
@@ -598,15 +776,15 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                 <Fragment key='0003'>
                     <Html>
                         <Close className="closeBtn" onClick={() => { setbackBtn(false); }} />
-                        {backBtn && shapeProps.clickEvnt[0]['link'] && <iframe
+                        {backBtn && clickEvnt[0]['link'] && <iframe
                             title="Myiframe"
-                            src={shapeProps.clickEvnt[0]['link']}
+                            src={clickEvnt[0]['link']}
                             width={((wwidth / wscale)) + 'px'}
                             height={((wheight / wscale) - 5) + 'px'}
                             frameBorder="0"
                             allowFullScreen
                         ></iframe>}
-                        {backBtn && (shapeProps.clickEvnt[0]['weblink'] || shapeProps.clickEvnt[0]['pagekey']) && <iframe
+                        {backBtn && (clickEvnt[0]['weblink'] || clickEvnt[0]['pagekey']) && <iframe
                             title="Myiframe"
                             src={dealweblink}
                             width={((wwidth / wscale)) + 'px'}

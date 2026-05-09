@@ -36,6 +36,8 @@
     deleteSuccess: 'Deleted successfully!',
     importSuccess: 'Import succeeded!',
     importFailed: 'Import failed!',
+    duplicatePageSkipped: 'Page already exists. Skipped creating a new page.',
+    exportNotZipWarning: 'Export API did not return a zip file. Please restart the local Node API and try again.',
     deleteFailed: 'Delete failed!',
     removePageFileFailed: 'Page file deletion failed. Please contact support.',
     editPage: 'Edit Page',

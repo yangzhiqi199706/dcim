@@ -14,6 +14,33 @@ export default {
             return false
         }
         const normalizeValue = (v) => (v === undefined || v === null ? '' : v.toString().trim());
+        const resolveAlarmLevelMeta = (rawLevel) => {
+            const level = normalizeValue(rawLevel);
+            switch (level) {
+                case '1':
+                    return { colorName: 'level1color', levelName: t('auto.k0602') };
+                case '2':
+                    return { colorName: 'level2color', levelName: t('auto.k0603') };
+                case '3':
+                    return { colorName: 'level3color', levelName: t('auto.k0604') };
+                case '4':
+                    return { colorName: 'level4color', levelName: t('auto.k0605') };
+                case '5':
+                    return { colorName: 'level5color', levelName: t('auto.k0606') };
+                // Compatible fallback for extended levels:
+                // 0 -> treat as lowest, >=6 -> treat as highest.
+                case '0':
+                    return { colorName: 'level1color', levelName: '' };
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    return { colorName: 'level5color', levelName: t('auto.k0606') };
+                default:
+                    return { colorName: 'level1color', levelName: '' };
+            }
+        };
+        const sameId = (a, b) => normalizeValue(a) === normalizeValue(b);
 
         // Comment translated to English.
         const dealProcotol = () => {
@@ -253,7 +280,7 @@ export default {
             } else {
                 let findcodeIndex = -1;
                 if (DevID) {// Comment translated to English.
-                    findcodeIndex = allDevcom.data.findIndex(v => v.DevID === DevID)
+                    findcodeIndex = allDevcom.data.findIndex(v => sameId(v.DevID, DevID))
                     if (findcodeIndex !== -1) ProtocolCode = allDevcom.data[findcodeIndex]['ProtocolCode'];
                 }
                 for (let key in jsonarr) {
@@ -372,7 +399,7 @@ export default {
         async function fetchData(element, newshapeProps, dataWhere) {
             if (!newCommandData) return newshapeProps;
             // console.log(newCommandData);
-            let findNewValIndex = newCommandData.findIndex(v => v.DevID === element.key && v.collectData && v.collectData[element.name]);// Comment translated to English.
+            let findNewValIndex = newCommandData.findIndex(v => sameId(v.DevID, element.key) && v.collectData && v.collectData[element.name]);// Comment translated to English.
             if (findNewValIndex !== -1) {// Comment translated to English.
                 let collectVal = newCommandData[findNewValIndex]['collectData'][element.name];
                 // Comment translated to English.
@@ -383,7 +410,7 @@ export default {
                 // Comment translated to English.
                 if (newshapeProps.moduleJson.children[0].className === 'Text') {// Comment translated to English.
                     let srcalarm = [];
-                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => v.DevId === element.key && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === element.name); // Comment translated to English.
+                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === element.name); // Comment translated to English.
                     // Comment translated to English.
                     // console.log(srcalarm);
                     if (dataWhere) {// Comment translated to English.
@@ -424,7 +451,7 @@ export default {
                 if (newshapeProps.moduleJson.children[0].className === 'leakWater') {// Comment translated to English.
                     newshapeProps.moduleJson.children[0].attrs.data = collectVal;
                     let srcalarm = [];
-                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => v.DevId === element.key && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === element.name); // Comment translated to English.
+                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === element.name); // Comment translated to English.
                     // Comment translated to English.
                     // console.log(srcalarm)
                     if (srcalarm.length !== 0) {
@@ -504,8 +531,8 @@ export default {
                                 let srcalarmevent = [];
                                 if (alarmdata && alarmdata.data) {
                                     srcalarmevent = alarmdata.data.filter(v => el.eventskey ?
-                                        (v.NotifyModeID === el.eventskey || (v.DevId === el.eventsdevkey && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === el.name)) :
-                                        (v.DevId === el.deveventskey)); // Comment translated to English.
+                                        (v.NotifyModeID === el.eventskey || (sameId(v.DevId, el.eventsdevkey) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === el.name)) :
+                                        (sameId(v.DevId, el.deveventskey))); // Comment translated to English.
                                     // Comment translated to English.
                                     // console.log(srcalarmevent);
                                 }
@@ -569,7 +596,7 @@ export default {
                                     if (type === 'cusparam') {
                                         res.data = historyparamdata.data.filter(v => v.ParamId === el.paramskey)
                                     } else {
-                                        res.data = newHistoryData.filter(v => parseInt(v.DevID) === parseInt(el.devkey))
+                                        res.data = newHistoryData.filter(v => sameId(v.DevID, el.devkey))
                                     }
                                     // Comment translated to English.
                                     // console.log(el.devkey)
@@ -680,7 +707,7 @@ export default {
                                         let res = {
                                             data: []
                                         };
-                                        res.data = newCommandData.filter(v => v.DevID === element.devkey);
+                                        res.data = newCommandData.filter(v => sameId(v.DevID, element.devkey));
                                         if (res.data) {
                                             let findthis = res.data.findIndex(val => val.collectData[element.name] && val.collectData);
                                             if (findthis > -1) {
@@ -727,7 +754,7 @@ export default {
                                         let res = {
                                             data: []
                                         };
-                                        res.data = newCommandData.filter(v => v.DevID === element.devkey);
+                                        res.data = newCommandData.filter(v => sameId(v.DevID, element.devkey));
                                         if (res.data) {
                                             let findthis = res.data.findIndex(val => val.collectData[element.name] && val.collectData);
                                             if (findthis > -1) {
@@ -758,7 +785,7 @@ export default {
                             let res = {
                                 data: []
                             };
-                            res.data = newCommandData.filter(v => v.DevID === element.key);
+                            res.data = newCommandData.filter(v => sameId(v.DevID, element.key));
                             if (res.data) {
                                 // Comment translated to English.
                                 if (newshapeProps.moduleJson.children[0].className === 'wetHtml') {// Comment translated to English.
@@ -766,8 +793,8 @@ export default {
                                     let srcalarmwen = [];
                                     let srcalarmwet = [];
                                     if (alarmdata && alarmdata.data) {
-                                        srcalarmwen = alarmdata.data.filter(v => v.DevId === element.key && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === t('auto.k0610')); // Comment translated to English.
-                                        srcalarmwet = alarmdata.data.filter(v => v.DevId === element.key && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === t('auto.k0611')); // Comment translated to English.
+                                        srcalarmwen = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === t('auto.k0610')); // Comment translated to English.
+                                        srcalarmwet = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === t('auto.k0611')); // Comment translated to English.
                                     }
                                     if (findthis > -1) {
                                         let findData = res.data[findthis]['collectData'];
@@ -852,22 +879,13 @@ export default {
                         if (alarmdata && alarmdata.data) {
                             // Comment translated to English.
                             alarmdata.data.forEach(element => {
-                                if (element.AlarmLevel === '1') {
-                                    element.colorName = 'level1color';
-                                    element.LevelName = t('auto.k0602');
-                                } else if (element.AlarmLevel === '2') {
-                                    element.colorName = 'level2color';
-                                    element.LevelName = t('auto.k0603');
-                                } else if (element.AlarmLevel === '3') {
-                                    element.colorName = 'level3color';
-                                    element.LevelName = t('auto.k0604');
-                                } else if (element.AlarmLevel === '4') {
-                                    element.colorName = 'level4color';
-                                    element.LevelName = t('auto.k0605');
-                                } else if (element.AlarmLevel === '5') {
-                                    element.colorName = 'level5color';
-                                    element.LevelName = t('auto.k0606');
-                                }
+                                const rawLevel = (
+                                    element.AlarmLevel !== undefined ? element.AlarmLevel
+                                        : (element.alarmLevel !== undefined ? element.alarmLevel : element.level)
+                                );
+                                const levelMeta = resolveAlarmLevelMeta(rawLevel);
+                                element.colorName = levelMeta.colorName;
+                                if (levelMeta.levelName) element.LevelName = levelMeta.levelName;
                                 element.AlarmName = element.TypeName;
                                 element.AlarmTime = element.update_time;
                                 if (element.TextMessage) {// Comment translated to English.

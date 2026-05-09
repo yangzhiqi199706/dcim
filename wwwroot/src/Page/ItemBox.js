@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { nav } from './ItemNav';
 import BasicComponents from './Data/BasicComponents';
 import ScreenTemplate from './Data/ScreenTemplate';
@@ -16,8 +16,6 @@ function ItemBox(props) {
 
     const [showDelbtn, setshowDelbtn] = useState(0);
     const [showTplDelbtn, setshowTplDelbtn] = useState(0);
-    const [hoverPreviewImg, setHoverPreviewImg] = useState('');
-    const [hoverPreviewPos, setHoverPreviewPos] = useState({ x: 0, y: 0 });
 
     const [editPageId, seteditPageId] = useState();
     const [editPageName, seteditPageName] = useState();
@@ -31,6 +29,31 @@ function ItemBox(props) {
 
     const [isdelModalOpen, setIsdelModalOpen] = useState(false);
     const [showeditPageBox, setshoweditPageBox] = useState(false);
+
+    const normalizePageTxt = (val) => String(val || '')
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()
+        .replace(/\.txt$/i, '')
+        .trim();
+
+    const duplicateMsgHints = ['已存在', 'already exists', 'duplicate', '重复'];
+    const isDuplicateCreateError = (res) => {
+        if (!res || res.code === 100) return false;
+        const msg = String((res.msg || '')).toLowerCase();
+        return duplicateMsgHints.some((hint) => msg.includes(hint.toLowerCase()));
+    };
+
+    const collectExistingPages = (items, collector) => {
+        if (!Array.isArray(items)) return;
+        items.forEach((item) => {
+            if (!item || typeof item !== 'object') return;
+            collector(item);
+            if (Array.isArray(item.children) && item.children.length > 0) {
+                collectExistingPages(item.children, collector);
+            }
+        });
+    };
 
     useEffect(() => {
         if (selectedNav === 0) getImgData('page');
@@ -341,7 +364,7 @@ function ItemBox(props) {
         return true;
     };
 
-    const onTreeSelect = async (val) => {
+    const onTreeSelect = (val) => {
         if (val[0]) {
             if (pagedata.length !== 0) {
                 let thisPage = pagedata.findIndex((v) => String(v.id) === String(val[0].split('-')[0]));
@@ -353,7 +376,7 @@ function ItemBox(props) {
                     seteditPageIndex(pagedata[thisPage].PageIndex);
                     seteditPageLink(pagedata[thisPage].PageLink);
                     seteditPageType(pagedata[thisPage].PageType);
-                    await props.onChangeDragUrl(
+                    props.onChangeDragUrl(
                         pagedata[thisPage].iconBase64,
                         JSON.parse(JSON.stringify(pagedata[thisPage].moduleJson)),
                         `${pagedata[thisPage].PageTxt}&${pagedata[thisPage].PageIndex}&${pagedata[thisPage].PageName}&${pagedata[thisPage].id}&${pagedata[thisPage].PageType}`
@@ -395,7 +418,7 @@ function ItemBox(props) {
                     const importData = info.file.response.data;
                     const duplicateByTxt = !!(importData && importData.duplicateByTxt);
                     if (duplicateByTxt) {
-                        message.warning('ҳ���Ѵ��ڣ�����������ҳ��');
+                        message.warning(t('itemBox.duplicatePageSkipped'));
                         getImgData('page');
                         return;
                     }
@@ -411,10 +434,10 @@ function ItemBox(props) {
                     const importedTxtStem = importedTxtName.replace(/\.txt$/i, '');
                     const pageNameFromPackage = uploadedFileStem
                         .replace(/\[[^\]]*]/g, '')
-                        .replace(/��[^��]*��/g, '')
+                        .replace(/\uFF3B[^\uFF3D]*\uFF3D/g, '')
                         .trim();
                     const importedPageName = pageNameFromPackage || importedTxtStem || `import_${Date.now()}`;
-                    const packageIndexMatches = [...uploadedFileStem.matchAll(/\[([^\]]+)\]|��([^��]+)��/g)];
+                    const packageIndexMatches = [...uploadedFileStem.matchAll(/\[([^\]]+)\]|\uFF3B([^\uFF3D]+)\uFF3D/g)];
                     let packagePageIndex = '';
                     packageIndexMatches.some((match) => {
                         const rawIndex = String(match[1] || match[2] || '').trim();
@@ -443,6 +466,26 @@ function ItemBox(props) {
                         collectMaxIndex(pageListRes.data);
                     }
 
+                    let duplicateByPageMeta = false;
+                    if (pageListRes && pageListRes.code === 100) {
+                        const targetName = String(importedPageName || '').trim().toLowerCase();
+                        const targetTxt = normalizePageTxt(importedTxtStem || importedTxtName).toLowerCase();
+                        collectExistingPages(pageListRes.data, (item) => {
+                            if (duplicateByPageMeta) return;
+                            const itemName = String(item.PageName || '').trim().toLowerCase();
+                            const itemTxt = normalizePageTxt(item.PageTxt).toLowerCase();
+                            if ((targetName && itemName && itemName === targetName) || (targetTxt && itemTxt && itemTxt === targetTxt)) {
+                                duplicateByPageMeta = true;
+                            }
+                        });
+                    }
+                    if (duplicateByPageMeta) {
+                        await httpsend.getDataLocal('imgData', { action: 'delpage', name: importedTxtStem || importedTxtName });
+                        message.warning(t('itemBox.duplicatePageSkipped'));
+                        getImgData('page');
+                        return;
+                    }
+
                     const createRes = await httpsend.getData('CreateDmpageKey', {
                         PageType: '1',
                         PageName: importedPageName,
@@ -455,6 +498,10 @@ function ItemBox(props) {
 
                     if (createRes && createRes.code === 100) {
                         message.success(t('itemBox.importSuccess'));
+                        getImgData('page');
+                    } else if (isDuplicateCreateError(createRes)) {
+                        await httpsend.getDataLocal('imgData', { action: 'delpage', name: importedTxtStem || importedTxtName });
+                        message.warning(t('itemBox.duplicatePageSkipped'));
                         getImgData('page');
                     } else {
                         await httpsend.getDataLocal('imgData', { action: 'delpage', name: importedTxtStem || importedTxtName });
@@ -498,7 +545,7 @@ function ItemBox(props) {
             const lowerUrl = fileUrl.toLowerCase();
             const fileExt = lowerUrl.endsWith('.zip') ? '.zip' : (lowerUrl.endsWith('.txt') ? '.txt' : '');
             if (fileExt !== '.zip') {
-                message.warning('�����ӿ�δ���� zip������������ Node �ӿں�����');
+                message.warning(t('itemBox.exportNotZipWarning'));
             }
             a.download = `${editPageName}[${editPageIndex}]${fileExt}`;
             document.body.appendChild(a);
@@ -523,40 +570,27 @@ function ItemBox(props) {
             <div>
                 {selectedNav === 5 && (
                     <>
-                        <div className="galleryToolbar uploadBtn">
-                            <div className="galleryToolbarLeft">
-                                <Upload {...uploadprops}>
-                                    <Button type="primary">{t('common.upload')}</Button>
-                                </Upload>
-                            </div>
-                            <div className="galleryToolbarRight">
-                                <Button className="delBtn" type="primary" danger onClick={() => setshowDelbtn(1)} style={showDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
-                                <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
-                            </div>
+                        <div className="uploadBtn">
+                            <Upload {...uploadprops}>
+                                <Button type="primary">{t('common.upload')}</Button>
+                            </Upload>
+                            <Button className="delBtn" type="primary" danger onClick={() => setshowDelbtn(1)} style={showDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
+                            <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
                         </div>
-                        <div className="galleryListOnly" style={{ marginTop: '42px' }} onMouseLeave={() => setHoverPreviewImg('')}>
+                        <div style={{ marginTop: '42px' }}>
                             {selectedData.map((v, index) => (
                                 <div className="itmeOne" key={index}>
                                     <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img')} />
                                     <img
                                         src={v.iconBase64}
                                         alt={JSON.stringify(v.moduleJson)}
-                                        onMouseEnter={(e) => {
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            setHoverPreviewImg(v.iconBase64);
-                                            setHoverPreviewPos({ x: rect.right + 16, y: rect.top });
-                                        }}
                                         onDragStart={(e) => {
                                             props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
                                         }}
-                                        className={hoverPreviewImg === v.iconBase64 ? 'galleryThumb active' : 'galleryThumb'}
                                     />
                                 </div>
                             ))}
                         </div>
-                        {hoverPreviewImg && <div className="galleryHoverPreview" style={{ left: hoverPreviewPos.x, top: hoverPreviewPos.y }}>
-                            <img src={hoverPreviewImg} alt="preview" className="galleryPreviewImg" />
-                        </div>}
                     </>
                 )}
 
@@ -573,12 +607,10 @@ function ItemBox(props) {
                                     <img
                                         src="Images/icon/tpl.png"
                                         alt={JSON.stringify(v.moduleJson)}
-                                        className="galleryThumb"
                                         onDragStart={(e) => {
                                             props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
                                         }}
                                     />
-
                                     <div title={v.moduleName}>{v.moduleName}</div>
                                 </div>
                             ))}
@@ -588,15 +620,15 @@ function ItemBox(props) {
 
                 {selectedNav === 0 && (
                     <>
-                        <div className="uploadBtn pageToolbar">
-                            {editPageId && <Button className="delBtn pageToolbarBtn" type="primary" danger onClick={() => setIsdelModalOpen(true)}>{t('common.delete')}</Button>}
+                        <div className="uploadBtn">
+                            {editPageId && <Button className="delBtn" type="primary" danger onClick={() => setIsdelModalOpen(true)}>{t('common.delete')}</Button>}
                             <Upload {...uploadPageprops}>
-                                <Button className="pageToolbarBtn" type="primary">{t('common.import')}</Button>
+                                <Button type="primary">{t('common.import')}</Button>
                             </Upload>
-                            {(editPageId && editPageTxt) && <Button className="pageToolbarBtn" type="primary" onClick={exportPage}>{t('common.export')}</Button>}
-                            {editPageId && <Button className="pageToolbarBtn" type="primary" onClick={() => setshoweditPageBox(true)}>{t('common.settings')}</Button>}
+                            {(editPageId && editPageTxt) && <Button type="primary" onClick={exportPage}>{t('common.export')}</Button>}
+                            {editPageId && <Button type="primary" onClick={() => setshoweditPageBox(true)}>{t('common.settings')}</Button>}
                         </div>
-                        <div className="pageTreeWrap">
+                        <div style={{ marginTop: '62px' }}>
                             {selectedData.length > 0 && (
                                 <Tree
                                     showLine
@@ -664,9 +696,9 @@ function ItemBox(props) {
                                 )}
                                 <div>
                                     <label>{t('itemBox.homepageDisplay')}</label>
-                                    <select style={{ width: '167px' }} value={editPageTop} onChange={(e) => seteditPageTop(e.target.value)}>
-                                        <option value="1">{t('common.yes')}</option>
-                                        <option value="-1">{t('common.no')}</option>
+                                    <select style={{ width: '167px' }} onChange={(e) => seteditPageTop(e.target.value)}>
+                                        <option value="1" selected={editPageTop === '1'}>{t('common.yes')}</option>
+                                        <option value="-1" selected={editPageTop === '-1'}>{t('common.no')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -708,7 +740,6 @@ function ItemBox(props) {
                 {(selectedNav === 1 || selectedNav === 2 || selectedNav === 4) && selectedData.map((v, index) => (
                     <div className="itmeOne" key={index}>
                         <img
-                            className="galleryThumb"
                             src={v.iconBase64}
                             alt={JSON.stringify(v.moduleJson)}
                             onDragStart={(e) => {

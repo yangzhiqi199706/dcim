@@ -416,65 +416,186 @@ function normalizeZipEntryName(rawName) {
   return normalized;
 }
 
-function parseZipEntriesFromBuffer(zipBuffer) {
-  const entries = [];
-  let offset = 0;
+function readUInt64LEAsNumber(buffer, offset) {
+  if (offset + 8 > buffer.length) {
+    throw new Error('invalid zip64 field length');
+  }
+  const low = buffer.readUInt32LE(offset);
+  const high = buffer.readUInt32LE(offset + 4);
+  const value = (high * 0x100000000) + low;
+  if (!Number.isSafeInteger(value)) {
+    throw new Error('zip64 field exceeds safe integer range');
+  }
+  return value;
+}
 
-  while (offset + 4 <= zipBuffer.length) {
-    const signature = zipBuffer.readUInt32LE(offset);
-    if (signature === 0x02014b50 || signature === 0x06054b50) {
+function parseZip64Extra(extraFieldBuffer, needs = {}) {
+  const result = {};
+  let cursor = 0;
+
+  while (cursor + 4 <= extraFieldBuffer.length) {
+    const headerId = extraFieldBuffer.readUInt16LE(cursor);
+    const dataSize = extraFieldBuffer.readUInt16LE(cursor + 2);
+    const dataStart = cursor + 4;
+    const dataEnd = dataStart + dataSize;
+    if (dataEnd > extraFieldBuffer.length) break;
+
+    if (headerId === 0x0001) {
+      let valueCursor = dataStart;
+      if (needs.uncompressedSize && valueCursor + 8 <= dataEnd) {
+        result.uncompressedSize = readUInt64LEAsNumber(extraFieldBuffer, valueCursor);
+        valueCursor += 8;
+      }
+      if (needs.compressedSize && valueCursor + 8 <= dataEnd) {
+        result.compressedSize = readUInt64LEAsNumber(extraFieldBuffer, valueCursor);
+        valueCursor += 8;
+      }
+      if (needs.localHeaderOffset && valueCursor + 8 <= dataEnd) {
+        result.localHeaderOffset = readUInt64LEAsNumber(extraFieldBuffer, valueCursor);
+      }
       break;
     }
-    if (signature !== 0x04034b50) {
-      throw new Error('invalid zip local header');
+
+    cursor = dataEnd;
+  }
+
+  return result;
+}
+
+function findEndOfCentralDirectoryOffset(zipBuffer) {
+  if (!zipBuffer || zipBuffer.length < 22) return -1;
+  const minOffset = Math.max(0, zipBuffer.length - 22 - 0xffff);
+  for (let offset = zipBuffer.length - 22; offset >= minOffset; offset -= 1) {
+    if (zipBuffer.readUInt32LE(offset) === 0x06054b50) {
+      return offset;
     }
-    if (offset + 30 > zipBuffer.length) {
-      throw new Error('invalid zip header size');
+  }
+  return -1;
+}
+
+function parseZipEntriesFromBuffer(zipBuffer) {
+  if (!Buffer.isBuffer(zipBuffer) || zipBuffer.length < 22) {
+    throw new Error('invalid zip content');
+  }
+
+  const entries = [];
+  const eocdOffset = findEndOfCentralDirectoryOffset(zipBuffer);
+  if (eocdOffset < 0) {
+    throw new Error('invalid zip central directory');
+  }
+
+  const centralDirSize = zipBuffer.readUInt32LE(eocdOffset + 12);
+  const centralDirOffset = zipBuffer.readUInt32LE(eocdOffset + 16);
+  const commentLength = zipBuffer.readUInt16LE(eocdOffset + 20);
+  const eocdEnd = eocdOffset + 22 + commentLength;
+  if (eocdEnd > zipBuffer.length) {
+    throw new Error('invalid zip end record');
+  }
+
+  const centralDirEnd = centralDirOffset + centralDirSize;
+  if (centralDirOffset < 0 || centralDirEnd > zipBuffer.length || centralDirEnd < centralDirOffset) {
+    throw new Error('invalid zip central directory range');
+  }
+
+  let offset = centralDirOffset;
+  while (offset + 46 <= centralDirEnd) {
+    const signature = zipBuffer.readUInt32LE(offset);
+    if (signature !== 0x02014b50) {
+      throw new Error('invalid zip central file header');
     }
 
-    const flags = zipBuffer.readUInt16LE(offset + 6);
-    const compressionMethod = zipBuffer.readUInt16LE(offset + 8);
-    const compressedSize = zipBuffer.readUInt32LE(offset + 18);
-    const fileNameLength = zipBuffer.readUInt16LE(offset + 26);
-    const extraFieldLength = zipBuffer.readUInt16LE(offset + 28);
+    const flags = zipBuffer.readUInt16LE(offset + 8);
+    const compressionMethod = zipBuffer.readUInt16LE(offset + 10);
+    let compressedSize = zipBuffer.readUInt32LE(offset + 20);
+    let uncompressedSize = zipBuffer.readUInt32LE(offset + 24);
+    const fileNameLength = zipBuffer.readUInt16LE(offset + 28);
+    const extraFieldLength = zipBuffer.readUInt16LE(offset + 30);
+    const fileCommentLength = zipBuffer.readUInt16LE(offset + 32);
+    let localHeaderOffset = zipBuffer.readUInt32LE(offset + 42);
 
-    if ((flags & 0x0008) !== 0) {
-      throw new Error('zip data descriptor is not supported');
-    }
-
-    const fileNameStart = offset + 30;
+    const fileNameStart = offset + 46;
     const fileNameEnd = fileNameStart + fileNameLength;
-    const dataStart = fileNameEnd + extraFieldLength;
-    const dataEnd = dataStart + compressedSize;
+    const extraFieldStart = fileNameEnd;
+    const extraFieldEnd = extraFieldStart + extraFieldLength;
+    const centralEntryEnd = extraFieldEnd + fileCommentLength;
+    if (centralEntryEnd > centralDirEnd || centralEntryEnd > zipBuffer.length) {
+      throw new Error('invalid zip central entry range');
+    }
 
-    if (dataEnd > zipBuffer.length) {
-      throw new Error('invalid zip data range');
+    const extraFieldBuffer = zipBuffer.slice(extraFieldStart, extraFieldEnd);
+    const zip64Values = parseZip64Extra(extraFieldBuffer, {
+      uncompressedSize: uncompressedSize === 0xffffffff,
+      compressedSize: compressedSize === 0xffffffff,
+      localHeaderOffset: localHeaderOffset === 0xffffffff,
+    });
+    if (uncompressedSize === 0xffffffff) {
+      if (typeof zip64Values.uncompressedSize !== 'number') {
+        throw new Error('zip64 uncompressed size is missing');
+      }
+      uncompressedSize = zip64Values.uncompressedSize;
+    }
+    if (compressedSize === 0xffffffff) {
+      if (typeof zip64Values.compressedSize !== 'number') {
+        throw new Error('zip64 compressed size is missing');
+      }
+      compressedSize = zip64Values.compressedSize;
+    }
+    if (localHeaderOffset === 0xffffffff) {
+      if (typeof zip64Values.localHeaderOffset !== 'number') {
+        throw new Error('zip64 local header offset is missing');
+      }
+      localHeaderOffset = zip64Values.localHeaderOffset;
     }
 
     const fileNameBuffer = zipBuffer.slice(fileNameStart, fileNameEnd);
     const useUtf8 = (flags & 0x0800) !== 0;
     const decodedName = useUtf8 ? fileNameBuffer.toString('utf8') : fileNameBuffer.toString('latin1');
     const entryName = normalizeZipEntryName(decodedName);
-
-    const compressedData = zipBuffer.slice(dataStart, dataEnd);
-    let dataBuffer = Buffer.alloc(0);
     const isDirectory = entryName.endsWith('/');
 
-    if (!isDirectory) {
-      if (compressionMethod === 0) {
-        dataBuffer = Buffer.from(compressedData);
-      } else if (compressionMethod === 8) {
-        dataBuffer = zlib.inflateRawSync(compressedData);
-      } else {
-        throw new Error(`unsupported zip compression method: ${compressionMethod}`);
-      }
-    }
-
     if (entryName) {
+      if (!isDirectory && (flags & 0x0001) !== 0) {
+        throw new Error('encrypted zip entry is not supported');
+      }
+
+      if (localHeaderOffset + 30 > zipBuffer.length) {
+        throw new Error('invalid zip local header');
+      }
+      const localHeaderSignature = zipBuffer.readUInt32LE(localHeaderOffset);
+      if (localHeaderSignature !== 0x04034b50) {
+        throw new Error('invalid zip local header');
+      }
+      const localFileNameLength = zipBuffer.readUInt16LE(localHeaderOffset + 26);
+      const localExtraFieldLength = zipBuffer.readUInt16LE(localHeaderOffset + 28);
+      const dataStart = localHeaderOffset + 30 + localFileNameLength + localExtraFieldLength;
+      const dataEnd = dataStart + compressedSize;
+      if (dataEnd > zipBuffer.length || dataEnd < dataStart) {
+        throw new Error('invalid zip data range');
+      }
+
+      const compressedData = zipBuffer.slice(dataStart, dataEnd);
+      let dataBuffer = Buffer.alloc(0);
+      if (!isDirectory) {
+        if (compressionMethod === 0) {
+          dataBuffer = Buffer.from(compressedData);
+        } else if (compressionMethod === 8) {
+          dataBuffer = zlib.inflateRawSync(compressedData);
+          if (uncompressedSize >= 0 && dataBuffer.length !== uncompressedSize) {
+            throw new Error('invalid zip uncompressed size');
+          }
+        } else {
+          throw new Error(`unsupported zip compression method: ${compressionMethod}`);
+        }
+      }
+
       entries.push({ name: entryName, data: dataBuffer, isDirectory });
     }
 
-    offset = dataEnd;
+    offset = centralEntryEnd;
+  }
+
+  if (offset !== centralDirEnd) {
+    throw new Error('invalid zip central directory tail');
   }
 
   return entries;
