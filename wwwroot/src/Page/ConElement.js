@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -16,8 +16,25 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, onDragMove
     const [imgurl] = useImage((shapeProps.moduleJson.children.length > 0 && (shapeProps.moduleJson.children[0].className === 'Image' || shapeProps.moduleJson.children[0].className === 'videoSwiper')) ? shapeProps.moduleJson.children[0].attrs.image : (shapeProps.src.indexOf('http') > -1 ? '../Images/' + shapeProps.src.split('/Images/')[0] : shapeProps.src));
     const groupRef = useRef();
     const transformRef = useRef();
+    const hoverTransformRef = useRef();
     const [newshapeProps, setnewshapeProps] = useState(null);
+    const [hoverPulseTick, setHoverPulseTick] = useState(0);
     const [divTab, setdivTab] = useState(0);
+
+    useEffect(() => {
+        if (!isHoverHighlighted) return undefined;
+        const timer = window.setInterval(() => {
+            setHoverPulseTick((prev) => prev + 1);
+        }, 450);
+        return () => window.clearInterval(timer);
+    }, [isHoverHighlighted]);
+
+    useEffect(() => {
+        if (isHoverHighlighted && hoverTransformRef.current) {
+            hoverTransformRef.current.nodes([groupRef.current]);
+            hoverTransformRef.current.getLayer().batchDraw();
+        }
+    }, [isHoverHighlighted, shapeProps, hoverPulseTick]);
 
     const toPositiveNumber = (value, fallback) => {
         const num = Number(value);
@@ -492,6 +509,17 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, onDragMove
 
                 })}
             </Group>
+            {isHoverHighlighted && (
+                <Transformer
+                    ref={hoverTransformRef}
+                    borderStroke="#13c2c2"
+                    borderStrokeWidth={hoverPulseTick % 2 === 0 ? 3 : 1}
+                    anchorSize={0}
+                    resizeEnabled={false}
+                    rotateEnabled={false}
+                    listening={false}
+                />
+            )}
             {(isSelected && shapeProps.draggable) && (
                 <Transformer
                     ref={transformRef}

@@ -123,6 +123,7 @@ function Home() {
     const lastSavedStageJsonRef = useRef('');
     const saveStatusTimerRef = useRef(null);
     const [tabFlash, setTabFlash] = useState('');
+    const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
 
     const formatTime = (date = new Date()) => {
         const hours = String(date.getHours()).padStart(2, '0');
@@ -468,6 +469,89 @@ function Home() {
 
     const canGroupSelection = selectedIds.length >= 2;
     const canUngroupSelection = isSelectionSingleGroup();
+
+    // F13 界面结构树 + hover 高亮
+    const getStructureItemLabel = (shape, index = 0) => {
+        if (!shape || !shape.moduleJson) return `元素 ${index + 1}`;
+        const firstChild = shape.moduleJson.children && shape.moduleJson.children[0] ? shape.moduleJson.children[0] : null;
+        const attrs = firstChild && firstChild.attrs ? firstChild.attrs : {};
+        return attrs.text || attrs.name || (firstChild && firstChild.className) || `元素 ${index + 1}`;
+    };
+
+    const getInterfaceStructure = () => {
+        const groupMap = {};
+        const singles = [];
+        images.forEach((shape, index) => {
+            const item = {
+                id: shape.id,
+                label: getStructureItemLabel(shape, index),
+                groupId: shape.groupId || '',
+            };
+            if (shape.groupId) {
+                if (!groupMap[shape.groupId]) {
+                    groupMap[shape.groupId] = {
+                        groupId: shape.groupId,
+                        label: `组合 ${Object.keys(groupMap).length + 1}`,
+                        members: [],
+                    };
+                }
+                groupMap[shape.groupId].members.push(item);
+            } else {
+                singles.push(item);
+            }
+        });
+        return { singles, groups: Object.values(groupMap) };
+    };
+
+    const selectStructureTarget = (shapeId, useGroupSelection = true) => {
+        const shape = imagesRef.current.find((item) => item.id === shapeId);
+        if (!shape) return;
+        const targetIds = useGroupSelection ? getExpandedSelectionIds(shapeId) : [shapeId];
+        if (targetIds.length > 1) {
+            selectShapes(targetIds);
+            selectedIdsRef.current = targetIds;
+        } else {
+            selectShapes([]);
+            selectedIdsRef.current = [];
+        }
+        setSelectedId(shapeId);
+        selectedIdRef.current = shapeId;
+        setDragShape(shape);
+    };
+
+    const scrollToStructureTarget = (shapeId, useGroupSelection = true) => {
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
+        if (!stage || !scroller) return;
+        const targetIds = useGroupSelection ? getExpandedSelectionIds(shapeId) : [shapeId];
+        const rects = targetIds
+            .map((id) => stage.findOne('#' + id))
+            .filter(Boolean)
+            .map((node) => node.getClientRect());
+        if (rects.length === 0) return;
+        const left = Math.min(...rects.map((rect) => rect.x));
+        const top = Math.min(...rects.map((rect) => rect.y));
+        const right = Math.max(...rects.map((rect) => rect.x + rect.width));
+        const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
+        const padding = 40;
+        const targetScrollLeft = Math.max(0, left - padding);
+        const targetScrollTop = Math.max(0, top - padding);
+        if (left < scroller.scrollLeft || right > scroller.scrollLeft + scroller.clientWidth) {
+            scroller.scrollLeft = targetScrollLeft;
+        }
+        if (top < scroller.scrollTop || bottom > scroller.scrollTop + scroller.clientHeight) {
+            scroller.scrollTop = targetScrollTop;
+        }
+    };
+
+    const handleStructureItemClick = (shapeId, useGroupSelection = true) => {
+        if (!shapeId) return;
+        selectStructureTarget(shapeId, useGroupSelection);
+        scrollToStructureTarget(shapeId, useGroupSelection);
+        setshowIndex(1);
+        setTabFlash('component');
+        setTimeout(() => setTabFlash(''), 650);
+    };
 
     // F8 剪贴板：copy / cut / paste（精简版：尚未引入锁定保护）
     const getClipboardSelectionShapes = () => {
@@ -2469,6 +2553,7 @@ function Home() {
                         <ul>
                             <li className={`${showIndex === 1 ? 'check' : ''} ${tabFlash === 'component' ? 'tabFlash' : ''}`.trim()} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
                             <li className={showIndex === 2 ? 'check' : ''} onClick={() => setshowIndex(2)}>{t('auto.k0395')}</li>
+                            <li className={showIndex === 3 ? 'check' : ''} onClick={() => setshowIndex(3)}>界面属性</li>
                         </ul>
                         {showIndex === 1 &&
                             <ElementAttr
@@ -2489,6 +2574,54 @@ function Home() {
                                     addToBackground(backgroundUrl);
                                 }} />
                             </>}
+                        {showIndex === 3 && (() => {
+                            const structure = getInterfaceStructure();
+                            return (
+                                <div className="interfaceAttrs">
+                                    <div className="attrTitle">未组合元素</div>
+                                    {structure.singles.length === 0 && <div className="attrBox">暂无未组合元素</div>}
+                                    {structure.singles.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className="attrBox interfaceItem"
+                                            onMouseEnter={() => setHoverHighlightIds([item.id])}
+                                            onMouseLeave={() => setHoverHighlightIds([])}
+                                            onClick={() => handleStructureItemClick(item.id, false)}
+                                        >
+                                            <label>{item.label}</label>
+                                            <span>{item.id}</span>
+                                        </div>
+                                    ))}
+                                    <div className="attrTitle">组合元素</div>
+                                    {structure.groups.length === 0 && <div className="attrBox">暂无组合</div>}
+                                    {structure.groups.map((group) => (
+                                        <div key={group.groupId} className="interfaceGroup">
+                                            <div
+                                                className="attrBox interfaceGroupHeader"
+                                                onMouseEnter={() => setHoverHighlightIds(group.members.map((m) => m.id))}
+                                                onMouseLeave={() => setHoverHighlightIds([])}
+                                                onClick={() => handleStructureItemClick(group.members.length > 0 ? group.members[0].id : '', true)}
+                                            >
+                                                <label>{group.label}</label>
+                                                <span>{group.members.length} 个元素</span>
+                                            </div>
+                                            {group.members.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="attrBox interfaceItem interfaceGroupMember"
+                                                    onMouseEnter={() => setHoverHighlightIds([item.id])}
+                                                    onMouseLeave={() => setHoverHighlightIds([])}
+                                                    onClick={() => handleStructureItemClick(item.id, true)}
+                                                >
+                                                    <label>{item.label}</label>
+                                                    <span>{item.id}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
                     <div
                         className="canvasBody"
@@ -2544,6 +2677,7 @@ function Home() {
                                         key={shape.id}
                                         shapeProps={shape}
                                         isSelected={isUnlocked && shape.id === selectedId && selectedIds.length === 0}
+                                        isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
