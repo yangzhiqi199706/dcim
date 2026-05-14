@@ -90,7 +90,8 @@ const getAlarmData = async (element, chartInfo, alarmDataList) => {
             { name: t('auto.k0142'), value: levelCount['5'] }
         ];
     }
-    const seriesAlarmData = alarmdata.filter((item) => Number(item.value) !== 0);
+    // const seriesAlarmData = alarmdata.filter((item) => Number(item.value) !== 0);
+    const seriesAlarmData = alarmdata;
     let data = [
         {
             type: 'pie',
