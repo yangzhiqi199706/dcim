@@ -212,6 +212,45 @@ function Home() {
         scalex: 1,
         scaley: 1
     });
+
+    const getBoundedDragPosition = (metrics, x, y) => {
+        if (!metrics) {
+            return { x, y };
+        }
+        const maxX = Math.max(0, stageWidth - metrics.width);
+        const maxY = Math.max(0, stageHeight - metrics.height);
+        return {
+            x: Math.min(Math.max(0, x), maxX),
+            y: Math.min(Math.max(0, y), maxY),
+        };
+    };
+
+    const getBoundedTransformerBox = (oldBox, newBox) => {
+        if (!newBox) return oldBox;
+        if (newBox.width < 5 || newBox.height < 5) {
+            return oldBox;
+        }
+        let nextBox = { ...newBox };
+        if (nextBox.x < 0) {
+            nextBox.width += nextBox.x;
+            nextBox.x = 0;
+        }
+        if (nextBox.y < 0) {
+            nextBox.height += nextBox.y;
+            nextBox.y = 0;
+        }
+        if (nextBox.x + nextBox.width > stageWidth) {
+            nextBox.width = stageWidth - nextBox.x;
+        }
+        if (nextBox.y + nextBox.height > stageHeight) {
+            nextBox.height = stageHeight - nextBox.y;
+        }
+        if (nextBox.width < 5 || nextBox.height < 5) {
+            return oldBox;
+        }
+        return nextBox;
+    };
+
     // Comment translated to English.
     const handleResize = (stageWidth, stageHeight) => {
         const normalizedWidth = normalizeStageSize(stageWidth, 1920);
@@ -1818,13 +1857,7 @@ function Home() {
                                 <Transformer
                                     ref={transformRefids}
                                     flipEnabled={false}
-                                    boundBoxFunc={(oldBox, newBox) => {
-                                        if (newBox.width < 5 || newBox.height < 5) {
-                                            return oldBox;
-                                        }
-                                        return newBox;
-
-                                    }} />
+                                    boundBoxFunc={(oldBox, newBox) => getBoundedTransformerBox(oldBox, newBox)} />
                                 <Rect fill="rgba(0,0,255,0.5)" ref={selectionRectRef} />
                             </Layer>
                         </Stage> : <Stage
