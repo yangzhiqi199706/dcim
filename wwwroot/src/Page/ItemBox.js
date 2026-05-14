@@ -16,6 +16,8 @@ function ItemBox(props) {
 
     const [showDelbtn, setshowDelbtn] = useState(0);
     const [showTplDelbtn, setshowTplDelbtn] = useState(0);
+    const [hoverPreviewImg, setHoverPreviewImg] = useState('');
+    const [hoverPreviewPos, setHoverPreviewPos] = useState({ x: 0, y: 0 });
 
     const [editPageId, seteditPageId] = useState();
     const [editPageName, seteditPageName] = useState();
@@ -124,20 +126,24 @@ function ItemBox(props) {
 
     const changeSelectedNav = (id) => {
         setSelectedNav(id);
+        const localizedBasicComponents = localizeDeep(BasicComponents);
         switch (id) {
             case 1:
-                setSelectedData(localizeDeep(BasicComponents));
+                setSelectedData(localizedBasicComponents.filter((item) => item.moduleJson && item.moduleJson.children && item.moduleJson.children[0] && item.moduleJson.children[0].className !== 'Echart'));
                 break;
             case 2:
-                setSelectedData(localizeDeep(ScreenTemplate));
+                setSelectedData(localizedBasicComponents.filter((item) => item.moduleJson && item.moduleJson.children && item.moduleJson.children[0] && item.moduleJson.children[0].className === 'Echart'));
                 break;
             case 3:
-                getImgData('tpl');
+                setSelectedData(localizeDeep(ScreenTemplate));
                 break;
             case 4:
-                getImgData('system');
+                getImgData('tpl');
                 break;
             case 5:
+                getImgData('system');
+                break;
+            case 6:
                 getImgData('upload');
                 break;
             case 0:
@@ -568,33 +574,46 @@ function ItemBox(props) {
                 ))}
             </ul>
             <div>
-                {selectedNav === 5 && (
+                {selectedNav === 6 && (
                     <>
-                        <div className="uploadBtn">
-                            <Upload {...uploadprops}>
-                                <Button type="primary">{t('common.upload')}</Button>
-                            </Upload>
-                            <Button className="delBtn" type="primary" danger onClick={() => setshowDelbtn(1)} style={showDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
-                            <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
+                        <div className="galleryToolbar uploadBtn">
+                            <div className="galleryToolbarLeft">
+                                <Upload {...uploadprops}>
+                                    <Button type="primary">{t('common.upload')}</Button>
+                                </Upload>
+                            </div>
+                            <div className="galleryToolbarRight">
+                                <Button className="delBtn" type="primary" danger onClick={() => setshowDelbtn(1)} style={showDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
+                                <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
+                            </div>
                         </div>
-                        <div style={{ marginTop: '42px' }}>
+                        <div className="galleryListOnly" style={{ marginTop: '42px' }} onMouseLeave={() => setHoverPreviewImg('')}>
                             {selectedData.map((v, index) => (
                                 <div className="itmeOne" key={index}>
                                     <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img')} />
                                     <img
                                         src={v.iconBase64}
                                         alt={JSON.stringify(v.moduleJson)}
+                                        onMouseEnter={(e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setHoverPreviewImg(v.iconBase64);
+                                            setHoverPreviewPos({ x: rect.right + 16, y: rect.top });
+                                        }}
                                         onDragStart={(e) => {
                                             props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
                                         }}
+                                        className={hoverPreviewImg === v.iconBase64 ? 'galleryThumb active' : 'galleryThumb'}
                                     />
                                 </div>
                             ))}
                         </div>
+                        {hoverPreviewImg && <div className="galleryHoverPreview" style={{ left: hoverPreviewPos.x, top: hoverPreviewPos.y }}>
+                            <img src={hoverPreviewImg} alt="preview" className="galleryPreviewImg" />
+                        </div>}
                     </>
                 )}
 
-                {selectedNav === 3 && (
+                {selectedNav === 4 && (
                     <>
                         <div className="uploadBtn">
                             <Button className="delBtn" type="primary" danger onClick={() => setshowTplDelbtn(1)} style={showTplDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
@@ -607,6 +626,7 @@ function ItemBox(props) {
                                     <img
                                         src="Images/icon/tpl.png"
                                         alt={JSON.stringify(v.moduleJson)}
+                                        className="galleryThumb"
                                         onDragStart={(e) => {
                                             props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
                                         }}
@@ -737,16 +757,17 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 4) && selectedData.map((v, index) => (
+                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5) && selectedData.map((v, index) => (
                     <div className="itmeOne" key={index}>
                         <img
+                            className="galleryThumb"
                             src={v.iconBase64}
                             alt={JSON.stringify(v.moduleJson)}
                             onDragStart={(e) => {
                                 props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
                             }}
                         />
-                        {selectedNav !== 3 && <div>{v.moduleName}</div>}
+                        {v.moduleName && <div>{v.moduleName}</div>}
                     </div>
                 ))}
             </div>

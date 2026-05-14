@@ -70,6 +70,21 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .pageToolbox{width:78px!important;float: right!important;line-height: 1!important;}
 .pageToolbox svg{width:16px;height:16px;margin-left: 2px;vertical-align: bottom;}
 
+.galleryThumb{
+  width:32px;
+  height:32px;
+  padding:4px;
+  border:1px solid #ddd;
+  object-fit:contain;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.galleryThumb.active,.galleryThumb:hover{border:2px solid #1e9fff;box-shadow:0 0 0 2px rgba(30,159,255,.15);}
+.galleryToolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.galleryToolbarLeft,.galleryToolbarRight{display:flex;align-items:center;gap:8px;}
+.galleryToolbarRight{flex-wrap:wrap;justify-content:flex-end;}
+.galleryHoverPreview{position:fixed;width:220px;height:220px;border:1px solid #ddd;box-shadow:0 4px 18px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;padding:10px;background:#fff;pointer-events:none;z-index:9999;}
+.galleryPreviewImg{max-width:100%;max-height:100%;object-fit:contain;}
+
 /* Comment translated to English. */
 .workContainer {
     position: relative;
