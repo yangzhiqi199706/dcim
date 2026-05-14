@@ -1990,6 +1990,21 @@ function Home() {
                 }
             });
         }
+        // F5 切换模板/页面前先清理多拖 / 磁吸 / 选择 / hover 状态
+        multiDragRef.current = {
+            active: false,
+            draggedId: null,
+            startPositions: {},
+            pendingPositions: null,
+        };
+        clearSnapGuides();
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
+        settoolType(null);
+        setHoverHighlightIds([]);
         setImages(tplimages);
         imagesRef.current = tplimages;
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
@@ -2861,6 +2876,20 @@ function Home() {
                                     setcanvasScale(100);
                                     setsavePageId(res.data.id);
                                     setsavePageTxt(res.data.PageTxt);
+                                    multiDragRef.current = {
+                                        active: false,
+                                        draggedId: null,
+                                        startPositions: {},
+                                        pendingPositions: null,
+                                    };
+                                    clearSnapGuides();
+                                    selectShapes([]);
+                                    selectedIdsRef.current = [];
+                                    setSelectedId(null);
+                                    selectedIdRef.current = null;
+                                    setDragShape(null);
+                                    settoolType(null);
+                                    setHoverHighlightIds([]);
                                     setImages([]);
                                     setBackgroundImage(null);
                                     setalarmCatch('1')
