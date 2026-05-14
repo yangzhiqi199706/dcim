@@ -168,6 +168,8 @@ const ElementAttr = memo((props) => {
     const [MyImages, setMyImages] = useState([]);// Comment translated to English.
     const [DefImages, setDefImages] = useState([]);// Comment translated to English.
     const [ShowImagesIndex, setShowImagesIndex] = useState(0);// Comment translated to English.
+    const [hoverPreviewImg, setHoverPreviewImg] = useState(null);
+    const [hoverPreviewKey, setHoverPreviewKey] = useState('');
 
     const [dataSelect, setdataSelect] = useState({
         all: [],
@@ -1819,21 +1821,48 @@ const ElementAttr = memo((props) => {
                 }
 
             </ul>
-            {ShowImagesIndex === 0 && <div className="layui-layer-content">
-                {
-                    MyImages.map((imgs, n) => {
-                        let unikey = shapeId + '0004' + n;
-                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => setimgChange(imgs.img, e)} alt={imgs.img} />)
-                    })
-                }
+            {ShowImagesIndex === 0 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => { setHoverPreviewImg(null); setHoverPreviewKey(''); }}>
+                <div className="selImgBox">
+                    {
+                        MyImages.map((imgs, n) => {
+                            let unikey = shapeId + '0004' + n;
+                            return (<img
+                                src={imgs.img}
+                                key={unikey}
+                                data-attrcode="image"
+                                data-attrwhere="myImage"
+                                onMouseEnter={() => { setHoverPreviewImg(imgs.img); setHoverPreviewKey(unikey); }}
+                                onClick={(e) => setimgChange(imgs.img, e)}
+                                alt={imgs.img}
+                                style={hoverPreviewKey === unikey ? { border: '2px solid red' } : undefined}
+                            />)
+                        })
+                    }
+                </div>
+                <div className="selImgPreview">
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>请选择左侧图片进行预览</span>}
+                </div>
             </div>}
-            {ShowImagesIndex === 1 && <div className="layui-layer-content">
-                {
-                    DefImages.map((imgs, n) => {
-                        let unikey = shapeId + '0004' + n;
-                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => setimgChange(imgs.img, e)} alt={imgs.img} />)
-                    })
-                }
+            {ShowImagesIndex === 1 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
+                <div className="selImgBox">
+                    {
+                        DefImages.map((imgs, n) => {
+                            let unikey = shapeId + '0004' + n;
+                            return (<img
+                                src={imgs.img}
+                                key={unikey}
+                                data-attrcode="image"
+                                data-attrwhere="myImage"
+                                onMouseEnter={() => setHoverPreviewImg(imgs.img)}
+                                onClick={(e) => setimgChange(imgs.img, e)}
+                                alt={imgs.img}
+                            />)
+                        })
+                    }
+                </div>
+                <div className="selImgPreview">
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>请选择左侧图片进行预览</span>}
+                </div>
             </div>}
             <span className="layui-layer-setwin" onClick={() => { setshowImgBox(0); setimgUrlId(0); }}>
                 <Close />
@@ -1852,13 +1881,26 @@ const ElementAttr = memo((props) => {
     attrList.push(
         <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" style={showGifImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
             <div className="layui-layer-title">{t('auto.k0511')}</div>
-            <div className="layui-layer-content">
-                {
-                    MyImages.map((imgs, n) => {
-                        let unikey = shapeId + '0007' + n;
-                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => dispatch({ type: "patch", formData: { val: imgs.img, name: "statusSelectColor", id: imgUrlId } })} alt={imgs.img} />)
-                    })
-                }
+            <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
+                <div className="selImgBox">
+                    {
+                        MyImages.map((imgs, n) => {
+                            let unikey = shapeId + '0007' + n;
+                            return (<img
+                                src={imgs.img}
+                                key={unikey}
+                                data-attrcode="image"
+                                data-attrwhere="myImage"
+                                onMouseEnter={() => setHoverPreviewImg(imgs.img)}
+                                onClick={(e) => dispatch({ type: "patch", formData: { val: imgs.img, name: "statusSelectColor", id: imgUrlId } })}
+                                alt={imgs.img}
+                            />)
+                        })
+                    }
+                </div>
+                <div className="selImgPreview">
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>图片预览</span>}
+                </div>
             </div>
             <span className="layui-layer-setwin" onClick={() => { setshowGifImgBox(0); setimgUrlId(0); }}>
                 <Close />
