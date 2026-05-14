@@ -116,6 +116,64 @@ function Home() {
     // Comment translated to English.
     const [canvasScale, setcanvasScale] = useState(100);
 
+    const [saveStatusText, setSaveStatusText] = useState('已保存');
+    const [lastAutoSaveTime, setLastAutoSaveTime] = useState('');
+    const lastSavedStageJsonRef = useRef('');
+    const saveStatusTimerRef = useRef(null);
+
+    const formatTime = (date = new Date()) => {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    };
+
+    const setSavedStatus = (text = '已保存') => {
+        if (saveStatusTimerRef.current) {
+            clearTimeout(saveStatusTimerRef.current);
+            saveStatusTimerRef.current = null;
+        }
+        setSaveStatusText(text);
+        if (text === '已自动保存') {
+            setLastAutoSaveTime(formatTime());
+        } else if (text === '已保存') {
+            setLastAutoSaveTime('');
+        }
+        if (text !== '已修改') {
+            saveStatusTimerRef.current = setTimeout(() => {
+                setSaveStatusText('已保存');
+                saveStatusTimerRef.current = null;
+            }, 1800);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (saveStatusTimerRef.current) {
+                clearTimeout(saveStatusTimerRef.current);
+            }
+        };
+    }, []);
+
+    const initialImagesSnapshotRef = useRef(false);
+    const saveStatusTextRef = useRef('已保存');
+    useEffect(() => {
+        saveStatusTextRef.current = saveStatusText;
+    }, [saveStatusText]);
+    useEffect(() => {
+        if (!initialImagesSnapshotRef.current) {
+            initialImagesSnapshotRef.current = true;
+            return;
+        }
+        if (saveStatusTextRef.current !== '已修改') {
+            if (saveStatusTimerRef.current) {
+                clearTimeout(saveStatusTimerRef.current);
+                saveStatusTimerRef.current = null;
+            }
+            setSaveStatusText('已修改');
+        }
+    }, [images, backgroundImage]);
+
     // Comment translated to English.
     const getevData = async (callback) => {
         let res = await httpsend.getData('GetDeviceListKey', {
@@ -1737,6 +1795,7 @@ function Home() {
                             </div>
                         </div>
                         <div className="topRight">
+                            <span className={`saveStatus ${saveStatusText === '已修改' ? 'dirty' : ''}`}>{saveStatusText === '已自动保存' && lastAutoSaveTime ? `${saveStatusText} · ${lastAutoSaveTime}` : saveStatusText}</span>
                             <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
@@ -1888,7 +1947,7 @@ function Home() {
                                 let savejson = await savePage('tpl');
                                 let res = await httpsend.getDataLocal('saveTpl', { name: saveTplName, tplcon: savejson });
                                 if (res) {
-                                    message.success(t('auto.k0443'));
+                                    message.success(t('auto.k0443')); setSavedStatus('已保存');
                                 }
                                 setsaveTplName('');
                                 setshowsaveTplBox(0);
@@ -1986,12 +2045,12 @@ function Home() {
                                     if (savePageType === '1') {// Comment translated to English.
                                         let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
                                         if (fileres.code === 100) {
-                                            message.success(t('auto.k0443'));
+                                            message.success(t('auto.k0443')); setSavedStatus('已保存');
                                         } else {
                                             message.error(t('auto.k0444'));
                                         }
                                     } else {
-                                        message.success(t('auto.k0443'));
+                                        message.success(t('auto.k0443')); setSavedStatus('已保存');
                                     }
                                 } else {
                                     message.error(t('auto.k0445'));
@@ -2029,12 +2088,12 @@ function Home() {
                                         if (savePageType === '1') {
                                             let res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
                                             if (res2.code === 100) {
-                                                message.success(t('auto.k0443'));
+                                                message.success(t('auto.k0443')); setSavedStatus('已保存');
                                             } else {
                                                 message.error(t('auto.k0444'));
                                             }
                                         } else {
-                                            message.success(t('auto.k0443'));
+                                            message.success(t('auto.k0443')); setSavedStatus('已保存');
                                         }
                                     } else {
                                         message.error(t('auto.k0445'));
