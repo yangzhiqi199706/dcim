@@ -120,6 +120,7 @@ function Home() {
     const [lastAutoSaveTime, setLastAutoSaveTime] = useState('');
     const lastSavedStageJsonRef = useRef('');
     const saveStatusTimerRef = useRef(null);
+    const [tabFlash, setTabFlash] = useState('');
 
     const formatTime = (date = new Date()) => {
         const hours = String(date.getHours()).padStart(2, '0');
@@ -154,6 +155,16 @@ function Home() {
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (!savePageId || savePageId === '0') return;
+        setshowIndex(1);
+        setTabFlash('component');
+        const timer = setTimeout(() => {
+            setTabFlash('');
+        }, 650);
+        return () => clearTimeout(timer);
+    }, [savePageId]);
 
     const initialImagesSnapshotRef = useRef(false);
     const saveStatusTextRef = useRef('已保存');
@@ -1809,7 +1820,7 @@ function Home() {
                         isChanged={savePageId} />
                     <div className="eleAttrs">
                         <ul>
-                            <li className={showIndex === 1 ? 'check' : ''} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
+                            <li className={`${showIndex === 1 ? 'check' : ''} ${tabFlash === 'component' ? 'tabFlash' : ''}`.trim()} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
                             <li className={showIndex === 2 ? 'check' : ''} onClick={() => setshowIndex(2)}>{t('auto.k0395')}</li>
                         </ul>
                         {showIndex === 1 &&
