@@ -327,10 +327,84 @@ function Home() {
         pendingPositions: null,
     });
 
-    // 默认直通；F7 组合落位后会改写为按组扩展
-    const expandDragSelectionIds = (ids /* , draggedId */) => {
-        return Array.isArray(ids) ? [...ids] : [];
+    // F7 组合：基于 shape.groupId 维护逻辑组
+    const getShapeGroupId = (shapeOrId) => {
+        const shape = typeof shapeOrId === 'string'
+            ? imagesRef.current.find((item) => item.id === shapeOrId)
+            : shapeOrId;
+        return shape && shape.groupId ? shape.groupId : '';
     };
+
+    const getGroupMemberIds = (groupId) => {
+        if (!groupId) return [];
+        return imagesRef.current.filter((item) => item.groupId === groupId).map((item) => item.id);
+    };
+
+    const getExpandedSelectionIds = (shapeOrId) => {
+        const shape = typeof shapeOrId === 'string'
+            ? imagesRef.current.find((item) => item.id === shapeOrId)
+            : shapeOrId;
+        if (!shape) return [];
+        if (!shape.groupId) return [shape.id];
+        const memberIds = getGroupMemberIds(shape.groupId);
+        return memberIds.length > 0 ? memberIds : [shape.id];
+    };
+
+    const createDerivedGroupId = (sourceGroupId) => {
+        if (!sourceGroupId) return null;
+        return `group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    };
+
+    // 组合扩展：拖动 / 选择某成员时把同组成员一并纳入
+    const expandDragSelectionIds = (ids, draggedShapeId) => {
+        const result = new Set();
+        const baseIds = Array.isArray(ids) ? ids : [];
+        const mergedIds = [...new Set([...(draggedShapeId ? [draggedShapeId] : []), ...baseIds])];
+        mergedIds.forEach((id) => {
+            getExpandedSelectionIds(id).forEach((memberId) => result.add(memberId));
+        });
+        return Array.from(result);
+    };
+
+    const groupSelectedShapes = () => {
+        if (!Array.isArray(selectedIdsRef.current) || selectedIdsRef.current.length < 2) return;
+        const groupId = `group_${Date.now()}`;
+        const nextImages = imagesRef.current.map((shape) => (
+            selectedIdsRef.current.includes(shape.id)
+                ? { ...shape, groupId }
+                : shape
+        ));
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+    };
+
+    const isSelectionSingleGroup = () => {
+        if (!Array.isArray(selectedIdsRef.current) || selectedIdsRef.current.length === 0) return false;
+        const groupIds = [...new Set(selectedIdsRef.current.map((id) => getShapeGroupId(id)).filter(Boolean))];
+        return groupIds.length === 1 && selectedIdsRef.current.every((id) => getShapeGroupId(id) === groupIds[0]);
+    };
+
+    const ungroupSelectedShapes = () => {
+        if (!isSelectionSingleGroup()) return;
+        const groupId = getShapeGroupId(selectedIdsRef.current[0]);
+        const memberIds = getGroupMemberIds(groupId);
+        const nextImages = imagesRef.current.map((shape) => (
+            memberIds.includes(shape.id)
+                ? { ...shape, groupId: null }
+                : shape
+        ));
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes(memberIds);
+        selectedIdsRef.current = memberIds;
+    };
+
+    const canGroupSelection = selectedIds.length >= 2;
+    const canUngroupSelection = isSelectionSingleGroup();
 
     const applyMultiDragPositions = (positionMap) => {
         if (!positionMap) return;
@@ -506,7 +580,13 @@ function Home() {
 
         // Comment translated to English.
         const onKeyDown = (e) => {
-            if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
+            if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+                e.preventDefault();
+                ungroupSelectedShapes();
+            } else if (e.ctrlKey && (e.key === 'G' || e.key === 'g')) {
+                e.preventDefault();
+                groupSelectedShapes();
+            } else if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
                 handleToolChange('copy');
             } else if (e.ctrlKey && e.key === 'ArrowUp') {
                 handleToolChange('up');
@@ -1897,7 +1977,8 @@ function Home() {
                                     }} />
                             </div>
                             <div className="topGroup topControls">
-                                {/* 磁吸 / 组合按钮位 — 后续 commit 填入 */}
+                                <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>组合</Button>
+                                <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>取消组合</Button>
                             </div>
                         </div>
                         <div className="topRight">
