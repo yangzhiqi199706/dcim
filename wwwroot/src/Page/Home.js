@@ -1721,20 +1721,29 @@ function Home() {
             {!isPreview &&
                 <>
                     <div className="top">
-                        <label>{t('auto.k0387')}</label>
-                        <ToolList
-                            MultiSelect={selectedIds.length !== 0}
-                            handleTool={(type) => {
-                                handleToolChange(type);
-                            }} />
-                        <Button type="primary" className="toolBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
-                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
-                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
-                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => savePage('page')}>{t('auto.k0391')}</Button>}
-                        {/* Comment translated to English. */}
-                        {/* Comment translated to English. */}
-                        <Button type="primary" className="toolBtn" onClick={() => savePage('editpage')}>{t('auto.k0392')}</Button>
-                        {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="toolBtn" onClick={() => setresetBox(true)}>{t('auto.k0393')}</Button>}
+                        <div className="topLeft">
+                            <label>{t('auto.k0387')}</label>
+                        </div>
+                        <div className="topCenter">
+                            <div className="topGroup topToolList">
+                                <ToolList
+                                    MultiSelect={selectedIds.length !== 0}
+                                    handleTool={(type) => {
+                                        handleToolChange(type);
+                                    }} />
+                            </div>
+                            <div className="topGroup topControls">
+                                {/* 磁吸 / 组合按钮位 — 后续 commit 填入 */}
+                            </div>
+                        </div>
+                        <div className="topRight">
+                            <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
+                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
+                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
+                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('page')}>{t('auto.k0391')}</Button>}
+                            <Button type="primary" className="topActionBtn" onClick={() => savePage('editpage')}>{t('auto.k0392')}</Button>
+                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setresetBox(true)}>{t('auto.k0393')}</Button>}
+                        </div>
                     </div>
                     <ItemBox
                         onChangeDragUrl={handleItemDragUrl}

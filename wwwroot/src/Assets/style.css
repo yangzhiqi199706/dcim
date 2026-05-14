@@ -35,10 +35,18 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 #root{overflow: hidden;}
 
 /* Comment translated to English. */
-.top{min-height:50px;background-color:#f3f3f3;padding-left:20px;border-bottom: 3px solid #ddd;position: relative;overflow: hidden;}
-.top label{font-size:20px;line-height:50px;display:block;float:left;margin-right:80px}
-.top button{float: right;margin-top: 10px;margin-right: 10px;width:65px;height:30px;font-size: 13px;padding:2px 0;background-color: #1e9fff;}
-.top svg{width: 30px;height: 30px;vertical-align: middle;fill: currentColor;overflow: hidden;margin: 10px 8px 0 0;cursor: pointer;}
+.top{min-height:50px;background-color:#f3f3f3;padding:0 20px;border-bottom: 3px solid #ddd;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.topLeft{display:flex;align-items:center;flex:0 0 auto;}
+.topLeft label{font-size:20px;line-height:50px;color:#222;white-space:nowrap;}
+.topCenter{display:flex;align-items:center;gap:16px;flex:1 1 auto;min-width:0;flex-wrap:wrap;}
+.topRight{display:flex;align-items:center;gap:14px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end;row-gap:10px;}
+.saveStatus{display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:16px;background:#eef6ff;color:#1e9fff;font-size:13px;white-space:nowrap;}
+.saveStatus.dirty{background:#fff1f0;color:#ff4d4f;}
+.topGroup{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.topToolList{min-height:50px;}
+.topControls button,.topActionBtn{min-width:72px;height:32px;font-size:13px;padding:2px 14px;margin:0 2px;}
+.topControl{height:32px;min-width:72px;}
+.top svg{width: 30px;height: 30px;vertical-align: middle;fill: currentColor;overflow: hidden;margin: 0 8px 0 0;cursor: pointer;}
 
 /* Comment translated to English. */
 .left{float: left;width:282px;height: calc(100vh - 53px);background-color: #ddd;position: relative;}
