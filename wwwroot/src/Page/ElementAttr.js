@@ -1,4 +1,4 @@
-﻿import React, { memo, useState, useEffect, useReducer } from 'react';
+﻿import React, { memo, useState, useEffect, useReducer, useRef, useCallback } from 'react';
 import { Close, Lock, PermMedia } from '@mui/icons-material';
 import httpsend from '../Assets/httpsend';
 import { Select, Button } from 'antd';
@@ -170,6 +170,83 @@ const ElementAttr = memo((props) => {
     const [ShowImagesIndex, setShowImagesIndex] = useState(0);// Comment translated to English.
     const [hoverPreviewImg, setHoverPreviewImg] = useState(null);
     const [hoverPreviewKey, setHoverPreviewKey] = useState('');
+
+    const [dialogPositions, setDialogPositions] = useState({});
+    const dialogRefs = useRef({});
+    const draggingDialogIdRef = useRef('');
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+    const handleDialogMouseMove = useCallback((e) => {
+        const dialogId = draggingDialogIdRef.current;
+        if (!dialogId) return;
+        const dialog = dialogRefs.current[dialogId];
+        if (!dialog) return;
+
+        const rect = dialog.getBoundingClientRect();
+        const canvasBody = document.querySelector('.canvasBody');
+        const boundaryRect = canvasBody ? canvasBody.getBoundingClientRect() : {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight,
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+        const dialogWidth = Math.min(rect.width, boundaryRect.width || rect.width);
+        const dialogHeight = Math.min(rect.height, boundaryRect.height || rect.height);
+        const minLeft = boundaryRect.left;
+        const maxLeft = Math.max(minLeft, boundaryRect.right - dialogWidth);
+        const minTop = boundaryRect.top;
+        const maxTop = Math.max(minTop, boundaryRect.bottom - dialogHeight);
+        const nextLeft = Math.min(Math.max(e.clientX - dragOffsetRef.current.x, minLeft), maxLeft);
+        const nextTop = Math.min(Math.max(e.clientY - dragOffsetRef.current.y, minTop), maxTop);
+
+        setDialogPositions((prev) => ({
+            ...prev,
+            [dialogId]: { left: nextLeft, top: nextTop }
+        }));
+    }, []);
+
+    const handleDialogMouseUp = useCallback(() => {
+        draggingDialogIdRef.current = '';
+        window.removeEventListener('mousemove', handleDialogMouseMove);
+        window.removeEventListener('mouseup', handleDialogMouseUp);
+    }, [handleDialogMouseMove]);
+
+    const handleDialogMouseDown = useCallback((dialogId, e) => {
+        if (e.button !== 0) return;
+        const dialog = dialogRefs.current[dialogId];
+        if (!dialog) return;
+
+        const rect = dialog.getBoundingClientRect();
+        draggingDialogIdRef.current = dialogId;
+        dragOffsetRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+
+        window.addEventListener('mousemove', handleDialogMouseMove);
+        window.addEventListener('mouseup', handleDialogMouseUp);
+    }, [handleDialogMouseMove, handleDialogMouseUp]);
+
+    const getDialogStyle = useCallback((dialogId, visible) => {
+        if (!visible) return { display: 'none' };
+        const position = dialogPositions[dialogId];
+        if (!position) return { display: 'block' };
+        return {
+            display: 'block',
+            left: position.left,
+            top: position.top,
+            transform: 'none'
+        };
+    }, [dialogPositions]);
+
+    useEffect(() => {
+        return () => {
+            window.removeEventListener('mousemove', handleDialogMouseMove);
+            window.removeEventListener('mouseup', handleDialogMouseUp);
+        };
+    }, [handleDialogMouseMove, handleDialogMouseUp]);
 
     const [dataSelect, setdataSelect] = useState({
         all: [],
@@ -1237,8 +1314,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0002'} id="chooseClick" style={showClickBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0477')}</div>
+        <div className="layui-layer" key={shapeId + '0002'} id="chooseClick" ref={(node) => { dialogRefs.current.chooseClick = node; }} style={getDialogStyle('chooseClick', showClickBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseClick', e)}>{t('auto.k0477')}</div>
             <div className="layui-layer-content">
                 <div className="attrBox">
                     <label>{t('auto.k0478')}</label>
@@ -1454,8 +1531,8 @@ const ElementAttr = memo((props) => {
     </div>)
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0005'} id="chooseDev" style={showDevBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0490')}</div>
+        <div className="layui-layer" key={shapeId + '0005'} id="chooseDev" ref={(node) => { dialogRefs.current.chooseDev = node; }} style={getDialogStyle('chooseDev', showDevBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseDev', e)}>{t('auto.k0490')}</div>
             <div className="layui-layer-content">
                 <div>
                     <label>{t('auto.k0491')}</label>
@@ -1493,8 +1570,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0003'} id="chooseParam" style={showParamBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0492')}</div>
+        <div className="layui-layer" key={shapeId + '0003'} id="chooseParam" ref={(node) => { dialogRefs.current.chooseParam = node; }} style={getDialogStyle('chooseParam', showParamBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseParam', e)}>{t('auto.k0492')}</div>
             <ul className="layui-nav">
                 {ShowParaIndex === 0 &&
                     <>
@@ -1585,8 +1662,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0006'} id="chooseParams" style={showParamsBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0498')}</div>
+        <div className="layui-layer" key={shapeId + '0006'} id="chooseParams" ref={(node) => { dialogRefs.current.chooseParams = node; }} style={getDialogStyle('chooseParams', showParamsBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseParams', e)}>{t('auto.k0498')}</div>
             <ul className="layui-nav">
                 {ShowParasIndex === 0 &&
                     <>
@@ -1674,8 +1751,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0008'} id="choosePage" style={showPagesBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0502')}</div>
+        <div className="layui-layer" key={shapeId + '0008'} id="choosePage" ref={(node) => { dialogRefs.current.choosePage = node; }} style={getDialogStyle('choosePage', showPagesBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('choosePage', e)}>{t('auto.k0502')}</div>
             <div className="layui-layer-content">
                 <div>
                     <label>{t('auto.k0503')}</label>
@@ -1716,8 +1793,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0009'} id="chooseEvents" style={showEventsBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0504')}</div>
+        <div className="layui-layer" key={shapeId + '0009'} id="chooseEvents" ref={(node) => { dialogRefs.current.chooseEvents = node; }} style={getDialogStyle('chooseEvents', showEventsBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseEvents', e)}>{t('auto.k0504')}</div>
             <ul className="layui-nav">
                 {ShowEventIndex === 0 &&
                     <>
@@ -1804,8 +1881,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0004'} id="chooseImg" style={showImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0508')}</div>
+        <div className="layui-layer" key={shapeId + '0004'} id="chooseImg" ref={(node) => { dialogRefs.current.chooseImg = node; }} style={getDialogStyle('chooseImg', showImgBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseImg', e)}>{t('auto.k0508')}</div>
             <ul className="layui-nav">
                 {ShowImagesIndex === 0 &&
                     <>
@@ -1879,8 +1956,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" style={showGifImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0511')}</div>
+        <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" ref={(node) => { dialogRefs.current.chooseGifImg = node; }} style={getDialogStyle('chooseGifImg', showGifImgBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseGifImg', e)}>{t('auto.k0511')}</div>
             <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
                 <div className="selImgBox">
                     {
