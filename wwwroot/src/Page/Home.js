@@ -356,13 +356,13 @@ function Home() {
         return `group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     };
 
-    // 组合扩展：拖动 / 选择某成员时把同组成员一并纳入
+    // 组合扩展：拖动 / 选择某成员时把同组成员一并纳入（排除锁定元素）
     const expandDragSelectionIds = (ids, draggedShapeId) => {
         const result = new Set();
         const baseIds = Array.isArray(ids) ? ids : [];
         const mergedIds = [...new Set([...(draggedShapeId ? [draggedShapeId] : []), ...baseIds])];
         mergedIds.forEach((id) => {
-            getExpandedSelectionIds(id).forEach((memberId) => result.add(memberId));
+            getUnlockedExpandedSelectionIds(id).forEach((memberId) => result.add(memberId));
         });
         return Array.from(result);
     };
@@ -402,6 +402,67 @@ function Home() {
         setChart(imagesRef.current, selectedIdRef.current, null);
         selectShapes(memberIds);
         selectedIdsRef.current = memberIds;
+    };
+
+    // F2 锁定保护：基于 shape.draggable === false 标记锁定
+    const isShapeUnlocked = (shapeOrId) => {
+        const shape = typeof shapeOrId === 'string'
+            ? imagesRef.current.find((item) => item.id === shapeOrId)
+            : shapeOrId;
+        return !!(shape && shape.draggable !== false);
+    };
+
+    const getUnlockedSelectedIds = () => {
+        if (!Array.isArray(selectedIdsRef.current) || selectedIdsRef.current.length === 0) return [];
+        return selectedIdsRef.current.filter((id) => isShapeUnlocked(id));
+    };
+
+    const getUnlockedExpandedSelectionIds = (shapeOrId) => {
+        return getExpandedSelectionIds(shapeOrId).filter((id) => isShapeUnlocked(id));
+    };
+
+    const lockSelectedShapes = () => {
+        const unlockedSelectedIds = getUnlockedSelectedIds();
+        const targetIds = unlockedSelectedIds.length > 0
+            ? unlockedSelectedIds
+            : (selectedIdRef.current !== null && isShapeUnlocked(selectedIdRef.current) ? [selectedIdRef.current] : []);
+        if (targetIds.length === 0) return;
+        const nextImages = imagesRef.current.map((shape) => (
+            targetIds.includes(shape.id) ? { ...shape, draggable: false } : shape
+        ));
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
+    };
+
+    const unlockSelectedShapes = () => {
+        let lockedSelectedIds = [];
+        if (Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0) {
+            lockedSelectedIds = selectedIdsRef.current.filter((id) => !isShapeUnlocked(id));
+        } else if (selectedIdRef.current !== null && !isShapeUnlocked(selectedIdRef.current)) {
+            lockedSelectedIds = [selectedIdRef.current];
+        } else {
+            lockedSelectedIds = imagesRef.current.filter((shape) => shape.draggable === false).map((shape) => shape.id);
+        }
+        if (lockedSelectedIds.length === 0) return;
+        const nextImages = imagesRef.current.map((shape) => (
+            lockedSelectedIds.includes(shape.id) ? { ...shape, draggable: true } : shape
+        ));
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
     };
 
     const canGroupSelection = selectedIds.length >= 2;
@@ -552,10 +613,15 @@ function Home() {
         const stage = stageRef.current ? stageRef.current.getStage() : null;
         if (!stage) return;
         Object.keys(positionMap).forEach((id) => {
-            const node = stage.findOne('#' + id);
-            if (node) {
-                node.position(positionMap[id]);
+            const shape = imagesRef.current.find((s) => s.id === id);
+            if (shape && shape.draggable === false) {
+                // 锁定元素：强制还原节点到 data 层记录的位置，防止 node.position() 把它移走
+                const node = stage.findOne('#' + id);
+                if (node) node.position({ x: shape.x, y: shape.y });
+                return;
             }
+            const node = stage.findOne('#' + id);
+            if (node) node.position(positionMap[id]);
         });
     };
 
@@ -563,6 +629,7 @@ function Home() {
         if (!positionMap) return;
         const nextImages = imagesRef.current.map((shape) => {
             if (!positionMap[shape.id]) return shape;
+            if (shape.draggable === false) return shape;
             return { ...shape, x: positionMap[shape.id].x, y: positionMap[shape.id].y };
         });
         setImages(JSON.parse(JSON.stringify(nextImages)));
@@ -574,7 +641,11 @@ function Home() {
 
     const handleShapeDragMove = (e, shape) => {
         const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
-        const isMultiDrag = Array.isArray(expandedSelectedIds) && expandedSelectedIds.length > 1 && expandedSelectedIds.includes(shape.id);
+        const dragSelectedIds = expandedSelectedIds.filter((id) => {
+            const currentShape = imagesRef.current.find((item) => item.id === id);
+            return currentShape && currentShape.draggable !== false;
+        });
+        const isMultiDrag = Array.isArray(dragSelectedIds) && dragSelectedIds.length > 1 && dragSelectedIds.includes(shape.id);
         if (!isMultiDrag) {
             multiDragRef.current = {
                 active: false,
@@ -586,7 +657,7 @@ function Home() {
         }
         if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
             const startPositions = {};
-            expandedSelectedIds.forEach((id) => {
+            dragSelectedIds.forEach((id) => {
                 const currentShape = imagesRef.current.find((item) => item.id === id);
                 if (currentShape) {
                     startPositions[id] = { x: currentShape.x, y: currentShape.y };
@@ -604,7 +675,7 @@ function Home() {
         const deltaX = e.target.x() - startPosition.x;
         const deltaY = e.target.y() - startPosition.y;
         const nextPositions = {};
-        expandedSelectedIds.forEach((id) => {
+        dragSelectedIds.forEach((id) => {
             const basePos = multiDragRef.current.startPositions[id];
             if (basePos) {
                 nextPositions[id] = {
@@ -755,6 +826,12 @@ function Home() {
                 //     handleToolChange('algincenter');
                 // } else if (e.key === 'E') {
                 //     handleToolChange('alginvertical');
+            } else if (e.ctrlKey && e.shiftKey && (e.key === 'K' || e.key === 'k')) {
+                e.preventDefault();
+                unlockSelectedShapes();
+            } else if (e.ctrlKey && (e.key === 'K' || e.key === 'k')) {
+                e.preventDefault();
+                lockSelectedShapes();
             } else if (e.ctrlKey && (e.key === 'L' || e.key === 'l')) {
                 handleToolChange('lock');
             } else if (e.ctrlKey && (e.key === 'N' || e.key === 'n')) {
@@ -1313,7 +1390,10 @@ function Home() {
 
     // Comment translated to English.
     useEffect(() => {
-        const nodes = selectedIds.map((id) => layerRef.current.findOne("#" + id));
+        const nodes = selectedIds
+            .filter((id) => isShapeUnlocked(id))
+            .map((id) => layerRef.current.findOne("#" + id))
+            .filter(Boolean);
         if (transformRefids.current) {
             transformRefids.current.nodes(nodes);
         }
@@ -2212,11 +2292,12 @@ function Home() {
                                         height={safeStageHeight} />
                                 )}
                                 {images.map((shape) => {
+                                    const isUnlocked = shape.draggable !== false;
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
                                         shapeProps={shape}
-                                        isSelected={shape.id === selectedId && selectedIds.length === 0}
+                                        isSelected={isUnlocked && shape.id === selectedId && selectedIds.length === 0}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
