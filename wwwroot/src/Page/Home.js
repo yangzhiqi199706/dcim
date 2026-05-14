@@ -18,6 +18,7 @@ import { t } from '../i18n';
 import Konva from "konva";
 
 let history = [];
+const PAGE_DESIGNER_CLIPBOARD_KEY = 'page_designer_clipboard_v1';
 const params = new URLSearchParams(window.location.search);
 const isPreview = params.get('type') ? true : false;// Comment translated to English.
 const isSwiper = params.get('swiper') ? true : false;// Comment translated to English.
@@ -406,6 +407,146 @@ function Home() {
     const canGroupSelection = selectedIds.length >= 2;
     const canUngroupSelection = isSelectionSingleGroup();
 
+    // F8 剪贴板：copy / cut / paste（精简版：尚未引入锁定保护）
+    const getClipboardSelectionShapes = () => {
+        let targetIds = [];
+        if (Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0) {
+            targetIds = expandDragSelectionIds(selectedIdsRef.current, null);
+        } else if (selectedIdRef.current !== null) {
+            targetIds = getExpandedSelectionIds(selectedIdRef.current);
+        }
+        if (!Array.isArray(targetIds) || targetIds.length === 0) return [];
+        return imagesRef.current.filter((shape) => targetIds.includes(shape.id));
+    };
+
+    const writeClipboard = (shapes) => {
+        const payload = {
+            type: 'page-elements',
+            copiedAt: Date.now(),
+            sourcePageId: savePageId,
+            elements: JSON.parse(JSON.stringify(shapes || [])),
+        };
+        try { localStorage.setItem(PAGE_DESIGNER_CLIPBOARD_KEY, JSON.stringify(payload)); } catch (e) { }
+    };
+
+    const readClipboard = () => {
+        try {
+            const raw = localStorage.getItem(PAGE_DESIGNER_CLIPBOARD_KEY);
+            if (!raw) return null;
+            const payload = JSON.parse(raw);
+            if (!payload || payload.type !== 'page-elements' || !Array.isArray(payload.elements)) return null;
+            return payload;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    // 简单 bounds：F1 落位后会换成基于 Konva node 的 metrics
+    const getClipboardBoundsSimple = (elements) => {
+        if (!Array.isArray(elements) || elements.length === 0) return null;
+        const xs = []; const ys = []; const xs2 = []; const ys2 = [];
+        elements.forEach((s) => {
+            const x = Number(s.x || 0);
+            const y = Number(s.y || 0);
+            const w = Number((s.moduleJson && s.moduleJson.width) || s.width || 0);
+            const h = Number((s.moduleJson && s.moduleJson.height) || s.height || 0);
+            xs.push(x); ys.push(y); xs2.push(x + w); ys2.push(y + h);
+        });
+        const left = Math.min(...xs);
+        const top = Math.min(...ys);
+        const right = Math.max(...xs2);
+        const bottom = Math.max(...ys2);
+        return { left, top, right, bottom, centerX: (left + right) / 2, centerY: (top + bottom) / 2 };
+    };
+
+    const getViewportCenterOnCanvas = () => {
+        const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
+        if (!scroller) return { x: stageWidth / 2, y: stageHeight / 2 };
+        const scrollLeft = scroller.scrollLeft || 0;
+        const scrollTop = scroller.scrollTop || 0;
+        const centerX = (scrollLeft + scroller.clientWidth / 2) / (stageDimensions.scalex || 1);
+        const centerY = (scrollTop + scroller.clientHeight / 2) / (stageDimensions.scaley || 1);
+        return { x: centerX, y: centerY };
+    };
+
+    const copySelectionToClipboard = () => {
+        const selectionShapes = getClipboardSelectionShapes();
+        if (selectionShapes.length === 0) {
+            message.warning('当前没有可复制的元素');
+            return;
+        }
+        writeClipboard(selectionShapes);
+        message.success(`已复制 ${selectionShapes.length} 个元素`);
+    };
+
+    const cutSelectionToClipboard = () => {
+        const selectionShapes = getClipboardSelectionShapes();
+        if (selectionShapes.length === 0) return;
+        writeClipboard(selectionShapes);
+        const deleteIds = new Set(selectionShapes.map((shape) => shape.id));
+        const nextImages = imagesRef.current.filter((shape) => !deleteIds.has(shape.id));
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
+        settoolType(null);
+        message.success(`已剪切 ${selectionShapes.length} 个元素`);
+    };
+
+    const pasteClipboardSelection = () => {
+        const payload = readClipboard();
+        if (!payload || !payload.elements || payload.elements.length === 0) {
+            message.warning('暂无可粘贴内容');
+            return;
+        }
+        const groupIdMap = {};
+        const pastedIds = [];
+        const nextImages = JSON.parse(JSON.stringify(imagesRef.current));
+        const clipboardBounds = getClipboardBoundsSimple(payload.elements);
+        const viewportCenter = getViewportCenterOnCanvas();
+        const offsetX = clipboardBounds ? (viewportCenter.x - clipboardBounds.centerX + 8) : 8;
+        const offsetY = clipboardBounds ? (viewportCenter.y - clipboardBounds.centerY + 8) : 8;
+
+        payload.elements.forEach((shape, index) => {
+            const newId = `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 6)}`;
+            let nextGroupId = shape.groupId || null;
+            if (shape.groupId) {
+                if (!groupIdMap[shape.groupId]) {
+                    groupIdMap[shape.groupId] = createDerivedGroupId(shape.groupId);
+                }
+                nextGroupId = groupIdMap[shape.groupId];
+            }
+            const nextShape = {
+                ...shape,
+                id: newId,
+                x: Number(shape.x || 0) + offsetX,
+                y: Number(shape.y || 0) + offsetY,
+                groupId: nextGroupId,
+            };
+            pastedIds.push(newId);
+            nextImages.push(nextShape);
+        });
+
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes(pastedIds);
+        selectedIdsRef.current = pastedIds;
+        if (pastedIds.length > 0) {
+            setSelectedId(pastedIds[0]);
+            selectedIdRef.current = pastedIds[0];
+            const pastedShape = nextImages.find((shape) => shape.id === pastedIds[0]);
+            setDragShape(pastedShape || null);
+        }
+        message.success(`已粘贴 ${pastedIds.length} 个元素`);
+    };
+
     const applyMultiDragPositions = (positionMap) => {
         if (!positionMap) return;
         const stage = stageRef.current ? stageRef.current.getStage() : null;
@@ -587,7 +728,11 @@ function Home() {
                 e.preventDefault();
                 groupSelectedShapes();
             } else if (e.ctrlKey && (e.key === 'C' || e.key === 'c')) {
-                handleToolChange('copy');
+                copySelectionToClipboard();
+            } else if (e.ctrlKey && (e.key === 'X' || e.key === 'x')) {
+                cutSelectionToClipboard();
+            } else if (e.ctrlKey && (e.key === 'V' || e.key === 'v')) {
+                pasteClipboardSelection();
             } else if (e.ctrlKey && e.key === 'ArrowUp') {
                 handleToolChange('up');
             } else if (e.ctrlKey && (e.key === 'Z' || e.key === 'z')) {
