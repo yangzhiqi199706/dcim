@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Stage, Layer, Rect, Transformer, Text, Group } from "react-konva";
+import { Stage, Layer, Rect, Transformer, Text, Group, Line } from "react-konva";
 import httpsend from '../Assets/httpsend';
 import ToolList from "./ToolList";
 import ItemBox from "./ItemBox";
@@ -19,6 +19,7 @@ import Konva from "konva";
 
 let history = [];
 const PAGE_DESIGNER_CLIPBOARD_KEY = 'page_designer_clipboard_v1';
+const SNAP_GUIDE_OFFSET = 24;
 const params = new URLSearchParams(window.location.search);
 const isPreview = params.get('type') ? true : false;// Comment translated to English.
 const isSwiper = params.get('swiper') ? true : false;// Comment translated to English.
@@ -608,6 +609,206 @@ function Home() {
         message.success(`已粘贴 ${pastedIds.length} 个元素`);
     };
 
+    // F1 磁吸 + 参考线
+    const [snapEnabled, setSnapEnabled] = useState(true);
+    const [snapThreshold, setSnapThreshold] = useState(6);
+    const [snapGuides, setSnapGuides] = useState({ vertical: null, horizontal: null });
+    const clearSnapGuides = () => setSnapGuides({ vertical: null, horizontal: null });
+
+    const getShapeRenderMetrics = (shape, stageNode) => {
+        if (!shape || !shape.moduleJson || !shape.moduleJson.children || shape.moduleJson.children.length === 0) return null;
+        const groupAttr = shape.moduleJson.children[0].attrs || {};
+        const groupName = groupAttr.name;
+        let width = shape.width || shape.moduleJson.width || 0;
+        let height = shape.height || shape.moduleJson.height || 0;
+        let borderWidth = Number(groupAttr.strokeWidth || 0);
+        if (groupName === 'rectBackground' && shape.moduleJson.children[3] && shape.moduleJson.children[3].attrs) {
+            const rectAttrs = shape.moduleJson.children[3].attrs;
+            width = rectAttrs.width || width;
+            height = rectAttrs.height || height;
+            borderWidth = Number(rectAttrs.strokeWidth || borderWidth || 0);
+        } else {
+            if (groupAttr.width) width = groupAttr.width;
+            if (groupAttr.height) height = groupAttr.height;
+        }
+        const scaleX = shape.scaleX || 1;
+        const scaleY = shape.scaleY || 1;
+        let actualWidth = width * scaleX;
+        let actualHeight = height * scaleY;
+        if (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') {
+            actualWidth += borderWidth * scaleX;
+            actualHeight += borderWidth * scaleY;
+        }
+        const x = Number(shape.x || 0);
+        const y = Number(shape.y || 0);
+        return {
+            x, y,
+            width: actualWidth, height: actualHeight,
+            left: x, centerX: x + actualWidth / 2, right: x + actualWidth,
+            top: y, centerY: y + actualHeight / 2, bottom: y + actualHeight,
+        };
+    };
+
+    const buildStageGuideCandidates = () => ({
+        vertical: [0, stageWidth / 2, stageWidth],
+        horizontal: [0, stageHeight / 2, stageHeight],
+    });
+
+    const buildGroupMetricsFromIds = (ids, positionMap = null) => {
+        if (!Array.isArray(ids) || ids.length === 0) return null;
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const metricsList = ids.map((id) => {
+            const shape = imagesRef.current.find((item) => item.id === id);
+            if (!shape) return null;
+            const stageNode = stage ? stage.findOne('#' + id) : null;
+            const positionOverride = positionMap && positionMap[id] ? positionMap[id] : null;
+            return getShapeRenderMetrics(
+                positionOverride ? { ...shape, x: positionOverride.x, y: positionOverride.y } : shape,
+                stageNode,
+            );
+        }).filter(Boolean);
+        if (metricsList.length === 0) return null;
+        const left = Math.min(...metricsList.map((item) => item.left));
+        const top = Math.min(...metricsList.map((item) => item.top));
+        const right = Math.max(...metricsList.map((item) => item.right));
+        const bottom = Math.max(...metricsList.map((item) => item.bottom));
+        return {
+            x: left, y: top, left, top, right, bottom,
+            width: right - left, height: bottom - top,
+            centerX: left + (right - left) / 2, centerY: top + (bottom - top) / 2,
+        };
+    };
+
+    const buildGuideCandidates = (excludeIds = []) => {
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const excluded = new Set(excludeIds);
+        const candidates = { vertical: [], horizontal: [] };
+        imagesRef.current.forEach((shape) => {
+            if (!shape || excluded.has(shape.id)) return;
+            const stageNode = stage ? stage.findOne('#' + shape.id) : null;
+            const metrics = getShapeRenderMetrics(shape, stageNode);
+            if (!metrics) return;
+            candidates.vertical.push({ value: metrics.left, top: metrics.top, bottom: metrics.bottom });
+            candidates.vertical.push({ value: metrics.centerX, top: metrics.top, bottom: metrics.bottom });
+            candidates.vertical.push({ value: metrics.right, top: metrics.top, bottom: metrics.bottom });
+            candidates.horizontal.push({ value: metrics.top, left: metrics.left, right: metrics.right });
+            candidates.horizontal.push({ value: metrics.centerY, left: metrics.left, right: metrics.right });
+            candidates.horizontal.push({ value: metrics.bottom, left: metrics.left, right: metrics.right });
+        });
+        const stageGuides = buildStageGuideCandidates();
+        stageGuides.vertical.forEach((value) => candidates.vertical.push({ value, top: 0, bottom: stageHeight }));
+        stageGuides.horizontal.forEach((value) => candidates.horizontal.push({ value, left: 0, right: stageWidth }));
+        return candidates;
+    };
+
+    const getBestSnapMatch = (edges, guideCandidates, axis) => {
+        let bestMatch = null;
+        edges.forEach((edge) => {
+            guideCandidates.forEach((guide) => {
+                const distance = Math.abs(edge.value - guide.value);
+                if (distance > snapThreshold) return;
+                if (!bestMatch || distance < bestMatch.distance) {
+                    bestMatch = { axis, edge, guide, distance };
+                }
+            });
+        });
+        return bestMatch;
+    };
+
+    const getSnappedMetrics = (metrics, excludeIds = []) => {
+        const candidates = buildGuideCandidates(excludeIds);
+        const verticalEdges = [
+            { type: 'left', value: metrics.left },
+            { type: 'centerX', value: metrics.centerX },
+            { type: 'right', value: metrics.right },
+        ];
+        const horizontalEdges = [
+            { type: 'top', value: metrics.top },
+            { type: 'centerY', value: metrics.centerY },
+            { type: 'bottom', value: metrics.bottom },
+        ];
+        const matchX = getBestSnapMatch(verticalEdges, candidates.vertical, 'x');
+        const matchY = getBestSnapMatch(horizontalEdges, candidates.horizontal, 'y');
+        let snappedX = metrics.x;
+        let snappedY = metrics.y;
+        if (matchX) snappedX += matchX.guide.value - matchX.edge.value;
+        if (matchY) snappedY += matchY.guide.value - matchY.edge.value;
+        const nextMetrics = {
+            ...metrics,
+            x: snappedX, y: snappedY,
+            left: snappedX, right: snappedX + metrics.width,
+            top: snappedY, bottom: snappedY + metrics.height,
+            centerX: snappedX + metrics.width / 2,
+            centerY: snappedY + metrics.height / 2,
+        };
+        return { matchX, matchY, snappedMetrics: nextMetrics };
+    };
+
+    const buildSnapGuideLine = (snapX, snapY, metrics, matchX, matchY) => ({
+        vertical: matchX ? {
+            x: snapX,
+            y1: Math.min(metrics.top, matchX.guide.top) - SNAP_GUIDE_OFFSET,
+            y2: Math.max(metrics.bottom, matchX.guide.bottom) + SNAP_GUIDE_OFFSET,
+            isStageGuide: matchX.guide.top === 0 && matchX.guide.bottom === stageHeight,
+        } : null,
+        horizontal: matchY ? {
+            y: snapY,
+            x1: Math.min(metrics.left, matchY.guide.left) - SNAP_GUIDE_OFFSET,
+            x2: Math.max(metrics.right, matchY.guide.right) + SNAP_GUIDE_OFFSET,
+            isStageGuide: matchY.guide.left === 0 && matchY.guide.right === stageWidth,
+        } : null,
+    });
+
+    const applySnapForShape = (node, shape) => {
+        if (!node || !shape) return;
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const stageNode = stage ? stage.findOne('#' + shape.id) : null;
+        const metrics = getShapeRenderMetrics({ ...shape, x: node.x(), y: node.y() }, stageNode || node);
+        if (!metrics) return;
+        if (!snapEnabled) {
+            const boundedPosition = getBoundedDragPosition(metrics, metrics.x, metrics.y);
+            node.position(boundedPosition);
+            clearSnapGuides();
+            return;
+        }
+        const { matchX, matchY, snappedMetrics } = getSnappedMetrics(metrics, [shape.id]);
+        const boundedPosition = getBoundedDragPosition(snappedMetrics, snappedMetrics.x, snappedMetrics.y);
+        const boundedMetrics = {
+            ...snappedMetrics,
+            x: boundedPosition.x, y: boundedPosition.y,
+            left: boundedPosition.x, right: boundedPosition.x + snappedMetrics.width,
+            top: boundedPosition.y, bottom: boundedPosition.y + snappedMetrics.height,
+            centerX: boundedPosition.x + snappedMetrics.width / 2,
+            centerY: boundedPosition.y + snappedMetrics.height / 2,
+        };
+        node.position({ x: boundedMetrics.x, y: boundedMetrics.y });
+        if (matchX || matchY) {
+            setSnapGuides(buildSnapGuideLine(
+                matchX ? matchX.guide.value : null,
+                matchY ? matchY.guide.value : null,
+                boundedMetrics,
+                matchX, matchY,
+            ));
+            return;
+        }
+        clearSnapGuides();
+    };
+
+    // F9 多选边界（依赖 buildGroupMetricsFromIds）
+    const getBoundedMultiDragPositions = (positionMap, ids) => {
+        if (!positionMap || !Array.isArray(ids) || ids.length === 0) return positionMap;
+        const groupMetrics = buildGroupMetricsFromIds(ids, positionMap);
+        if (!groupMetrics) return positionMap;
+        const boundedGroup = getBoundedDragPosition(groupMetrics, groupMetrics.x, groupMetrics.y);
+        const offsetX = boundedGroup.x - groupMetrics.x;
+        const offsetY = boundedGroup.y - groupMetrics.y;
+        if (offsetX === 0 && offsetY === 0) return positionMap;
+        return Object.keys(positionMap).reduce((acc, id) => {
+            acc[id] = { x: positionMap[id].x + offsetX, y: positionMap[id].y + offsetY };
+            return acc;
+        }, {});
+    };
+
     const applyMultiDragPositions = (positionMap) => {
         if (!positionMap) return;
         const stage = stageRef.current ? stageRef.current.getStage() : null;
@@ -653,7 +854,11 @@ function Home() {
                 startPositions: {},
                 pendingPositions: null,
             };
+            applySnapForShape(e.target, shape);
             return;
+        }
+        if (!snapEnabled) {
+            clearSnapGuides();
         }
         if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
             const startPositions = {};
@@ -671,10 +876,13 @@ function Home() {
             };
         }
         const startPosition = multiDragRef.current.startPositions[shape.id];
-        if (!startPosition) return;
+        if (!startPosition) {
+            applySnapForShape(e.target, shape);
+            return;
+        }
         const deltaX = e.target.x() - startPosition.x;
         const deltaY = e.target.y() - startPosition.y;
-        const nextPositions = {};
+        let nextPositions = {};
         dragSelectedIds.forEach((id) => {
             const basePos = multiDragRef.current.startPositions[id];
             if (basePos) {
@@ -684,6 +892,32 @@ function Home() {
                 };
             }
         });
+        if (snapEnabled) {
+            const groupMetrics = buildGroupMetricsFromIds(dragSelectedIds, nextPositions);
+            if (groupMetrics) {
+                const { matchX, matchY, snappedMetrics } = getSnappedMetrics(groupMetrics, dragSelectedIds);
+                if (matchX || matchY) {
+                    const offsetX = snappedMetrics.x - groupMetrics.x;
+                    const offsetY = snappedMetrics.y - groupMetrics.y;
+                    nextPositions = Object.keys(nextPositions).reduce((acc, id) => {
+                        acc[id] = {
+                            x: nextPositions[id].x + offsetX,
+                            y: nextPositions[id].y + offsetY,
+                        };
+                        return acc;
+                    }, {});
+                    setSnapGuides(buildSnapGuideLine(
+                        matchX ? matchX.guide.value : null,
+                        matchY ? matchY.guide.value : null,
+                        snappedMetrics,
+                        matchX, matchY,
+                    ));
+                } else {
+                    clearSnapGuides();
+                }
+            }
+        }
+        nextPositions = getBoundedMultiDragPositions(nextPositions, dragSelectedIds);
         applyMultiDragPositions(nextPositions);
         multiDragRef.current.pendingPositions = nextPositions;
     };
@@ -2202,6 +2436,18 @@ function Home() {
                                     }} />
                             </div>
                             <div className="topGroup topControls">
+                                <Button type={snapEnabled ? 'primary' : 'default'} onClick={() => {
+                                    setSnapEnabled((prev) => {
+                                        if (prev) clearSnapGuides();
+                                        return !prev;
+                                    });
+                                }}>{snapEnabled ? '磁吸开' : '磁吸关'}</Button>
+                                <select className="topControl" value={String(snapThreshold)} onChange={(e) => setSnapThreshold(Number(e.target.value))}>
+                                    <option value="4">4px</option>
+                                    <option value="6">6px</option>
+                                    <option value="8">8px</option>
+                                    <option value="10">10px</option>
+                                </select>
                                 <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>组合</Button>
                                 <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>取消组合</Button>
                             </div>
@@ -2323,6 +2569,38 @@ function Home() {
                                         }} />
                                     );
                                 })}
+                                {snapGuides.vertical && (
+                                    <Line
+                                        points={[
+                                            snapGuides.vertical.x,
+                                            snapGuides.vertical.y1,
+                                            snapGuides.vertical.x,
+                                            snapGuides.vertical.y2,
+                                        ]}
+                                        stroke={snapGuides.vertical.isStageGuide ? "#fa8c16" : "#148cf1"}
+                                        strokeWidth={snapGuides.vertical.isStageGuide ? 2 : 1}
+                                        dash={snapGuides.vertical.isStageGuide ? [10, 6] : [6, 4]}
+                                        shadowColor={snapGuides.vertical.isStageGuide ? "#fa8c16" : "#148cf1"}
+                                        shadowBlur={snapGuides.vertical.isStageGuide ? 4 : 2}
+                                        listening={false}
+                                    />
+                                )}
+                                {snapGuides.horizontal && (
+                                    <Line
+                                        points={[
+                                            snapGuides.horizontal.x1,
+                                            snapGuides.horizontal.y,
+                                            snapGuides.horizontal.x2,
+                                            snapGuides.horizontal.y,
+                                        ]}
+                                        stroke={snapGuides.horizontal.isStageGuide ? "#fa8c16" : "#148cf1"}
+                                        strokeWidth={snapGuides.horizontal.isStageGuide ? 2 : 1}
+                                        dash={snapGuides.horizontal.isStageGuide ? [10, 6] : [6, 4]}
+                                        shadowColor={snapGuides.horizontal.isStageGuide ? "#fa8c16" : "#148cf1"}
+                                        shadowBlur={snapGuides.horizontal.isStageGuide ? 4 : 2}
+                                        listening={false}
+                                    />
+                                )}
                                 <Transformer
                                     ref={transformRefids}
                                     flipEnabled={false}
