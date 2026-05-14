@@ -1647,22 +1647,31 @@ function Home() {
     // Comment translated to English.
     const savePage = async (type) => {
         stagejson = stageRef.current.toJSON();
-        if (backgroundImage) {// Comment translated to English.
-            let newjson = JSON.parse(stagejson);
+        let newjson = JSON.parse(stagejson);
+        const shapeMap = {};
+        imagesRef.current.forEach((shape) => {
+            shapeMap[shape.id] = shape;
+        });
+        if (newjson && newjson.children && newjson.children[0] && Array.isArray(newjson.children[0].children)) {
             newjson.children[0].children.forEach(element => {// Comment translated to English.
                 if (element.attrs.id === 'canvasBackground') {
-                    if (backgroundImage.indexOf('#') === -1) {
+                    if (backgroundImage && backgroundImage.indexOf('#') === -1) {
                         if (backgroundImage.indexOf('/public/') > 0) {
                             element.attrs.fillPatternImage = backgroundImage.split('/public/')[1];
                         } else {
                             element.attrs.fillPatternImage = backgroundImage;
                         }
                     }
-                    element.attrs.alarmCatch = alarmCatch;
+                    element.attrs.alarmCatch = alarmCatchRef.current;
+                    return;
                 }
-            })
-            stagejson = JSON.stringify(newjson);
+                const currentShape = shapeMap[element.attrs.id];
+                if (currentShape) {
+                    element.attrs = JSON.parse(JSON.stringify(currentShape));
+                }
+            });
         }
+        stagejson = JSON.stringify(newjson);
         if (type === 'preview') {// Comment translated to English.
             localStorage.setItem('stageJson', JSON.stringify(stagejson));
             window.open(httpsend.viewURL() + 'preview.html?type=preview');
