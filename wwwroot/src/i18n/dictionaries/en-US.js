@@ -53,6 +53,7 @@
     pageTemplate: 'Page Templates',
     myPages: 'My Pages',
     basicComponents: 'Basic Components',
+    chartComponents: 'Chart Components',
     templateComponents: 'Template Components',
     uploadImage: 'Upload Image',
     deleteConfirmPrefix: 'Confirm deleting "',

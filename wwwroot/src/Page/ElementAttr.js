@@ -1092,6 +1092,20 @@ const ElementAttr = memo((props) => {
                         </select>
                     </div>)
                 }
+                if (a.attrType === 'sortOrderSelect') {
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <select
+                            defaultValue={val.attrs[a.attrCode]}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere}>
+                            <option value='desc'>{t('auto.k2004')}</option>
+                            <option value='asc'>{t('auto.k2005')}</option>
+                        </select>
+                    </div>)
+                }
                 if (a.attrType === 'orientSelect') {// Comment translated to English.
                     attrList.push(<div className="attrBox" key={unikey}>
                         <label>{a.attrName}</label>

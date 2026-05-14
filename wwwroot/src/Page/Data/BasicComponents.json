@@ -1404,6 +1404,253 @@
     }
   },
   {
+    "moduleName": "__i18n__.auto.k2001",
+    "iconBase64": "Images/icon/3.png",
+    "moduleJson": {
+      "attrs": {
+        "dataKey": [],
+        "moduleAttr": [
+          {
+            "attrGroupName": "__i18n__.auto.k0002",
+            "attrGroupContent": [
+              {
+                "attrName": "__i18n__.auto.k0003",
+                "attrCode": "dataParamsKey",
+                "attrType": "hardwareInputNew",
+                "attrWhere": "this"
+              }
+            ]
+          },
+          {
+            "attrGroupName": "__i18n__.auto.k0004",
+            "attrGroupContent": [
+              {
+                "attrName": "__i18n__.auto.k0020",
+                "attrCode": "width",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0021",
+                "attrCode": "height",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0042",
+                "attrCode": "titleSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0043",
+                "attrCode": "title",
+                "attrType": "textarea",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0044",
+                "attrCode": "titleFontSize",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0045",
+                "attrCode": "titleColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0061",
+                "attrCode": "iconSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0062",
+                "attrCode": "iconColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0064",
+                "attrCode": "dataSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0046",
+                "attrCode": "dataFontSize",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0047",
+                "attrCode": "dataColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0048",
+                "attrCode": "markColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0049",
+                "attrCode": "markFontColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0065",
+                "attrCode": "xshow",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0066",
+                "attrCode": "xaxisLine",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0067",
+                "attrCode": "xTextShow",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0068",
+                "attrCode": "xColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0079",
+                "attrCode": "barbackgroundSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0080",
+                "attrCode": "barbackground",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k2002",
+                "attrCode": "sortEnable",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k2003",
+                "attrCode": "sortOrder",
+                "attrType": "sortOrderSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0069",
+                "attrCode": "yshow",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0070",
+                "attrCode": "yaxisLine",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0071",
+                "attrCode": "yColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0072",
+                "attrCode": "splitSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0073",
+                "attrCode": "splitColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              }
+            ]
+          }
+        ]
+      },
+      "children": [
+        {
+          "attrs": {
+            "title": "__i18n__.auto.k2001",
+            "titleSwitch": "1",
+            "titleFontSize": 24,
+            "titleFontFamily": "__i18n__.auto.k0011",
+            "titleColor": "#000000",
+            "iconSwitch": "1",
+            "iconColor": "#000000",
+            "dataSwitch": "1",
+            "dataFontSize": 12,
+            "dataFontFamily": "__i18n__.auto.k0011",
+            "dataColor": "#000000",
+            "markColor": "#999999",
+            "markFontColor": "#999999",
+            "xshow": "2",
+            "xTextShow": "2",
+            "xaxisLine": "#000000",
+            "xColor": "#000000",
+            "barbackgroundSwitch": "1",
+            "barbackground": "#ffffff",
+            "sortEnable": "2",
+            "sortOrder": "desc",
+            "sortTarget": "first",
+            "yshow": "2",
+            "yaxisLine": "#000000",
+            "yColor": "#000000",
+            "splitSwitch": "2",
+            "splitColor": "#cccccc",
+            "name": "Echart",
+            "width": 350,
+            "height": 250,
+            "cat": "bar",
+            "data": [
+              {
+                "name": "__i18n__.auto.k0002",
+                "data": [
+                  120,
+                  200,
+                  150,
+                  80,
+                  70,
+                  110,
+                  130
+                ],
+                "type": "bar"
+              }
+            ],
+            "xdata": [
+              "Mon",
+              "Tue",
+              "Wed",
+              "Thu",
+              "Fri",
+              "Sat",
+              "Sun"
+            ]
+          },
+          "className": "Echart"
+        }
+      ],
+      "width": 350,
+      "height": 250
+    }
+  },
+  {
     "moduleName": "__i18n__.auto.k0081",
     "iconBase64": "Images/icon/4.png",
     "moduleJson": {

@@ -17,6 +17,10 @@ export const nav = [
     icon: <DashboardCustomizeIcon />
   },
   {
+    title: t('itemBox.chartComponents'),
+    icon: <DashboardCustomizeIcon />
+  },
+  {
     title: t('itemBox.templateComponents'),
     icon: <BorderAllIcon />
   },
