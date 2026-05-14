@@ -18,7 +18,6 @@ import { t } from '../i18n';
 import Konva from "konva";
 
 let history = [];
-let historyStep = -1;
 const params = new URLSearchParams(window.location.search);
 const isPreview = params.get('type') ? true : false;// Comment translated to English.
 const isSwiper = params.get('swiper') ? true : false;// Comment translated to English.
@@ -1219,7 +1218,6 @@ function Home() {
         setImages(tplimages);
         imagesRef.current = tplimages;
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-        historyStep = 0;
         history = [];
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
     }
@@ -1260,7 +1258,6 @@ function Home() {
                 images.concat([shape])
             );
             imagesRef.current = images.concat([shape]);
-            historyStep += 1;
             history.push(JSON.parse(JSON.stringify(imagesRef.current)));
 
             setSelectedId(null);
@@ -1284,7 +1281,6 @@ function Home() {
         imagesToUpdate[findIndex] = singleImageToUpdate;
         setImages(JSON.parse(JSON.stringify(imagesToUpdate)));
         imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
-        historyStep += 1;
         history.push(imagesToUpdate);
         setChart(imagesRef.current, selectedIdRef.current, null);
         if (selectedIdsRef.current.length === 0) {
@@ -1319,7 +1315,6 @@ function Home() {
                     imagesToUpdate.push(shape);
                     setImages(JSON.parse(JSON.stringify(imagesToUpdate)));// Comment translated to English.
                     imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
-                    historyStep += 1;
                     history.push(imagesToUpdate);
                     setChart(imagesRef.current, selectedIdRef.current, null);
 
@@ -1338,7 +1333,6 @@ function Home() {
                 const delImageToUpdate = imagesToUpdate.filter((img) => img.id !== newShapeProps.id);
                 setImages(JSON.parse(JSON.stringify(delImageToUpdate)));
                 imagesRef.current = JSON.parse(JSON.stringify(delImageToUpdate));
-                historyStep += 1;
                 history.push(delImageToUpdate);
                 setChart(imagesRef.current, selectedIdRef.current, null);
 
@@ -1586,7 +1580,6 @@ function Home() {
                 imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
             }
             if (n + 1 === neworderIds.length) {
-                historyStep += 1;
                 history.push(JSON.parse(JSON.stringify(imagesToUpdate)));
                 setChart(imagesRef.current, selectedIdRef.current, null);
                 if (type === 'copys') {
@@ -1600,30 +1593,15 @@ function Home() {
     // Comment translated to English.
     const handleToolChange = async (type) => {
         if (type === 'undo') {
-            // Comment translated to English.
-            // Comment translated to English.
-            //     return;
-            // }
-            // Comment translated to English.
-            history = Array.from(new Set(history));
-            historyStep = history.length - 1;
-            if (historyStep < 1) {
-                console.log(t('auto.k0385'));
-                historyStep = -1;
-                setImages([]);
-                imagesRef.current = [];
-                history = [];
+            if (history.length <= 1) {
                 return;
             }
-            let undostep = 1;
-            historyStep -= undostep;
-            const previous = history[historyStep];
-            history = history.slice(0, -undostep);
+            history = history.slice(0, -1);
+            const previous = JSON.parse(JSON.stringify(history[history.length - 1]));
             setImages(previous);
             imagesRef.current = previous;
             onClickTap('handle');
             setChart(imagesRef.current, selectedIdRef.current, null);
-            console.log(t('auto.k0386'));
         } else {
             // Comment translated to English.
             if (selectedIdRef.current !== null || selectedIdsRef.current.length !== 0) {
@@ -1995,7 +1973,6 @@ function Home() {
                                     alarmCatchRef.current = '1';
                                     imagesRef.current = [];
                                     setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-                                    historyStep = -1;
                                     history = [];
                                     if (savePageType === '1') {// Comment translated to English.
                                         let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
@@ -2135,7 +2112,6 @@ function Home() {
                                     setImages(newimags);
                                     imagesRef.current = newimags;
                                     setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
-                                    historyStep += 1;
                                     history.push(JSON.parse(JSON.stringify(imagesRef.current)));
                                 }
                                 setresetBox(false);
