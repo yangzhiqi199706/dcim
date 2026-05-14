@@ -319,6 +319,89 @@ function Home() {
         return nextBox;
     };
 
+    // F6 多选拖动：跟随移动 / 提交 / 框选扩展（F7 时增强为组合扩展）
+    const multiDragRef = useRef({
+        active: false,
+        draggedId: null,
+        startPositions: {},
+        pendingPositions: null,
+    });
+
+    // 默认直通；F7 组合落位后会改写为按组扩展
+    const expandDragSelectionIds = (ids /* , draggedId */) => {
+        return Array.isArray(ids) ? [...ids] : [];
+    };
+
+    const applyMultiDragPositions = (positionMap) => {
+        if (!positionMap) return;
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        if (!stage) return;
+        Object.keys(positionMap).forEach((id) => {
+            const node = stage.findOne('#' + id);
+            if (node) {
+                node.position(positionMap[id]);
+            }
+        });
+    };
+
+    const commitMultiDragPositions = (positionMap) => {
+        if (!positionMap) return;
+        const nextImages = imagesRef.current.map((shape) => {
+            if (!positionMap[shape.id]) return shape;
+            return { ...shape, x: positionMap[shape.id].x, y: positionMap[shape.id].y };
+        });
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        selectShapes([...selectedIdsRef.current]);
+    };
+
+    const handleShapeDragMove = (e, shape) => {
+        const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
+        const isMultiDrag = Array.isArray(expandedSelectedIds) && expandedSelectedIds.length > 1 && expandedSelectedIds.includes(shape.id);
+        if (!isMultiDrag) {
+            multiDragRef.current = {
+                active: false,
+                draggedId: null,
+                startPositions: {},
+                pendingPositions: null,
+            };
+            return;
+        }
+        if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
+            const startPositions = {};
+            expandedSelectedIds.forEach((id) => {
+                const currentShape = imagesRef.current.find((item) => item.id === id);
+                if (currentShape) {
+                    startPositions[id] = { x: currentShape.x, y: currentShape.y };
+                }
+            });
+            multiDragRef.current = {
+                active: true,
+                draggedId: shape.id,
+                startPositions,
+                pendingPositions: null,
+            };
+        }
+        const startPosition = multiDragRef.current.startPositions[shape.id];
+        if (!startPosition) return;
+        const deltaX = e.target.x() - startPosition.x;
+        const deltaY = e.target.y() - startPosition.y;
+        const nextPositions = {};
+        expandedSelectedIds.forEach((id) => {
+            const basePos = multiDragRef.current.startPositions[id];
+            if (basePos) {
+                nextPositions[id] = {
+                    x: basePos.x + deltaX,
+                    y: basePos.y + deltaY,
+                };
+            }
+        });
+        applyMultiDragPositions(nextPositions);
+        multiDragRef.current.pendingPositions = nextPositions;
+    };
+
     // Comment translated to English.
     const handleResize = (stageWidth, stageHeight) => {
         const normalizedWidth = normalizeStageSize(stageWidth, 1920);
@@ -1343,6 +1426,18 @@ function Home() {
     // Comment translated to English.
     // Comment translated to English.
     const handleShapeChange = (newShapeProps, id) => {
+        // F6 多选拖动：如果当前正在多选拖动，由 commitMultiDragPositions 统一提交，单点 onChange 跳过
+        if (multiDragRef.current.active && multiDragRef.current.pendingPositions) {
+            const pending = multiDragRef.current.pendingPositions;
+            multiDragRef.current = {
+                active: false,
+                draggedId: null,
+                startPositions: {},
+                pendingPositions: null,
+            };
+            commitMultiDragPositions(pending);
+            return;
+        }
         let imagesToUpdate = images;
         const findIndex = images.findIndex((img) => img.id === newShapeProps.id);
         let singleImageToUpdate = imagesToUpdate[findIndex];
@@ -1900,6 +1995,7 @@ function Home() {
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
                                         }}
+                                        onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
                                         onSelect={() => {
                                             if (selectedId !== shape.id) {
                                                 setSelectedId(null);

@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -187,6 +187,7 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
             <Group
                 id={id}
                 onDragStart={handleDragStart}
+                onDragMove={(e) => { if (onDragMove) onDragMove(e, shapeProps); }}
                 onDragEnd={handleDragEnd}
                 onClick={onSelect}
                 onTap={onSelect}
