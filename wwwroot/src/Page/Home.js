@@ -1030,14 +1030,7 @@ function Home() {
                         };
                         return acc;
                     }, {});
-                    setSnapGuides(buildSnapGuideLine(
-                        matchX ? matchX.guide.value : null,
-                        matchY ? matchY.guide.value : null,
-                        snappedMetrics,
-                        matchX, matchY,
-                    ));
-                } else {
-                    clearSnapGuides();
+                    // 多选拖动期间不调 setSnapGuides，避免 React 重渲染把组员 Konva 节点回拉
                 }
             }
         }
@@ -2797,6 +2790,8 @@ function Home() {
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         isElementHover={isElementHover}
                                         onHoverEnter={(s) => {
+                                            // 拖动期间禁用 hover 状态更新，避免 setState 触发 React 重渲染把同组成员的 Konva 节点回拉到旧位置
+                                            if (multiDragRef.current.active) return;
                                             // 锁定元素：只亮自身红边，不联动组
                                             if (s.draggable === false) {
                                                 setHoverElementIds([s.id]);
@@ -2809,7 +2804,10 @@ function Home() {
                                             });
                                             setHoverElementIds(groupIds.length > 0 ? groupIds : [s.id]);
                                         }}
-                                        onHoverLeave={() => setHoverElementIds([])}
+                                        onHoverLeave={() => {
+                                            if (multiDragRef.current.active) return;
+                                            setHoverElementIds([]);
+                                        }}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
