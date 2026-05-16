@@ -17,8 +17,10 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
     const groupRef = useRef();
     const transformRef = useRef();
     const hoverTransformRef = useRef();
+    const elementHoverTransformRef = useRef();
     const [newshapeProps, setnewshapeProps] = useState(null);
     const [hoverPulseTick, setHoverPulseTick] = useState(0);
+    const [isElementHover, setIsElementHover] = useState(false);
     const [divTab, setdivTab] = useState(0);
 
     useEffect(() => {
@@ -35,6 +37,13 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
             hoverTransformRef.current.getLayer().batchDraw();
         }
     }, [isHoverHighlighted, shapeProps, hoverPulseTick]);
+
+    useEffect(() => {
+        if (isElementHover && elementHoverTransformRef.current && groupRef.current) {
+            elementHoverTransformRef.current.nodes([groupRef.current]);
+            elementHoverTransformRef.current.getLayer().batchDraw();
+        }
+    }, [isElementHover, shapeProps]);
 
     const toPositiveNumber = (value, fallback) => {
         const num = Number(value);
@@ -206,6 +215,8 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
                 onDragStart={handleDragStart}
                 onDragMove={(e) => { if (onDragMove) onDragMove(e, shapeProps); }}
                 onDragEnd={handleDragEnd}
+                onMouseEnter={() => setIsElementHover(true)}
+                onMouseLeave={() => setIsElementHover(false)}
                 onClick={onSelect}
                 onTap={onSelect}
                 handleTool={isSelected && handleToolChange(toolType)}
@@ -514,6 +525,17 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
                     ref={hoverTransformRef}
                     borderStroke="#13c2c2"
                     borderStrokeWidth={hoverPulseTick % 2 === 0 ? 3 : 1}
+                    anchorSize={0}
+                    resizeEnabled={false}
+                    rotateEnabled={false}
+                    listening={false}
+                />
+            )}
+            {(isElementHover && !isSelected && !isHoverHighlighted) && (
+                <Transformer
+                    ref={elementHoverTransformRef}
+                    borderStroke={shapeProps.draggable === false ? '#ff7875' : '#13c2c2'}
+                    borderStrokeWidth={1}
                     anchorSize={0}
                     resizeEnabled={false}
                     rotateEnabled={false}
