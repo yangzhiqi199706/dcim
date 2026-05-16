@@ -899,17 +899,19 @@ function Home() {
         if (!positionMap) return;
         const stage = stageRef.current ? stageRef.current.getStage() : null;
         if (!stage) return;
+        let touchedLayer = null;
         Object.keys(positionMap).forEach((id) => {
             const shape = imagesRef.current.find((s) => s.id === id);
-            if (shape && shape.draggable === false) {
-                // 锁定元素：强制还原节点到 data 层记录的位置，防止 node.position() 把它移走
-                const node = stage.findOne('#' + id);
-                if (node) node.position({ x: shape.x, y: shape.y });
-                return;
-            }
             const node = stage.findOne('#' + id);
-            if (node) node.position(positionMap[id]);
+            if (!node) return;
+            if (shape && shape.draggable === false) {
+                node.position({ x: shape.x, y: shape.y });
+            } else {
+                node.position(positionMap[id]);
+            }
+            if (!touchedLayer) touchedLayer = node.getLayer();
         });
+        if (touchedLayer) touchedLayer.batchDraw();
     };
 
     const commitMultiDragPositions = (positionMap) => {
@@ -932,6 +934,14 @@ function Home() {
             selectShapes([...selectedIdsRef.current]);
         }
     };
+
+    // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions / startPositions，
+    // 避免 <Group {...shapeProps}> 用 imagesRef 旧 x/y 回拉同组成员，造成漂移
+    useEffect(() => {
+        if (!multiDragRef.current.active) return;
+        const positions = multiDragRef.current.pendingPositions || multiDragRef.current.startPositions;
+        if (positions) applyMultiDragPositions(positions);
+    });
 
     // 拖动起手：在第一帧 dragmove 之前就把整组的初始位置 / multiDragRef.active 设好，避免第一帧只有被拖元素动其它成员还在原位
     const handleShapeDragStart = (e, shape) => {
