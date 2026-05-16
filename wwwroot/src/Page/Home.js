@@ -2154,19 +2154,24 @@ function Home() {
                     console.log(t('auto.k0363'));
                 }
                 break;
-            case 'del':
-                let imagesToUpdate = images;
-                const delImageToUpdate = imagesToUpdate.filter((img) => img.id !== newShapeProps.id);
+            case 'del': {
+                // 删除目标元素；若属于组合，则整组一起删
+                const delIds = new Set(getExpandedSelectionIds(newShapeProps.id));
+                if (delIds.size === 0) delIds.add(newShapeProps.id);
+                const delImageToUpdate = imagesRef.current.filter((img) => !delIds.has(img.id));
                 setImages(JSON.parse(JSON.stringify(delImageToUpdate)));
                 imagesRef.current = JSON.parse(JSON.stringify(delImageToUpdate));
                 history.push(delImageToUpdate);
                 setChart(imagesRef.current, selectedIdRef.current, null);
 
+                selectShapes([]);
+                selectedIdsRef.current = [];
                 setSelectedId(null);
                 selectedIdRef.current = null;
                 setDragShape(null);
                 console.log(t('auto.k0364'));
                 break;
+            }
             case 'lock':
             case 'unlock':
                 handleShapeChange(newShapeProps, newShapeProps.id);
@@ -2178,6 +2183,26 @@ function Home() {
     };
     // Comment translated to English.
     const handleMultiToolBack = (type) => {
+        // 多选删除：批量删除 selectedIds（组合点击后 selectedIds 已含整组）
+        if (type === 'del') {
+            const delIds = new Set(selectedIdsRef.current);
+            if (delIds.size === 0) {
+                settoolType(null);
+                return;
+            }
+            const nextImages = imagesRef.current.filter((img) => !delIds.has(img.id));
+            setImages(JSON.parse(JSON.stringify(nextImages)));
+            imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+            history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+            setChart(imagesRef.current, selectedIdRef.current, null);
+            selectShapes([]);
+            selectedIdsRef.current = [];
+            setSelectedId(null);
+            selectedIdRef.current = null;
+            setDragShape(null);
+            settoolType(null);
+            return;
+        }
         let tr = transformRefids.current;
         const stage = stageRef.current.getStage();
         let w = tr.width();
@@ -2753,15 +2778,26 @@ function Home() {
                                         }}
                                         onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
                                         onSelect={() => {
+                                            // 组合成员被点中：整组同步纳入 selectedIds（按组整体选中）
+                                            const groupSelectionIds = getExpandedSelectionIds(shape.id);
+                                            if (groupSelectionIds.length > 1) {
+                                                selectShapes(groupSelectionIds);
+                                                selectedIdsRef.current = groupSelectionIds;
+                                                setSelectedId(shape.id);
+                                                selectedIdRef.current = shape.id;
+                                                setDragShape(shape);
+                                                return;
+                                            }
+                                            // 普通单元素：保持原有单选行为
                                             if (selectedId !== shape.id) {
                                                 setSelectedId(null);
                                                 setDragShape(null);
+                                                selectShapes([]);
+                                                selectedIdsRef.current = [];
                                                 setTimeout(() => {
-                                                    // Comment translated to English.
                                                     setSelectedId(shape.id);
                                                     selectedIdRef.current = shape.id;
                                                     setDragShape(shape);
-                                                    // console.log(shape)
                                                 });
                                             }
                                         }}
