@@ -2777,7 +2777,15 @@ function Home() {
                                             handleToolBack(newShapeProps, type);
                                         }}
                                         onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
-                                        onSelect={() => {
+                                        onSelect={(evt) => {
+                                            // shift/ctrl/meta：交给 onClickTap 多选逻辑
+                                            if (evt && evt.evt && (evt.evt.shiftKey || evt.evt.ctrlKey || evt.evt.metaKey)) {
+                                                return;
+                                            }
+                                            // 拖动开始时 handleDragStart 触发 onSelect：当前元素已在选中组里就别重置选中状态
+                                            if (evt && evt.evt && evt.evt.__draggingSelection && selectedIdsRef.current.length > 1 && selectedIdsRef.current.includes(shape.id)) {
+                                                return;
+                                            }
                                             // 组合成员被点中：整组同步纳入 selectedIds（按组整体选中）
                                             const groupSelectionIds = getExpandedSelectionIds(shape.id);
                                             if (groupSelectionIds.length > 1) {
@@ -2802,8 +2810,18 @@ function Home() {
                                             }
                                         }}
                                         onChange={(newShapeProps) => {
-                                            // Comment translated to English.
-                                            // console.log(newShapeProps)
+                                            // 多选拖动：被拖元素的 onChange 优先把 pendingPositions 一次性 commit，避免单点 handleShapeChange 把整组带歪
+                                            if (multiDragRef.current.active && multiDragRef.current.draggedId === shape.id && multiDragRef.current.pendingPositions) {
+                                                commitMultiDragPositions(multiDragRef.current.pendingPositions);
+                                                multiDragRef.current = {
+                                                    active: false,
+                                                    draggedId: null,
+                                                    startPositions: {},
+                                                    pendingPositions: null,
+                                                };
+                                                clearSnapGuides();
+                                                return;
+                                            }
                                             handleShapeChange(newShapeProps, shape.id);
                                         }} />
                                     );

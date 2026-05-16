@@ -125,6 +125,9 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
     });
 
     const handleDragStart = e => {
+        if (e && e.evt) {
+            e.evt.__draggingSelection = true;
+        }
         onSelect(e);
     };
     
