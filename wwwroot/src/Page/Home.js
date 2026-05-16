@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 import { Stage, Layer, Rect, Transformer, Text, Group, Line } from "react-konva";
 import httpsend from '../Assets/httpsend';
 import ToolList from "./ToolList";
@@ -937,7 +937,8 @@ function Home() {
 
     // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions / startPositions，
     // 避免 <Group {...shapeProps}> 用 imagesRef 旧 x/y 回拉同组成员，造成漂移
-    useEffect(() => {
+    // 用 useLayoutEffect 在浏览器绘制之前同步执行，避免用户看到错位的一帧
+    useLayoutEffect(() => {
         if (!multiDragRef.current.active) return;
         const positions = multiDragRef.current.pendingPositions || multiDragRef.current.startPositions;
         if (positions) applyMultiDragPositions(positions);
@@ -2837,6 +2838,12 @@ function Home() {
                                             // 组合成员被点中：整组同步纳入 selectedIds（按组整体选中）
                                             const groupSelectionIds = getExpandedSelectionIds(shape.id);
                                             if (groupSelectionIds.length > 1) {
+                                                // 已经是同样的整组在选中：跳过 setState，避免重渲染回拉拖动中的 Konva 节点
+                                                const same = selectedIdsRef.current.length === groupSelectionIds.length
+                                                    && groupSelectionIds.every((id) => selectedIdsRef.current.includes(id));
+                                                if (same && selectedIdRef.current === shape.id) {
+                                                    return;
+                                                }
                                                 selectShapes(groupSelectionIds);
                                                 selectedIdsRef.current = groupSelectionIds;
                                                 setSelectedId(shape.id);
