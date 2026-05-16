@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -20,7 +20,6 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
     const elementHoverTransformRef = useRef();
     const [newshapeProps, setnewshapeProps] = useState(null);
     const [hoverPulseTick, setHoverPulseTick] = useState(0);
-    const [isElementHover, setIsElementHover] = useState(false);
     const [divTab, setdivTab] = useState(0);
 
     useEffect(() => {
@@ -213,8 +212,8 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
                 onDragStart={handleDragStart}
                 onDragMove={(e) => { if (onDragMove) onDragMove(e, shapeProps); }}
                 onDragEnd={handleDragEnd}
-                onMouseEnter={() => setIsElementHover(true)}
-                onMouseLeave={() => setIsElementHover(false)}
+                onMouseEnter={() => { if (onHoverEnter) onHoverEnter(shapeProps); }}
+                onMouseLeave={() => { if (onHoverLeave) onHoverLeave(shapeProps); }}
                 onClick={onSelect}
                 onTap={onSelect}
                 handleTool={isSelected && handleToolChange(toolType)}

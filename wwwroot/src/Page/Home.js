@@ -63,6 +63,7 @@ function Home() {
     const [selectedIds, selectShapes] = useState([]);
     const selectedIdsRef = useRef(selectedIds);
     const [marqueeHoverIds, setMarqueeHoverIds] = useState([]);
+    const [hoverElementIds, setHoverElementIds] = useState([]);
     const layerRef = useRef();
     const transformRefids = useRef();
     // Comment translated to English.
@@ -2712,6 +2713,7 @@ function Home() {
                                     const isUnlocked = shape.draggable !== false;
                                     const isPrimarySelected = isUnlocked && shape.id === selectedId && selectedIds.length === 0;
                                     const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || marqueeHoverIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
+                                    const isElementHover = hoverElementIds.includes(shape.id);
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
@@ -2719,6 +2721,12 @@ function Home() {
                                         isSelected={isPrimarySelected}
                                         showSelectionFrame={hasSelectionFrame}
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
+                                        isElementHover={isElementHover}
+                                        onHoverEnter={(s) => {
+                                            const groupIds = getExpandedSelectionIds(s.id);
+                                            setHoverElementIds(groupIds.length > 0 ? groupIds : [s.id]);
+                                        }}
+                                        onHoverLeave={() => setHoverElementIds([])}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
