@@ -923,7 +923,14 @@ function Home() {
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
-        selectShapes([...selectedIdsRef.current]);
+        // 把拖动过程中算入的整组成员同步到选中状态（覆盖 dragstart 之前可能为空的 selectedIds）
+        const dragIds = Object.keys(positionMap);
+        if (dragIds.length > 1) {
+            selectShapes(dragIds);
+            selectedIdsRef.current = dragIds;
+        } else {
+            selectShapes([...selectedIdsRef.current]);
+        }
     };
 
     // 拖动起手：在第一帧 dragmove 之前就把整组的初始位置 / multiDragRef.active 设好，避免第一帧只有被拖元素动其它成员还在原位
@@ -2814,8 +2821,9 @@ function Home() {
                                             if (evt && evt.evt && (evt.evt.shiftKey || evt.evt.ctrlKey || evt.evt.metaKey)) {
                                                 return;
                                             }
-                                            // 拖动开始时 handleDragStart 触发 onSelect：当前元素已在选中组里就别重置选中状态
-                                            if (evt && evt.evt && evt.evt.__draggingSelection && selectedIdsRef.current.length > 1 && selectedIdsRef.current.includes(shape.id)) {
+                                            // 拖动开始：handleShapeDragStart 已经预初始化 multiDragRef，这里完全不调 setState
+                                            // 否则 React 重渲染会用 imagesRef 旧 x/y 把已被 applyMultiDragPositions 移动的同组 node 回拉，导致漂移
+                                            if (evt && evt.evt && evt.evt.__draggingSelection) {
                                                 return;
                                             }
                                             // 组合成员被点中：整组同步纳入 selectedIds（按组整体选中）
