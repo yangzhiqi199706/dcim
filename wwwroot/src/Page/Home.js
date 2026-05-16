@@ -2687,11 +2687,14 @@ function Home() {
                                 )}
                                 {images.map((shape) => {
                                     const isUnlocked = shape.draggable !== false;
+                                    const isPrimarySelected = isUnlocked && shape.id === selectedId && selectedIds.length === 0;
+                                    const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
                                         shapeProps={shape}
-                                        isSelected={isUnlocked && shape.id === selectedId && selectedIds.length === 0}
+                                        isSelected={isPrimarySelected}
+                                        showSelectionFrame={hasSelectionFrame}
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         toolType={shape.id === selectedId ? toolType : null}
                                         onToolBack={(newShapeProps, type) => {

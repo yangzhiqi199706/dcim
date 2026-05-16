@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -112,14 +112,12 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
     };
 
     useEffect(() => {
-        if (isSelected) {
+        if ((isSelected || showSelectionFrame) && transformRef.current) {
             transformRef.current.nodes([groupRef.current]);
             transformRef.current.getLayer().batchDraw();
-            // console.log(transformRef.current.width())
-            // console.log(transformRef.current.height())
             setnewshapeProps(shapeProps);
         }
-    }, [isSelected]);
+    }, [isSelected, showSelectionFrame, shapeProps]);
 
     useEffect(() => {
         if (transformRef.current != null) {
@@ -531,7 +529,7 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
                     listening={false}
                 />
             )}
-            {(isElementHover && !isSelected && !isHoverHighlighted) && (
+            {(isElementHover && !isSelected && !showSelectionFrame && !isHoverHighlighted) && (
                 <Transformer
                     ref={elementHoverTransformRef}
                     borderStroke={shapeProps.draggable === false ? '#ff7875' : '#13c2c2'}
@@ -553,6 +551,18 @@ const ConElement = ({ shapeProps, id, isSelected, isHoverHighlighted, onSelect, 
                         // debounceHandleInfo(newBox)
                         return newBox;
                     }}
+                />
+            )}
+            {(!isSelected && showSelectionFrame && shapeProps.draggable) && (
+                <Transformer
+                    ref={transformRef}
+                    borderStroke="#52c41a"
+                    borderStrokeWidth={1}
+                    anchorSize={0}
+                    resizeEnabled={false}
+                    rotateEnabled={false}
+                    listening={false}
+                    flipEnabled={false}
                 />
             )}
             {(isSelected && !shapeProps.draggable) && (
