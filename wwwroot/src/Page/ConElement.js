@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragMove, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -128,6 +128,8 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
         if (e && e.evt) {
             e.evt.__draggingSelection = true;
         }
+        // 先让父级有机会预初始化多选拖动状态，再走 onSelect
+        if (onDragStartProp) onDragStartProp(e, shapeProps);
         onSelect(e);
     };
     

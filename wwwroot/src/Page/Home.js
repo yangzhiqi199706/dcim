@@ -926,6 +926,37 @@ function Home() {
         selectShapes([...selectedIdsRef.current]);
     };
 
+    // 拖动起手：在第一帧 dragmove 之前就把整组的初始位置 / multiDragRef.active 设好，避免第一帧只有被拖元素动其它成员还在原位
+    const handleShapeDragStart = (e, shape) => {
+        if (!shape || shape.draggable === false) return;
+        // 把同组成员 + 当前 shape 一并算入
+        let dragIds = expandDragSelectionIds(selectedIdsRef.current, shape.id).filter((id) => {
+            const s = imagesRef.current.find((it) => it.id === id);
+            return s && s.draggable !== false;
+        });
+        if (!dragIds.includes(shape.id)) dragIds = [shape.id, ...dragIds];
+        if (dragIds.length <= 1) {
+            multiDragRef.current = {
+                active: false,
+                draggedId: null,
+                startPositions: {},
+                pendingPositions: null,
+            };
+            return;
+        }
+        const startPositions = {};
+        dragIds.forEach((id) => {
+            const s = imagesRef.current.find((it) => it.id === id);
+            if (s) startPositions[id] = { x: s.x, y: s.y };
+        });
+        multiDragRef.current = {
+            active: true,
+            draggedId: shape.id,
+            startPositions,
+            pendingPositions: null,
+        };
+    };
+
     const handleShapeDragMove = (e, shape) => {
         const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
         const dragSelectedIds = expandedSelectedIds.filter((id) => {
@@ -2776,6 +2807,7 @@ function Home() {
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
                                         }}
+                                        onDragStart={(e, currentShape) => handleShapeDragStart(e, currentShape)}
                                         onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
                                         onSelect={(evt) => {
                                             // shift/ctrl/meta：交给 onClickTap 多选逻辑
