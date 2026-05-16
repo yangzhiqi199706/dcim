@@ -62,6 +62,7 @@ function Home() {
     // Comment translated to English.
     const [selectedIds, selectShapes] = useState([]);
     const selectedIdsRef = useRef(selectedIds);
+    const [marqueeHoverIds, setMarqueeHoverIds] = useState([]);
     const layerRef = useRef();
     const transformRefids = useRef();
     // Comment translated to English.
@@ -1873,6 +1874,7 @@ function Home() {
         selection.current.y1 = pos.y / stageDimensions.scalex;
         selection.current.x2 = pos.x / stageDimensions.scalex;
         selection.current.y2 = pos.y / stageDimensions.scalex;
+        setMarqueeHoverIds([]);
         updateSelectionRect();
     };
     const onMouseMove = (e) => {
@@ -1883,6 +1885,25 @@ function Home() {
         selection.current.x2 = pos.x / stageDimensions.scalex;
         selection.current.y2 = pos.y / stageDimensions.scalex;
         updateSelectionRect();
+        // 实时计算与选框相交的可拖动元素 id
+        const selBox = selectionRectRef.current.getClientRect();
+        const hoverIds = [];
+        layerRef.current.find(".group").forEach((elementNode) => {
+            const elBox = elementNode.getClientRect();
+            if (Konva.Util.haveIntersection(selBox, elBox)) {
+                const sid = elementNode.attrs.id;
+                const shape = imagesRef.current.find((s) => s.id === sid);
+                if (shape && shape.draggable !== false) {
+                    hoverIds.push(sid);
+                }
+            }
+        });
+        setMarqueeHoverIds((prev) => {
+            if (prev.length === hoverIds.length && prev.every((id, i) => id === hoverIds[i])) {
+                return prev;
+            }
+            return hoverIds;
+        });
     };
     const onMouseUp = () => {
         oldPos.current = null;
@@ -1890,6 +1911,7 @@ function Home() {
         const { x1, x2, y1, y2 } = selection.current;
         const moved = x1 !== x2 || y1 !== y2;
         if (!moved) {
+            setMarqueeHoverIds([]);
             updateSelectionRect();
             return;
         }
@@ -1904,6 +1926,7 @@ function Home() {
         let ids = elements.map((el) => el.attrs.id);
         selectShapes(ids);
         selectedIdsRef.current = ids;
+        setMarqueeHoverIds([]);
         updateSelectionRect('remove');
     };
     // Comment translated to English.
@@ -2688,7 +2711,7 @@ function Home() {
                                 {images.map((shape) => {
                                     const isUnlocked = shape.draggable !== false;
                                     const isPrimarySelected = isUnlocked && shape.id === selectedId && selectedIds.length === 0;
-                                    const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
+                                    const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || marqueeHoverIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
