@@ -2268,6 +2268,16 @@ function Home() {
         let newy = 0;// Comment translated to English.
         let newx = 0;
         let copyids = [];
+        // F8 / 复制工具栏：把待复制元素的 groupId 一次性重映射，避免新旧成员留在同一组
+        const copyGroupIdMap = {};
+        if (type === 'copys') {
+            neworderIds.forEach((sid) => {
+                const src = imagesRef.current.find((img) => img.id === sid);
+                if (src && src.groupId && !copyGroupIdMap[src.groupId]) {
+                    copyGroupIdMap[src.groupId] = createDerivedGroupId(src.groupId);
+                }
+            });
+        }
         neworderIds.forEach((ids, n) => {
             let imagesToUpdate = imagesRef.current;
             const findIndex = imagesRef.current.findIndex((img) => img.id === ids);
@@ -2293,7 +2303,8 @@ function Home() {
                             ...singleImageToUpdate,
                             x: singleImageToUpdate.x + 5,
                             y: singleImageToUpdate.y + 5,
-                            id: eleId
+                            id: eleId,
+                            groupId: singleImageToUpdate.groupId ? (copyGroupIdMap[singleImageToUpdate.groupId] || null) : null,
                         };
                         copyids.push(eleId);
                         console.log(t('auto.k0373'));
