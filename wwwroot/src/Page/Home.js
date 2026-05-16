@@ -2734,7 +2734,16 @@ function Home() {
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         isElementHover={isElementHover}
                                         onHoverEnter={(s) => {
-                                            const groupIds = getExpandedSelectionIds(s.id);
+                                            // 锁定元素：只亮自身红边，不联动组
+                                            if (s.draggable === false) {
+                                                setHoverElementIds([s.id]);
+                                                return;
+                                            }
+                                            // 未锁定元素：整组联动，但过滤掉组内锁定成员
+                                            const groupIds = getExpandedSelectionIds(s.id).filter((id) => {
+                                                const member = imagesRef.current.find((m) => m.id === id);
+                                                return member && member.draggable !== false;
+                                            });
                                             setHoverElementIds(groupIds.length > 0 ? groupIds : [s.id]);
                                         }}
                                         onHoverLeave={() => setHoverElementIds([])}
