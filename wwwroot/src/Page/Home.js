@@ -947,7 +947,7 @@ function Home() {
     // 拖动起手：在第一帧 dragmove 之前就把整组的初始位置 / multiDragRef.active 设好，避免第一帧只有被拖元素动其它成员还在原位
     const handleShapeDragStart = (e, shape) => {
         if (!shape || shape.draggable === false) return;
-        // 把同组成员 + 当前 shape 一并算入
+        // 把同组成员 + 当前 shape 一并算入（非组合多选也走这条路径：expandDragSelectionIds 会包含所有 selectedIds）
         let dragIds = expandDragSelectionIds(selectedIdsRef.current, shape.id).filter((id) => {
             const s = imagesRef.current.find((it) => it.id === id);
             return s && s.draggable !== false;
@@ -962,11 +962,46 @@ function Home() {
             };
             return;
         }
+        // ============================================================
+        // 漂移根因修复：Konva 在触发 dragstart 之前会把"被拖元素"自动预移动 dragDistance（默认约 3px），
+        // 但其它框选成员仍在原位。若把 startPositions 全部取自 imagesRef.current 的 React state x/y，
+        // 第一帧 dragmove 时 deltaX = e.target.x() - startPositions[被拖].x 会多出这段预移动量，
+        // 导致其它成员在第一帧"漂"出 dragDistance 像素去追被拖元素。
+        //
+        // 解决方法：dragstart 时立即把"其它成员"的 Konva 节点同步预移动相同 offset，让整组在 dragstart 时刻
+        // 已经对齐到 (origin + dragOffset)。startPositions 也用这个对齐后的位置，第一帧 dragmove 时所有成员
+        // 都从同一基准前进，不会再有漂移。
+        // ============================================================
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const draggedNode = stage ? stage.findOne('#' + shape.id) : null;
+        const draggedRefShape = imagesRef.current.find((it) => it.id === shape.id);
+        const baseX = draggedRefShape ? Number(draggedRefShape.x) || 0 : (Number(shape.x) || 0);
+        const baseY = draggedRefShape ? Number(draggedRefShape.y) || 0 : (Number(shape.y) || 0);
+        const dragOffsetX = draggedNode ? (draggedNode.x() - baseX) : 0;
+        const dragOffsetY = draggedNode ? (draggedNode.y() - baseY) : 0;
+
         const startPositions = {};
+        let touchedLayer = null;
         dragIds.forEach((id) => {
             const s = imagesRef.current.find((it) => it.id === id);
-            if (s) startPositions[id] = { x: s.x, y: s.y };
+            if (!s) return;
+            if (id === shape.id) {
+                // 被拖元素：保留 Konva 当前位置（origin + dragOffset），避免回跳闪烁
+                startPositions[id] = { x: (Number(s.x) || 0) + dragOffsetX, y: (Number(s.y) || 0) + dragOffsetY };
+                return;
+            }
+            // 其它成员：同步预移动相同 offset，让整组在 dragstart 时刻视觉上已经对齐
+            const node = stage ? stage.findOne('#' + id) : null;
+            const nextX = (Number(s.x) || 0) + dragOffsetX;
+            const nextY = (Number(s.y) || 0) + dragOffsetY;
+            if (node) {
+                node.position({ x: nextX, y: nextY });
+                if (!touchedLayer) touchedLayer = node.getLayer();
+            }
+            startPositions[id] = { x: nextX, y: nextY };
         });
+        if (touchedLayer) touchedLayer.batchDraw();
+
         multiDragRef.current = {
             active: true,
             draggedId: shape.id,
@@ -1842,7 +1877,10 @@ function Home() {
         }
         // do we pressed shift or ctrl?
         const metaPressed = e.evt.shiftKey;
-        const isSelected = tr.nodes().indexOf(e.target) >= 0;
+        const clickedShapeId = e.target.parent.attrs.id;
+        // 把 "已选" 判断扩展到整组：onSelect 已经把同组成员装入 selectedIdsRef，这里要识别成已选
+        const isSelected = tr.nodes().indexOf(e.target) >= 0
+            || (selectedIdsRef.current && selectedIdsRef.current.includes(clickedShapeId));
         const isDrag = e.target.parent.attrs.draggable;
         // Comment translated to English.
         if (!isDrag) { message.error(t('auto.k0361')); return; }
