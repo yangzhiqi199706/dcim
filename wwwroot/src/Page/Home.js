@@ -331,6 +331,11 @@ function Home() {
         startPositions: {},
         pendingPositions: null,
     });
+    // 多选/组合拖动 dragend 阶段，Konva 会让所有 nodes 各触发一次 onChange：
+    //   - 被拖元素 (draggedId) 走 commitMultiDragPositions（push 1 次 history）
+    //   - 其余跟随成员若也走 handleShapeChange 又会各 push 1 次 history → 撤销要按 N 次
+    // 用这个 ref 在 dragstart 时记录"非被拖的跟随成员 id"，dragend 时这些 id 的 onChange 直接 return 并自移除
+    const pendingDragFollowerIdsRef = useRef(new Set());
 
     // F7 组合：基于 shape.groupId 维护逻辑组
     const getShapeGroupId = (shapeOrId) => {
@@ -1001,6 +1006,7 @@ function Home() {
                 startPositions: {},
                 pendingPositions: null,
             };
+            pendingDragFollowerIdsRef.current = new Set();
             return;
         }
         const startPositions = {};
@@ -1022,6 +1028,12 @@ function Home() {
             startPositions,
             pendingPositions: null,
         };
+        // 记录"跟随成员"：dragend 时这些 id 的 onChange 直接 return，避免每个成员都 push 一次 history
+        const followers = new Set();
+        dragSelectedIds.forEach((id) => {
+            if (id !== shape.id) followers.add(id);
+        });
+        pendingDragFollowerIdsRef.current = followers;
     };
 
     // 多选/组合拖动：dragmove 计算 delta 并把所有成员定位到 startPositions[id] + delta
@@ -2192,6 +2204,11 @@ function Home() {
     // Comment translated to English.
     // Comment translated to English.
     const handleShapeChange = (newShapeProps, id) => {
+        // F6 多选拖动：跟随成员的 onChange 走到这里也直接丢弃（兜底，正常路径已在 JSX onChange 里 return）
+        if (pendingDragFollowerIdsRef.current.has(newShapeProps && newShapeProps.id)) {
+            pendingDragFollowerIdsRef.current.delete(newShapeProps.id);
+            return;
+        }
         // F6 多选拖动：如果当前正在多选拖动，由 commitMultiDragPositions 统一提交，单点 onChange 跳过
         if (multiDragRef.current.active && multiDragRef.current.pendingPositions) {
             const pending = multiDragRef.current.pendingPositions;
@@ -2201,6 +2218,7 @@ function Home() {
                 startPositions: {},
                 pendingPositions: null,
             };
+            pendingDragFollowerIdsRef.current = new Set();
             commitMultiDragPositions(pending);
             return;
         }
@@ -2934,6 +2952,12 @@ function Home() {
                                             }
                                         }}
                                         onChange={(newShapeProps) => {
+                                            // 多选拖动 dragend：跟随成员 (非被拖那个) 的 onChange 直接 return，
+                                            // 避免每个成员都 push 一次 history 导致撤销要按 N 次
+                                            if (pendingDragFollowerIdsRef.current.has(shape.id)) {
+                                                pendingDragFollowerIdsRef.current.delete(shape.id);
+                                                return;
+                                            }
                                             // 多选拖动：被拖元素的 onChange 优先把 pendingPositions 一次性 commit，避免单点 handleShapeChange 把整组带歪
                                             if (multiDragRef.current.active && multiDragRef.current.draggedId === shape.id && multiDragRef.current.pendingPositions) {
                                                 commitMultiDragPositions(multiDragRef.current.pendingPositions);
@@ -2943,6 +2967,8 @@ function Home() {
                                                     startPositions: {},
                                                     pendingPositions: null,
                                                 };
+                                                // 被拖元素已 commit，剩余 follower 不需要再保留追踪
+                                                pendingDragFollowerIdsRef.current = new Set();
                                                 clearSnapGuides();
                                                 return;
                                             }
