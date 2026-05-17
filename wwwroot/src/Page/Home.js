@@ -2594,6 +2594,10 @@ function Home() {
     };
     // Comment translated to English.
     const savePage = async (type) => {
+        // 关键：保存前先把 Konva 节点真实位置同步回 imagesRef，确保保存到 chart 的 x/y
+        // 永远等于视觉看到的位置。否则复制后视觉上对，但保存的是 imagesRef 的旧 x/y，
+        // 刷新加载后元素位置与保存时视觉不一致 → 复制体错位。
+        syncKonvaPositionsToImagesRef();
         stagejson = stageRef.current.toJSON();
         let newjson = JSON.parse(stagejson);
         const shapeMap = {};
