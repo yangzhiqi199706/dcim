@@ -947,7 +947,52 @@ function Home() {
         if (positions) applyMultiDragPositions(positions);
     });
 
-    // 多选/组合拖动：dragmove 第一次到达时懒初始化起点（对齐 your-feature 风格）
+    // 多选/组合拖动：dragstart 立即用 Konva 节点真实位置记录所有成员起点。
+    // 关键修复：startPositions 必须与 e.target.position() 同源（都来自 Konva 节点）。
+    // 旧实现用 imagesRef.current.x/y 做起点，一旦 React 状态与 Konva 节点不同步（如上次拖动 commit、
+    // useLayoutEffect backstop、自动保存 setState 等），首帧 delta 会把这部分历史偏差一次性吸收，
+    // 然后原封不动加到其他成员上，造成"鼠标选中元素稳，其他元素瞬间偏一下"的乱跑现象。
+    const handleShapeDragStart = (e, shape) => {
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        if (!stage) return;
+        const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
+        const dragSelectedIds = expandedSelectedIds.filter((id) => {
+            const currentShape = imagesRef.current.find((item) => item.id === id);
+            return currentShape && currentShape.draggable !== false;
+        });
+        // 单拖：复位 multiDragRef，让 dragmove 走单元素分支（applySnapForShape）
+        if (!Array.isArray(dragSelectedIds) || dragSelectedIds.length <= 1 || !dragSelectedIds.includes(shape.id)) {
+            multiDragRef.current = {
+                active: false,
+                draggedId: null,
+                startPositions: {},
+                pendingPositions: null,
+            };
+            return;
+        }
+        const startPositions = {};
+        dragSelectedIds.forEach((id) => {
+            const node = stage.findOne('#' + id);
+            if (node) {
+                // 用 Konva 节点的真实位置作为起点，与被拖元素 e.target.position() 同源
+                startPositions[id] = { x: node.x(), y: node.y() };
+            } else {
+                const currentShape = imagesRef.current.find((item) => item.id === id);
+                if (currentShape) {
+                    startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
+                }
+            }
+        });
+        multiDragRef.current = {
+            active: true,
+            draggedId: shape.id,
+            startPositions,
+            pendingPositions: null,
+        };
+    };
+
+    // 多选/组合拖动：dragmove 计算 delta 并把所有成员定位到 startPositions[id] + delta
+    // dragstart 已经预记录起点；这里保留懒初始化作为兜底（万一 dragstart 未触发也能 fallback）
     const handleShapeDragMove = (e, shape) => {
         const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
         const dragSelectedIds = expandedSelectedIds.filter((id) => {
@@ -968,13 +1013,20 @@ function Home() {
         if (!snapEnabled) {
             clearSnapGuides();
         }
-        // 懒初始化：dragmove 第一次到达时根据 imagesRef 当前 x/y 记录起点
+        // 懒初始化兜底：dragstart 未触发时（极少数情况），用 Konva 节点真实位置记录起点，
+        // 与 e.target.position() 同源，避免吸收 React/Konva 不同步的偏差导致其他成员乱跑
         if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
+            const stage = stageRef.current ? stageRef.current.getStage() : null;
             const startPositions = {};
             dragSelectedIds.forEach((id) => {
-                const currentShape = imagesRef.current.find((item) => item.id === id);
-                if (currentShape) {
-                    startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
+                const node = stage ? stage.findOne('#' + id) : null;
+                if (node) {
+                    startPositions[id] = { x: node.x(), y: node.y() };
+                } else {
+                    const currentShape = imagesRef.current.find((item) => item.id === id);
+                    if (currentShape) {
+                        startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
+                    }
                 }
             });
             multiDragRef.current = {
@@ -2800,6 +2852,7 @@ function Home() {
                                         onToolBack={(newShapeProps, type) => {
                                             handleToolBack(newShapeProps, type);
                                         }}
+                                        onDragStart={(e, currentShape) => handleShapeDragStart(e, currentShape)}
                                         onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
                                         onSelect={(evt) => {
                                             // shift/ctrl/meta：交给 onClickTap 多选逻辑
