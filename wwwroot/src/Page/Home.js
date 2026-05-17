@@ -925,14 +925,14 @@ function Home() {
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
-        // 把拖动过程中算入的整组成员同步到选中状态（覆盖 dragstart 之前可能为空的 selectedIds）
-        const dragIds = Object.keys(positionMap);
-        if (dragIds.length > 1) {
-            selectShapes(dragIds);
-            selectedIdsRef.current = dragIds;
-        } else {
-            selectShapes([...selectedIdsRef.current]);
-        }
+        // 拖动结束后自动取消选中：松开鼠标视同点击空白处，让组合恢复非选择状态
+        // （之前是 selectShapes(dragIds) 把整组保留为选中，这里改为清空）
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(null);
+        selectedIdRef.current = null;
+        setDragShape(null);
+        settoolType(null);
     };
 
     // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions，
