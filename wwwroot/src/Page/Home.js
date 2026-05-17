@@ -936,12 +936,15 @@ function Home() {
         }
     };
 
-    // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions / startPositions，
+    // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions，
     // 避免 <Group {...shapeProps}> 用 imagesRef 旧 x/y 回拉同组成员，造成漂移
     // 用 useLayoutEffect 在浏览器绘制之前同步执行，避免用户看到错位的一帧
+    // 关键：只在 pendingPositions 已就绪（dragmove 至少跑过一次）时才 backstop；
+    // 否则 dragstart 后、首次 dragmove 前的重渲染会用 startPositions(=origin) 把被拖元素拽回原点，跟 Konva 内部 dragMove 形成对抗，
+    // 导致"先 click 再 drag → 拖不动"
     useLayoutEffect(() => {
         if (!multiDragRef.current.active) return;
-        const positions = multiDragRef.current.pendingPositions || multiDragRef.current.startPositions;
+        const positions = multiDragRef.current.pendingPositions;
         if (positions) applyMultiDragPositions(positions);
     });
 
@@ -2957,6 +2960,11 @@ function Home() {
                                 <Transformer
                                     ref={transformRefids}
                                     flipEnabled={false}
+                                    // 多选/组合：Transformer 仅做视觉边框，listening=false 让 mouseDown 落到底下的 Group 上正常触发 dragstart
+                                    // 否则 Konva Transformer 多 node 时形成的事件层会拦截 mouseDown，导致"先点一次再拖动 → 拖不动"
+                                    listening={selectedIds.length <= 1}
+                                    resizeEnabled={selectedIds.length <= 1}
+                                    rotateEnabled={selectedIds.length <= 1}
                                     boundBoxFunc={(oldBox, newBox) => getBoundedTransformerBox(oldBox, newBox)} />
                                 <Rect fill="rgba(0,0,255,0.5)" ref={selectionRectRef} />
                             </Layer>
