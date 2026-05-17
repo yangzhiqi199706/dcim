@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect, Fragment } from 'react';
+import React, { useRef, useState, useEffect, Fragment } from 'react';
 import { Group, Image, Transformer, Rect } from "react-konva";
 import useImage from 'use-image';
 // import debounce from 'lodash.debounce';
@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack, multiDragRef }) => {
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -121,25 +121,6 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
     useEffect(() => {
         if (transformRef.current != null) {
             transformRef.current.forceUpdate();
-        }
-    });
-
-    // 多选/组合拖动 backstop：ConElement 自身重渲染（hoverPulseTick / isElementHover / 内部 setState 等）时，
-    // react-konva 会把 Konva node 的 x/y 同步到 props（即 imagesRef 旧值），把拖动中的成员节点拽回原点。
-    // Home 的 useLayoutEffect 只在 Home 重渲染时跑，无法覆盖 ConElement 单独重渲染的场景。
-    // 这里在每次本组件渲染后立即把 Konva 节点位置拉回 multiDragRef.pendingPositions[id]，防止漂移。
-    useLayoutEffect(() => {
-        if (!multiDragRef || !multiDragRef.current) return;
-        const state = multiDragRef.current;
-        if (!state.active || !state.pendingPositions) return;
-        const target = state.pendingPositions[id];
-        if (!target) return;
-        const node = groupRef.current;
-        if (!node) return;
-        if (node.x() !== target.x || node.y() !== target.y) {
-            node.position({ x: target.x, y: target.y });
-            const layer = node.getLayer();
-            if (layer) layer.batchDraw();
         }
     });
 

@@ -2777,7 +2777,6 @@ function Home() {
                                         showSelectionFrame={hasSelectionFrame}
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         isElementHover={isElementHover}
-                                        multiDragRef={multiDragRef}
                                         onHoverEnter={(s) => {
                                             // 拖动期间禁用 hover 状态更新，避免 setState 触发 React 重渲染把同组成员的 Konva 节点回拉到旧位置
                                             if (multiDragRef.current.active) return;
