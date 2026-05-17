@@ -7,7 +7,7 @@ import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 
-const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmentAnchor, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -560,8 +560,8 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isHoverHig
             {(!isSelected && showSelectionFrame && shapeProps.draggable) && (
                 <Transformer
                     ref={transformRef}
-                    borderStroke="#52c41a"
-                    borderStrokeWidth={1}
+                    borderStroke={isAlignmentAnchor ? "#9254de" : "#52c41a"}
+                    borderStrokeWidth={isAlignmentAnchor ? 2 : 1}
                     anchorSize={0}
                     resizeEnabled={false}
                     rotateEnabled={false}

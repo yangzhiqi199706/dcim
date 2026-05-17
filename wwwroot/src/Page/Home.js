@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import React, { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
 import { Stage, Layer, Rect, Transformer, Text, Group, Line } from "react-konva";
 import httpsend from '../Assets/httpsend';
 import ToolList from "./ToolList";
@@ -124,6 +124,9 @@ function Home() {
     const [lastAutoSaveTime, setLastAutoSaveTime] = useState('');
     const lastSavedStageJsonRef = useRef('');
     const saveStatusTimerRef = useRef(null);
+    // F11b 精简版：5 分钟空闲自动保存
+    const dirtyRef = useRef(false);            // 有未保存修改时为 true
+    const autoSaveTimerRef = useRef(null);     // 5 分钟自动保存定时器
     const [tabFlash, setTabFlash] = useState('');
     const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
 
@@ -153,10 +156,130 @@ function Home() {
         }
     };
 
-    useEffect(() => {
-        return () => {
+    // F11b 精简版：把当前 Stage 序列化成保存用的 JSON（沿用 savePage 的处理逻辑）
+    const buildPageJson = () => {
+        if (!stageRef.current) return '';
+        // 关键：序列化前先把 Konva 节点真实位置同步回 imagesRef，确保自动保存写入的 x/y
+        // 永远等于视觉看到的位置，避免 5 分钟空闲自动保存把旧 imagesRef 的偏差固化到 chart
+        if (typeof syncKonvaPositionsToImagesRef === 'function') {
+            syncKonvaPositionsToImagesRef();
+        }
+        let raw = stageRef.current.toJSON();
+        let newjson;
+        try {
+            newjson = JSON.parse(raw);
+        } catch (e) {
+            return '';
+        }
+        const shapeMap = {};
+        imagesRef.current.forEach((shape) => {
+            shapeMap[shape.id] = shape;
+        });
+        if (newjson && newjson.children && newjson.children[0] && Array.isArray(newjson.children[0].children)) {
+            newjson.children[0].children.forEach(element => {
+                if (element.attrs.id === 'canvasBackground') {
+                    if (backgroundImage && backgroundImage.indexOf('#') === -1) {
+                        if (backgroundImage.indexOf('/public/') > 0) {
+                            element.attrs.fillPatternImage = backgroundImage.split('/public/')[1];
+                        } else {
+                            element.attrs.fillPatternImage = backgroundImage;
+                        }
+                    }
+                    element.attrs.alarmCatch = alarmCatchRef.current;
+                    return;
+                }
+                const currentShape = shapeMap[element.attrs.id];
+                if (currentShape) {
+                    element.attrs = JSON.parse(JSON.stringify(currentShape));
+                }
+            });
+        }
+        return JSON.stringify(newjson);
+    };
+
+    // F11b 精简版：仅静默回写"已经存在的页面"，永远不主动新建草稿页
+    const silentAutoSave = async () => {
+        if (isPreview) return;
+        if (!dirtyRef.current) return;             // 没改动就跳过
+        if (!savePageId || savePageId === '0') return;   // 草稿页（未新建过）跳过
+        if (savePageType !== '1' || !savePageTxt) return; // 只保存 PageType=1 的常规页面
+        const savejson = buildPageJson();
+        if (!savejson) return;
+        try {
+            const res = await httpsend.getData('ChangeDmpageKey', { id: savePageId });
+            if (!res || res.code !== 100) return;
+            const res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
+            if (!res2 || res2.code !== 100) return;
+            dirtyRef.current = false;
+            lastSavedStageJsonRef.current = savejson;
+            setSavedStatus('已自动保存');
+        } catch (e) {
+            // 静默失败：等下一次 dirty + 5 分钟后再尝试
+        }
+    };
+
+    // F11b 精简版：每次有修改都重置 5 分钟定时器（停止操作 5 分钟才触发自动保存）
+    const scheduleAutoSave = () => {
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+            autoSaveTimerRef.current = null;
+        }
+        if (isPreview) return;
+        autoSaveTimerRef.current = setTimeout(() => {
+            autoSaveTimerRef.current = null;
+            silentAutoSave();
+        }, 5 * 60 * 1000);
+    };
+
+    // 取消自动保存（用于手动保存后 / 切换页面 / unmount）
+    const cancelAutoSave = () => {
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+            autoSaveTimerRef.current = null;
+        }
+    };
+
+    // F11b 精简版：刚加载完一个页面，等 React 把 setImages/setBackgroundImage 引起的 useEffect 跑完后回滚 dirty 状态
+    const markPageLoaded = () => {
+        setTimeout(() => {
+            dirtyRef.current = false;
+            cancelAutoSave();
             if (saveStatusTimerRef.current) {
                 clearTimeout(saveStatusTimerRef.current);
+                saveStatusTimerRef.current = null;
+            }
+            setSaveStatusText('已保存');
+            setLastAutoSaveTime('');
+        }, 0);
+    };
+
+    useEffect(() => {
+        // 关闭网页 / 刷新 / 跳转外部链接前，如果还有未保存改动则弹原生提示
+        // 注意：现代浏览器出于安全考虑只显示固定文案（"离开此页面? / 系统可能不会保存您所做的更改"），
+        // returnValue 的字符串内容不会被使用，但必须设置才能触发对话框。
+        // Chrome / Edge / Firefox 都要求 preventDefault() + returnValue 双重保险。
+        // 关键：用 ref 读取最新的 savePageId / savePageType / savePageTxt，避免 useEffect [] 闭包陈旧
+        // 导致切到新页面后改东西关网页不弹提示。
+        const handleBeforeUnload = (e) => {
+            if (isPreview) return;                                                     // 预览模式不拦截
+            if (!dirtyRef.current) return;                                             // 没有未保存改动不拦截
+            const curPageId = savePageIdRef.current;
+            const curPageType = savePageTypeRef.current;
+            const curPageTxt = savePageTxtRef.current;
+            if (!curPageId || curPageId === '0') return;                               // 草稿页未新建过不拦截
+            if (curPageType !== '1' || !curPageTxt) return;                            // 非 PageType=1 不拦截
+            e.preventDefault();
+            e.returnValue = '页面有未保存的修改，确定要离开吗？';
+            return e.returnValue;
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (saveStatusTimerRef.current) {
+                clearTimeout(saveStatusTimerRef.current);
+            }
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
             }
         };
     }, []);
@@ -173,6 +296,14 @@ function Home() {
 
     const initialImagesSnapshotRef = useRef(false);
     const saveStatusTextRef = useRef('已保存');
+    // 用 ref 跟踪 savePageId / savePageType / savePageTxt 的最新值，
+    // 让 useEffect [] 内的 beforeunload 监听不会被初始挂载时的闭包冻结
+    const savePageIdRef = useRef(savePageId);
+    const savePageTypeRef = useRef(savePageType);
+    const savePageTxtRef = useRef(savePageTxt);
+    useEffect(() => { savePageIdRef.current = savePageId; }, [savePageId]);
+    useEffect(() => { savePageTypeRef.current = savePageType; }, [savePageType]);
+    useEffect(() => { savePageTxtRef.current = savePageTxt; }, [savePageTxt]);
     useEffect(() => {
         saveStatusTextRef.current = saveStatusText;
     }, [saveStatusText]);
@@ -181,6 +312,9 @@ function Home() {
             initialImagesSnapshotRef.current = true;
             return;
         }
+        // F11b 精简版：用户做了改动 → 标 dirty + 启动/重置 5 分钟定时器
+        dirtyRef.current = true;
+        scheduleAutoSave();
         if (saveStatusTextRef.current !== '已修改') {
             if (saveStatusTimerRef.current) {
                 clearTimeout(saveStatusTimerRef.current);
@@ -477,6 +611,23 @@ function Home() {
     const canGroupSelection = selectedIds.length >= 2;
     const canUngroupSelection = isSelectionSingleGroup();
 
+    // 对齐锚点：用户最先选中的元素 / 组合，对齐时锚点不动，其他 unit 向锚点靠拢。
+    // - 单选 / 0 选：无锚点（空集），UI 不画紫色高亮
+    // - 多选：selectedIds[0] 所在的整个 group（若无 groupId 则就这一个 id）
+    const alignmentAnchorIds = useMemo(() => {
+        if (!Array.isArray(selectedIds) || selectedIds.length < 2) return [];
+        const anchorId = selectedIds[0];
+        if (!anchorId) return [];
+        const anchorShape = imagesRef.current.find((s) => s.id === anchorId);
+        if (!anchorShape) return [];
+        const anchorGroupId = getShapeGroupId(anchorShape);
+        if (anchorGroupId) {
+            // 整组都算锚点：锁定成员也涂紫，便于用户直观看到哪个 unit 不会动
+            return selectedIds.filter((id) => getShapeGroupId(id) === anchorGroupId);
+        }
+        return [anchorId];
+    }, [selectedIds, images]);
+
     // F13 界面结构树 + hover 高亮
     const getStructureItemLabel = (shape, index = 0) => {
         if (!shape || !shape.moduleJson) return `元素 ${index + 1}`;
@@ -707,8 +858,50 @@ function Home() {
     // F1 磁吸 + 参考线
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [snapThreshold, setSnapThreshold] = useState(6);
-    const [snapGuides, setSnapGuides] = useState({ vertical: null, horizontal: null });
-    const clearSnapGuides = () => setSnapGuides({ vertical: null, horizontal: null });
+    // 引导线用 Konva 节点 ref + imperative 更新（避免 setState 触发 React 重渲染把多选拖动的 Konva 组员节点回拉）
+    const snapGuideVRef = useRef(null);
+    const snapGuideHRef = useRef(null);
+    const updateSnapGuides = (guideData) => {
+        const v = snapGuideVRef.current;
+        const h = snapGuideHRef.current;
+        if (v) {
+            const g = guideData && guideData.vertical;
+            if (g) {
+                v.setAttrs({
+                    visible: true,
+                    points: [g.x, g.y1, g.x, g.y2],
+                    stroke: g.isStageGuide ? '#fa8c16' : '#148cf1',
+                    strokeWidth: g.isStageGuide ? 2 : 1,
+                    dash: g.isStageGuide ? [10, 6] : [6, 4],
+                    shadowColor: g.isStageGuide ? '#fa8c16' : '#148cf1',
+                    shadowBlur: g.isStageGuide ? 4 : 2,
+                });
+            } else {
+                v.setAttrs({ visible: false });
+            }
+            const layer = v.getLayer && v.getLayer();
+            if (layer) layer.batchDraw();
+        }
+        if (h) {
+            const g = guideData && guideData.horizontal;
+            if (g) {
+                h.setAttrs({
+                    visible: true,
+                    points: [g.x1, g.y, g.x2, g.y],
+                    stroke: g.isStageGuide ? '#fa8c16' : '#148cf1',
+                    strokeWidth: g.isStageGuide ? 2 : 1,
+                    dash: g.isStageGuide ? [10, 6] : [6, 4],
+                    shadowColor: g.isStageGuide ? '#fa8c16' : '#148cf1',
+                    shadowBlur: g.isStageGuide ? 4 : 2,
+                });
+            } else {
+                h.setAttrs({ visible: false });
+            }
+            const layer = h.getLayer && h.getLayer();
+            if (layer) layer.batchDraw();
+        }
+    };
+    const clearSnapGuides = () => updateSnapGuides(null);
 
     const getShapeRenderMetrics = (shape, stageNode) => {
         if (!shape || !shape.moduleJson || !shape.moduleJson.children || shape.moduleJson.children.length === 0) return null;
@@ -772,6 +965,68 @@ function Home() {
             width: right - left, height: bottom - top,
             centerX: left + (right - left) / 2, centerY: top + (bottom - top) / 2,
         };
+    };
+
+    // 把选中 ids 折成"对齐单元"列表：同 groupId 的成员合并成 1 个 unit（用整组外包盒），
+    // 单 id 作为独立 unit。这样后续对齐按 unit 计算 offset，再把 offset 应用到 unit 内全部成员，
+    // 组合就能作为整体参与对齐（成员相对位置保持不变）。
+    const getAlignmentUnits = (ids) => {
+        if (!Array.isArray(ids) || ids.length === 0) return [];
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const units = [];
+        const visited = new Set();
+        ids.forEach((id) => {
+            if (visited.has(id)) return;
+            const shape = imagesRef.current.find((item) => item.id === id);
+            if (!shape) return;
+            const groupId = getShapeGroupId(shape);
+            if (groupId) {
+                // 取选中 ids 中属于同一组的所有成员（不扩展未选成员，保持用户意图）
+                const memberIds = ids.filter((selectedId) => getShapeGroupId(selectedId) === groupId);
+                memberIds.forEach((memberId) => visited.add(memberId));
+                const metrics = buildGroupMetricsFromIds(memberIds);
+                if (metrics) {
+                    units.push({ key: groupId, memberIds, metrics, isGroup: true });
+                }
+                return;
+            }
+            visited.add(id);
+            const stageNode = stage ? stage.findOne('#' + id) : null;
+            const metrics = getShapeRenderMetrics(shape, stageNode);
+            if (metrics) {
+                units.push({ key: id, memberIds: [id], metrics, isGroup: false });
+            }
+        });
+        return units;
+    };
+
+    // 按 unit 粒度计算"水平等距 / 垂直等距"目标坐标
+    const getDistributedUnitTargets = (units, axis) => {
+        if (!Array.isArray(units) || units.length === 0) return {};
+        if (units.length === 1) {
+            return { [units[0].key]: axis === 'x' ? units[0].metrics.x : units[0].metrics.y };
+        }
+        const sortedUnits = [...units].sort((a, b) => (
+            axis === 'x' ? a.metrics.x - b.metrics.x : a.metrics.y - b.metrics.y
+        ));
+        const firstUnit = sortedUnits[0];
+        const lastUnit = sortedUnits[sortedUnits.length - 1];
+        const start = axis === 'x' ? firstUnit.metrics.x : firstUnit.metrics.y;
+        const end = axis === 'x'
+            ? lastUnit.metrics.x + lastUnit.metrics.width
+            : lastUnit.metrics.y + lastUnit.metrics.height;
+        const totalSize = sortedUnits.reduce(
+            (sum, unit) => sum + (axis === 'x' ? unit.metrics.width : unit.metrics.height),
+            0,
+        );
+        const gap = sortedUnits.length > 1 ? (end - start - totalSize) / (sortedUnits.length - 1) : 0;
+        const targets = {};
+        let cursor = start;
+        sortedUnits.forEach((unit) => {
+            targets[unit.key] = cursor;
+            cursor += (axis === 'x' ? unit.metrics.width : unit.metrics.height) + gap;
+        });
+        return targets;
     };
 
     const buildGuideCandidates = (excludeIds = []) => {
@@ -878,7 +1133,7 @@ function Home() {
         };
         node.position({ x: boundedMetrics.x, y: boundedMetrics.y });
         if (matchX || matchY) {
-            setSnapGuides(buildSnapGuideLine(
+            updateSnapGuides(buildSnapGuideLine(
                 matchX ? matchX.guide.value : null,
                 matchY ? matchY.guide.value : null,
                 boundedMetrics,
@@ -963,14 +1218,10 @@ function Home() {
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
-        // 拖动结束后自动取消选中：松开鼠标视同点击空白处，让组合恢复非选择状态
-        // （之前是 selectShapes(dragIds) 把整组保留为选中，这里改为清空）
-        selectShapes([]);
-        selectedIdsRef.current = [];
-        setSelectedId(null);
-        selectedIdRef.current = null;
-        setDragShape(null);
-        settoolType(null);
+        // 拖动结束保留整组选中（your-feature 风格）：避免 setState 异步过程中
+        // 出现 selectedIds=[] 但 selectedId=被拖元素 的中间帧，否则那个成员会闪现蓝色单选框，
+        // 且 selectedIdsRef 与 state 不同步会让下一次拖动 startPositions 错算导致另一成员乱跑。
+        selectShapes([...selectedIdsRef.current]);
     };
 
     // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions，
@@ -1112,9 +1363,21 @@ function Home() {
                         };
                         return acc;
                     }, {});
-                    // 多选拖动期间不调 setSnapGuides，避免 React 重渲染把组员 Konva 节点回拉
+                    // 引导线用 ref imperative 绘制，不触发 React 重渲染，多选/组合拖动也能显示
+                    updateSnapGuides(buildSnapGuideLine(
+                        matchX ? matchX.guide.value : null,
+                        matchY ? matchY.guide.value : null,
+                        snappedMetrics,
+                        matchX, matchY,
+                    ));
+                } else {
+                    clearSnapGuides();
                 }
+            } else {
+                clearSnapGuides();
             }
+        } else {
+            clearSnapGuides();
         }
         nextPositions = getBoundedMultiDragPositions(nextPositions, dragSelectedIds);
         applyMultiDragPositions(nextPositions);
@@ -1911,43 +2174,51 @@ function Home() {
             checkDeselect();
             return;
         }
-        // do we pressed shift or ctrl?
-        const metaPressed = e.evt.shiftKey;
+        // 多选键：Ctrl（Win/Linux）或 Cmd（Mac）。Shift 不再触发多选
+        const metaPressed = e.evt.ctrlKey || e.evt.metaKey;
         const clickedShapeId = e.target.parent.attrs.id;
         // 把 "已选" 判断扩展到整组：onSelect 已经把同组成员装入 selectedIdsRef，这里要识别成已选
         const isSelected = tr.nodes().indexOf(e.target) >= 0
             || (selectedIdsRef.current && selectedIdsRef.current.includes(clickedShapeId));
         const isDrag = e.target.parent.attrs.draggable;
-        // Comment translated to English.
         if (!isDrag) { message.error(t('auto.k0361')); return; }
+        // 点击成员所在整组（组合则展开为整组成员，单元素则就是自身）
+        const clickedGroupIds = getUnlockedExpandedSelectionIds(clickedShapeId);
         if (!metaPressed && !isSelected) {
-            // if no key pressed and the node is not selected
-            // Comment translated to English.
+            // 无修饰键 + 未选中：清空选区（具体单选/整组选交给 onSelect 处理）
             selectShapes([]);
             selectedIdsRef.current = [];
             return;
-        } else if (metaPressed && isSelected) {// Comment translated to English.
-            // if we pressed keys and node was selected
-            // we need to remove it from selection:
+        } else if (metaPressed && isSelected) {
+            // Ctrl + 已选：把整组从选区中整体移除
             selectShapes((oldShapes) => {
-                let ids = oldShapes.filter((oldId) => oldId !== e.target.parent.attrs.id)
+                const removeSet = new Set(clickedGroupIds);
+                const ids = oldShapes.filter((oldId) => !removeSet.has(oldId));
                 selectedIdsRef.current = ids;
                 return ids;
             });
-
         } else if (metaPressed && !isSelected) {
-            // add the node into selection
+            // Ctrl + 未选：把整组成员加入选区，并保留之前的 selectedId（若可拖）
             selectShapes((oldShapes) => {
                 let resShapes = oldShapes;
-                if (oldShapes.indexOf(selectedId) === -1) {
-                    let isDragIndex = images.findIndex((findid) => selectedId === findid.id)
+                if (selectedId && oldShapes.indexOf(selectedId) === -1) {
+                    const isDragIndex = images.findIndex((findid) => selectedId === findid.id);
                     if (isDragIndex !== -1) {
-                        let isDrag = images[isDragIndex].draggable;// Comment translated to English.
-                        if (isDrag) resShapes = [...resShapes, selectedId];
+                        const prevDraggable = images[isDragIndex].draggable;
+                        if (prevDraggable) {
+                            // 之前的 selectedId 也要按整组扩展
+                            const prevGroupIds = getUnlockedExpandedSelectionIds(selectedId);
+                            prevGroupIds.forEach((id) => {
+                                if (!resShapes.includes(id)) resShapes = [...resShapes, id];
+                            });
+                        }
                     }
                 }
-                selectedIdsRef.current = [...resShapes, e.target.parent.attrs.id];
-                return [...resShapes, e.target.parent.attrs.id];
+                clickedGroupIds.forEach((id) => {
+                    if (!resShapes.includes(id)) resShapes = [...resShapes, id];
+                });
+                selectedIdsRef.current = resShapes;
+                return resShapes;
             });
         }
         layer.draw();
@@ -2150,6 +2421,8 @@ function Home() {
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
         history = [];
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        // F11b 精简版：刚加载完页面，把 dirty 状态压回去（避免随之而来的 setImages 把刚加载的内容判脏）
+        markPageLoaded();
     }
     // Comment translated to English.
     const handleOnDrop = (e) => {
@@ -2329,253 +2602,179 @@ function Home() {
             settoolType(null);
             return;
         }
-        let tr = transformRefids.current;
-        const stage = stageRef.current.getStage();
-        let w = tr.width();
-        let h = tr.height();
-        // Comment translated to English.
-        // Comment translated to English.
-        // Comment translated to English.
-        // Comment translated to English.
-        // Comment translated to English.
-        let xl = tr.x();//left
-        let xr = tr.x() + w;//right
-        let yt = tr.y();//top
-        let yb = tr.y() + h;//bottom
-        let xr2 = tr.x() + (w / 2);
-        let yt2 = tr.y() + (h / 2);
-        let maxh = 0, maxw = 0, totalw = 0, totalh = 0, newxSelectedIds = [], newySelectedIds = [];
-        if (type.indexOf('equal') >= 0) {// Comment translated to English.
-            selectedIdsRef.current.forEach((ids, n) => {
-                const findIndex = imagesRef.current.findIndex((img) => img.id === ids);
-                const singnodeId = stage.findOne('#' + ids);
-                if (singnodeId && findIndex !== -1) {
-                    let singleImage = imagesRef.current[findIndex];
-                    let groupAttr = singleImage.moduleJson.children[0].attrs;
-                    let groupName = groupAttr.name;
-                    if (groupName === 'rectBackground') {
-                        groupAttr = singleImage.moduleJson.children[3].attrs;
-                    }
-                    let findWidth = groupAttr.width ? groupAttr.width : singnodeId.children[0].textWidth + 20;
-                    let findHeight = groupAttr.height ? groupAttr.height : singnodeId.children[0].textHeight + 20;
-                    let width = findWidth * (singleImage.scaleX ? singleImage.scaleX : 1);
-                    let height = findHeight * (singleImage.scaleY ? singleImage.scaleY : 1);
-                    let borderWidth = groupAttr.strokeWidth;// Comment translated to English.
-
-                    if (n !== selectedIdsRef.current.length - 1) {
-                        width = (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? width + borderWidth * (singleImage.scaleX ? singleImage.scaleX : 1) : width;
-                        height = (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? height + borderWidth * (singleImage.scaleY ? singleImage.scaleY : 1) : height;
-                    }
-                    if (maxh < height) {
-                        maxh = height;
-                    }
-                    if (maxw < width) {
-                        maxw = width;
-                    }
-                    totalw += width;
-                    totalh += height;
-
-                    newxSelectedIds.push({// Comment translated to English.
-                        id: ids,
-                        x: singleImage.x
-                    });
-                    newySelectedIds.push({
-                        id: ids,
-                        y: singleImage.y
-                    })
-                }
-            })
+        // F7+ Unit 模型：把同 groupId 成员折成一个 unit，按 unit 计算对齐目标，再把 offset
+        // 应用到 unit 全部成员上，确保组合作为整体平移、内部相对位置不变。
+        const tr = transformRefids.current;
+        const unlockedSelectedIds = getUnlockedSelectedIds();
+        const alignmentUnits = getAlignmentUnits(unlockedSelectedIds);
+        if (!tr || alignmentUnits.length === 0) {
+            settoolType(null);
+            return;
         }
-        console.log(t('auto.k0367') + w)
-        console.log(t('auto.k0368') + totalw)
-        console.log(t('auto.k0369') + h)
-        console.log(t('auto.k0370') + totalh)
 
-        let stepx = (w - totalw) / (selectedIdsRef.current.length - 1);// Comment translated to English.
-        let stepy = (h - totalh) / (selectedIdsRef.current.length - 1);
-        console.log(t('auto.k0371') + stepx)
-        console.log(t('auto.k0372') + stepy)
+        // 锚点：以"用户最先选中的元素 / 组合"为参考线，对齐时锚点不动，其他 unit 向锚点对齐
+        // alignmentUnits[0] 来自 selectedIds[0]，正好是用户首选项；如果首选项是组合，整组作为一个 unit
+        const anchorMetrics = alignmentUnits[0].metrics;
+        const xl = anchorMetrics.x;                                   // 锚点左边
+        const xr = anchorMetrics.x + anchorMetrics.width;             // 锚点右边
+        const yt = anchorMetrics.y;                                   // 锚点上边
+        const yb = anchorMetrics.y + anchorMetrics.height;            // 锚点下边
+        const xr2 = anchorMetrics.x + anchorMetrics.width / 2;        // 锚点水平中线
+        const yt2 = anchorMetrics.y + anchorMetrics.height / 2;       // 锚点垂直中线
 
-        let neworderIds = [];// Comment translated to English.
-        // Comment translated to English.
-        if (type === "equallevel") {
-            newxSelectedIds = newxSelectedIds.sort(function (a, b) {
-                return a.x - b.x;
+        // equal 系列：以 unit（组合外包盒 / 单元素外包盒）为粒度统计 maxw/maxh
+        let maxh = 0, maxw = 0;
+        if (type.indexOf('equal') >= 0) {
+            alignmentUnits.forEach((unit) => {
+                if (maxh < unit.metrics.height) maxh = unit.metrics.height;
+                if (maxw < unit.metrics.width) maxw = unit.metrics.width;
             });
-            newxSelectedIds.forEach((id) => {
-                neworderIds.push(id.id);
-            })
-            // Comment translated to English.
-        } else if (type === "equalvertical") {
-            newySelectedIds = newySelectedIds.sort(function (a, b) {
-                return a.y - b.y;
-            });
-            newySelectedIds.forEach((id) => {
-                neworderIds.push(id.id);
-            })
+        }
+
+        // 排序：水平等距按 x 升序、垂直等距按 y 升序，其它对齐保持 units 原顺序
+        let orderedUnitKeys = [];
+        if (type === 'equallevel') {
+            orderedUnitKeys = [...alignmentUnits]
+                .sort((a, b) => a.metrics.x - b.metrics.x)
+                .map((u) => u.key);
+        } else if (type === 'equalvertical') {
+            orderedUnitKeys = [...alignmentUnits]
+                .sort((a, b) => a.metrics.y - b.metrics.y)
+                .map((u) => u.key);
         } else {
-            neworderIds = selectedIdsRef.current;
+            orderedUnitKeys = alignmentUnits.map((u) => u.key);
         }
-        let newy = 0;// Comment translated to English.
-        let newx = 0;
-        let copyids = [];
-        // F8 / 复制工具栏：把待复制元素的 groupId 一次性重映射，避免新旧成员留在同一组
+
+        // 等距：按 unit 计算每个 unit 的目标坐标
+        const equalLevelTargets = type === 'equallevel'
+            ? getDistributedUnitTargets(alignmentUnits, 'x') : {};
+        const equalVerticalTargets = type === 'equalvertical'
+            ? getDistributedUnitTargets(alignmentUnits, 'y') : {};
+
+        // 复制：按 unit 收集 groupId 重映射，确保同一组的成员复制后仍属于同一新组
         const copyGroupIdMap = {};
         if (type === 'copys') {
-            neworderIds.forEach((sid) => {
+            unlockedSelectedIds.forEach((sid) => {
                 const src = imagesRef.current.find((img) => img.id === sid);
                 if (src && src.groupId && !copyGroupIdMap[src.groupId]) {
                     copyGroupIdMap[src.groupId] = createDerivedGroupId(src.groupId);
                 }
             });
         }
-        neworderIds.forEach((ids, n) => {
-            let imagesToUpdate = imagesRef.current;
-            const findIndex = imagesRef.current.findIndex((img) => img.id === ids);
-            const singnodeId = stage.findOne('#' + ids);
-            // console.log(singnodeId)
-            if (singnodeId && findIndex !== -1) {
-                let singleImageToUpdate = JSON.parse(JSON.stringify(imagesToUpdate))[findIndex];
-                // Comment translated to English.
-                let groupAttr = singleImageToUpdate.moduleJson.children[0].attrs;
-                let groupName = groupAttr.name;
-                if (groupName === 'rectBackground') {
-                    groupAttr = singleImageToUpdate.moduleJson.children[3].attrs;
-                }
-                let findWidth = groupAttr.width ? groupAttr.width : singnodeId.children[0].textWidth + 20;
-                let findHeight = groupAttr.height ? groupAttr.height : singnodeId.children[0].textHeight + 20;
-                let width = findWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1);
-                let height = findHeight * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1);
-                let borderWidth = groupAttr.strokeWidth / 2;// Comment translated to English.
+
+        const unitMap = {};
+        alignmentUnits.forEach((u) => { unitMap[u.key] = u; });
+
+        const copyids = [];
+        const nextImages = JSON.parse(JSON.stringify(imagesRef.current));
+
+        orderedUnitKeys.forEach((unitKey) => {
+            const unit = unitMap[unitKey];
+            if (!unit) return;
+            const width = unit.metrics.width;
+            const height = unit.metrics.height;
+
+            // 1. 先按 unit 算出整体目标坐标（unit 外包盒左上角应该到哪）
+            let targetX = unit.metrics.x;
+            let targetY = unit.metrics.y;
+            switch (type) {
+                case 'alginleft':     targetX = xl;             break;
+                case 'alginright':    targetX = xr - width;     break;
+                case 'algintop':      targetY = yt;             break;
+                case 'alginbottom':   targetY = yb - height;    break;
+                case 'alginvertical': targetX = xr2 - width / 2;  break;
+                case 'algincenter':   targetY = yt2 - height / 2; break;
+                case 'equallevel':
+                    if (equalLevelTargets[unit.key] !== undefined) targetX = equalLevelTargets[unit.key];
+                    break;
+                case 'equalvertical':
+                    if (equalVerticalTargets[unit.key] !== undefined) targetY = equalVerticalTargets[unit.key];
+                    break;
+                default: break;
+            }
+            const offsetX = targetX - unit.metrics.x;
+            const offsetY = targetY - unit.metrics.y;
+
+            // 2. 把 offset / scale / 复制 应用到 unit 内全部成员（组合作为整体平移）
+            unit.memberIds.forEach((memberId) => {
+                const findIndex = nextImages.findIndex((img) => img.id === memberId);
+                if (findIndex === -1) return;
+                let singleImageToUpdate = JSON.parse(JSON.stringify(nextImages[findIndex]));
                 switch (type) {
-                    case "copys":
-                        let eleId = parseInt(new Date().getTime()).toString() + n// Comment translated to English.
+                    case 'copys': {
+                        const eleId = parseInt(new Date().getTime()).toString() + copyids.length;
                         singleImageToUpdate = {
                             ...singleImageToUpdate,
                             x: singleImageToUpdate.x + 5,
                             y: singleImageToUpdate.y + 5,
                             id: eleId,
-                            groupId: singleImageToUpdate.groupId ? (copyGroupIdMap[singleImageToUpdate.groupId] || null) : null,
+                            groupId: singleImageToUpdate.groupId
+                                ? (copyGroupIdMap[singleImageToUpdate.groupId] || null)
+                                : null,
                         };
                         copyids.push(eleId);
+                        nextImages.push(singleImageToUpdate);
                         console.log(t('auto.k0373'));
                         break;
-                    case "alginleft":
-                        // Comment translated to English.
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            x: (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? xl + borderWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1) : xl
-                        };
-                        console.log(t('auto.k0374'));
-                        break;
-                    case "alginright":
-                        // Comment translated to English.
-                        // Comment translated to English.
-                        // Comment translated to English.
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            x: parseFloat(((groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? (xr - borderWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1)) : xr) - width)
-                            // x: parseFloat(xr - width)
-                        };
-                        console.log(t('auto.k0375'));
-                        break;
-                    case "algintop":
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            y: (groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? yt + borderWidth * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1) : yt
-                        };
-                        console.log(t('auto.k0376'));
-                        break;
-                    case "alginbottom":
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            y: parseFloat(((groupName === 'myShape' || groupName === 'buttonRect' || groupName === 'rectBackground') ? (yb - borderWidth * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1)) : yb) - height)
-                        };
-                        console.log(t('auto.k0377'));
-                        break;
-                    case "alginvertical":
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            x: parseFloat(xr2 - (width / 2))
-                        };
-                        console.log(t('auto.k0378'));
-                        break;
-                    case "algincenter":
-                        singleImageToUpdate = {
-                            ...singleImageToUpdate,
-                            y: parseFloat(yt2 - (height / 2))
-                        };
-                        console.log(t('auto.k0379'));
-                        break;
-                    case "equalhight":
-                        if (maxh !== height) {
-                            singleImageToUpdate = {
-                                ...singleImageToUpdate,
-                                scaleY: maxh / height
-                            };
+                    }
+                    case 'equalhight': {
+                        if (height !== 0 && maxh !== height) {
+                            const scaleY = (singleImageToUpdate.scaleY || 1) * (maxh / height);
+                            singleImageToUpdate = { ...singleImageToUpdate, scaleY };
                         }
+                        nextImages[findIndex] = singleImageToUpdate;
                         console.log(t('auto.k0380'));
                         break;
-                    case "equalwidth":
-                        if (maxw !== width) {
-                            singleImageToUpdate = {
-                                ...singleImageToUpdate,
-                                scaleX: maxw / height
-                            };
+                    }
+                    case 'equalwidth': {
+                        if (width !== 0 && maxw !== width) {
+                            const scaleX = (singleImageToUpdate.scaleX || 1) * (maxw / width);
+                            singleImageToUpdate = { ...singleImageToUpdate, scaleX };
                         }
+                        nextImages[findIndex] = singleImageToUpdate;
                         console.log(t('auto.k0381'));
                         break;
-                    case "equal":
-                        if (maxh !== height || maxw !== width) {
-                            singleImageToUpdate = {
-                                ...singleImageToUpdate,
-                                scaleY: maxh / height,
-                                scaleX: maxw / width
-                            };
-                        }
+                    }
+                    case 'equal': {
+                        const next = { ...singleImageToUpdate };
+                        if (height !== 0 && maxh !== height) next.scaleY = (singleImageToUpdate.scaleY || 1) * (maxh / height);
+                        if (width !== 0 && maxw !== width) next.scaleX = (singleImageToUpdate.scaleX || 1) * (maxw / width);
+                        nextImages[findIndex] = next;
                         console.log(t('auto.k0382'));
                         break;
-                    case "equalvertical":
-                        if (newy !== 0) {
+                    }
+                    default: {
+                        // 对齐 / 等距：组合所有成员同步偏移，相对位置保持
+                        if (offsetX !== 0 || offsetY !== 0) {
                             singleImageToUpdate = {
                                 ...singleImageToUpdate,
-                                y: newy
+                                x: singleImageToUpdate.x + offsetX,
+                                y: singleImageToUpdate.y + offsetY,
                             };
                         }
-                        //     height=((groupName==='myShape' || groupName==='buttonRect' || groupName==='rectBackground')?(height+0.5*(singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1)):height)
-                        newy = singleImageToUpdate.y + height + stepy// Comment translated to English.
-                        console.log(t('auto.k0383'));
+                        nextImages[findIndex] = singleImageToUpdate;
+                        if (type === 'alginleft') console.log(t('auto.k0374'));
+                        else if (type === 'alginright') console.log(t('auto.k0375'));
+                        else if (type === 'algintop') console.log(t('auto.k0376'));
+                        else if (type === 'alginbottom') console.log(t('auto.k0377'));
+                        else if (type === 'alginvertical') console.log(t('auto.k0378'));
+                        else if (type === 'algincenter') console.log(t('auto.k0379'));
+                        else if (type === 'equalvertical') console.log(t('auto.k0383'));
+                        else if (type === 'equallevel') console.log(t('auto.k0384'));
                         break;
-                    case "equallevel":
-                        if (newx !== 0) {
-                            singleImageToUpdate = {
-                                ...singleImageToUpdate,
-                                x: newx
-                            };
-                        }
-                        // width=((groupName==='myShape' || groupName==='buttonRect' || groupName==='rectBackground')?(width-0.5*(singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1)):width)
-                        newx = singleImageToUpdate.x + width + stepx// Comment translated to English.
-                        console.log(t('auto.k0384'));
-                        break;
-                    default: break;
+                    }
                 }
-                if (type === 'copys') {
-                    imagesToUpdate.push(JSON.parse(JSON.stringify(singleImageToUpdate)));
-                } else {
-                    imagesToUpdate[findIndex] = singleImageToUpdate;
-                }
-                setImages(JSON.parse(JSON.stringify(imagesToUpdate)));
-                imagesRef.current = JSON.parse(JSON.stringify(imagesToUpdate));
-            }
-            if (n + 1 === neworderIds.length) {
-                history.push(JSON.parse(JSON.stringify(imagesToUpdate)));
-                setChart(imagesRef.current, selectedIdRef.current, null);
-                if (type === 'copys') {
-                    selectShapes(copyids);
-                    selectedIdsRef.current = copyids;
-                }
-            }
-        })
+            });
+        });
+
+        setImages(JSON.parse(JSON.stringify(nextImages)));
+        imagesRef.current = JSON.parse(JSON.stringify(nextImages));
+        history.push(JSON.parse(JSON.stringify(imagesRef.current)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        if (type === 'copys') {
+            selectShapes(copyids);
+            selectedIdsRef.current = copyids;
+        }
         settoolType(null);
     }
     // Comment translated to English.
@@ -2880,12 +3079,14 @@ function Home() {
                                     const isPrimarySelected = isUnlocked && shape.id === selectedId && selectedIds.length === 0;
                                     const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || marqueeHoverIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
                                     const isElementHover = hoverElementIds.includes(shape.id);
+                                    const isAlignmentAnchor = alignmentAnchorIds.includes(shape.id);
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
                                         shapeProps={shape}
                                         isSelected={isPrimarySelected}
                                         showSelectionFrame={hasSelectionFrame}
+                                        isAlignmentAnchor={isAlignmentAnchor}
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         isElementHover={isElementHover}
                                         onHoverEnter={(s) => {
@@ -2914,8 +3115,8 @@ function Home() {
                                         onDragStart={(e, currentShape) => handleShapeDragStart(e, currentShape)}
                                         onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
                                         onSelect={(evt) => {
-                                            // shift/ctrl/meta：交给 onClickTap 多选逻辑
-                                            if (evt && evt.evt && (evt.evt.shiftKey || evt.evt.ctrlKey || evt.evt.metaKey)) {
+                                            // Ctrl / Cmd：交给 onClickTap 走多选逻辑
+                                            if (evt && evt.evt && (evt.evt.ctrlKey || evt.evt.metaKey)) {
                                                 return;
                                             }
                                             // 拖动开始：dragmove 懒初始化 multiDragRef，这里跳过 setState 避免 React 重渲染拽回 Konva 节点
@@ -2976,38 +3177,25 @@ function Home() {
                                         }} />
                                     );
                                 })}
-                                {snapGuides.vertical && (
-                                    <Line
-                                        points={[
-                                            snapGuides.vertical.x,
-                                            snapGuides.vertical.y1,
-                                            snapGuides.vertical.x,
-                                            snapGuides.vertical.y2,
-                                        ]}
-                                        stroke={snapGuides.vertical.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        strokeWidth={snapGuides.vertical.isStageGuide ? 2 : 1}
-                                        dash={snapGuides.vertical.isStageGuide ? [10, 6] : [6, 4]}
-                                        shadowColor={snapGuides.vertical.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        shadowBlur={snapGuides.vertical.isStageGuide ? 4 : 2}
-                                        listening={false}
-                                    />
-                                )}
-                                {snapGuides.horizontal && (
-                                    <Line
-                                        points={[
-                                            snapGuides.horizontal.x1,
-                                            snapGuides.horizontal.y,
-                                            snapGuides.horizontal.x2,
-                                            snapGuides.horizontal.y,
-                                        ]}
-                                        stroke={snapGuides.horizontal.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        strokeWidth={snapGuides.horizontal.isStageGuide ? 2 : 1}
-                                        dash={snapGuides.horizontal.isStageGuide ? [10, 6] : [6, 4]}
-                                        shadowColor={snapGuides.horizontal.isStageGuide ? "#fa8c16" : "#148cf1"}
-                                        shadowBlur={snapGuides.horizontal.isStageGuide ? 4 : 2}
-                                        listening={false}
-                                    />
-                                )}
+                                {/* 磁吸引导线：始终渲染，由 ref imperative 控制 visible/points/样式，不触发 React 重渲染 */}
+                                <Line
+                                    ref={snapGuideVRef}
+                                    visible={false}
+                                    points={[0, 0, 0, 0]}
+                                    stroke="#148cf1"
+                                    strokeWidth={1}
+                                    dash={[6, 4]}
+                                    listening={false}
+                                />
+                                <Line
+                                    ref={snapGuideHRef}
+                                    visible={false}
+                                    points={[0, 0, 0, 0]}
+                                    stroke="#148cf1"
+                                    strokeWidth={1}
+                                    dash={[6, 4]}
+                                    listening={false}
+                                />
                                 <Transformer
                                     ref={transformRefids}
                                     flipEnabled={false}
@@ -3054,7 +3242,7 @@ function Home() {
                                 let savejson = await savePage('tpl');
                                 let res = await httpsend.getDataLocal('saveTpl', { name: saveTplName, tplcon: savejson });
                                 if (res) {
-                                    message.success(t('auto.k0443')); setSavedStatus('已保存');
+                                    message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
                                 }
                                 setsaveTplName('');
                                 setshowsaveTplBox(0);
@@ -3166,12 +3354,12 @@ function Home() {
                                     if (savePageType === '1') {// Comment translated to English.
                                         let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
                                         if (fileres.code === 100) {
-                                            message.success(t('auto.k0443')); setSavedStatus('已保存');
+                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
                                         } else {
                                             message.error(t('auto.k0444'));
                                         }
                                     } else {
-                                        message.success(t('auto.k0443')); setSavedStatus('已保存');
+                                        message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
                                     }
                                 } else {
                                     message.error(t('auto.k0445'));
@@ -3209,12 +3397,12 @@ function Home() {
                                         if (savePageType === '1') {
                                             let res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
                                             if (res2.code === 100) {
-                                                message.success(t('auto.k0443')); setSavedStatus('已保存');
+                                                message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
                                             } else {
                                                 message.error(t('auto.k0444'));
                                             }
                                         } else {
-                                            message.success(t('auto.k0443')); setSavedStatus('已保存');
+                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
                                         }
                                     } else {
                                         message.error(t('auto.k0445'));

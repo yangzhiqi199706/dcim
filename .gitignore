@@ -1,0 +1,30 @@
+# IDE / 工具
+.vscode/
+.claude/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 环境变量与站点配置（不要进仓库）
+wwwroot/.env
+wwwroot/.htaccess
+wwwroot/.user.ini
+wwwroot/nginx.htaccess
+
+# 构建产物
+wwwroot/build/
+
+# 依赖（历史已入库的不受影响，仅忽略新增 untracked 内容）
+wwwroot/node_modules/
+# 自动生成的页面入口
+wwwroot/index.html
+wwwroot/404.html
+
+# 备份文件
+*.bak
+*.bak_*
+
+# 注意：node_modules 历史上已被追踪，这里不加规则，避免把已入库的依赖从索引里移除。
+# 如果后续要清理，请单独开分支，用 `git rm -r --cached wwwroot/node_modules` 处理。

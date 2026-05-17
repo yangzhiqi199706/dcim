@@ -1,0 +1,53 @@
+{
+    "name": "react-moodboard",
+    "version": "0.1.0",
+    "private": true,
+    "dependencies": {
+        "@emotion/react": "^11.8.1",
+        "@emotion/styled": "^11.8.1",
+        "@mui/icons-material": "^5.4.4",
+        "@mui/material": "^5.4.4",
+        "antd": "^5.12.2",
+        "axios": "^1.6.2",
+        "echarts": "^5.4.3",
+        "gifler": "^0.1.0",
+        "konva": "^9.0.0",
+        "nprogress": "^0.2.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-konva": "^18.2.7",
+        "react-konva-utils": "^1.0.5",
+        "react-rnd": "^10.4.1",
+        "react-scripts": "^2.0.4",
+        "use-image": "^1.0.10"
+    },
+    "scripts": {
+        "start": "react-scripts start",
+        "start:local-api": "node server/local-api.js",
+        "build": "react-scripts build",
+        "test": "react-scripts test",
+        "eject": "react-scripts eject",
+        "check:no-cjk": "node scripts/check-no-cjk.js"
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app",
+            "react-app/jest"
+        ],
+        "rules": {
+            "no-unused-vars": "off"
+        }
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    }
+}
