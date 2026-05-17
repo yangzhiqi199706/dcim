@@ -618,6 +618,8 @@ function Home() {
     };
 
     const copySelectionToClipboard = () => {
+        // 关键：先把 Konva 节点的真实位置同步回 imagesRef，避免拖动 / 浮点累积偏差导致复制体相对位置错乱
+        syncKonvaPositionsToImagesRef();
         const selectionShapes = getClipboardSelectionShapes();
         if (selectionShapes.length === 0) {
             message.warning('当前没有可复制的元素');
@@ -628,6 +630,8 @@ function Home() {
     };
 
     const cutSelectionToClipboard = () => {
+        // 关键：先把 Konva 节点的真实位置同步回 imagesRef，避免剪切后粘贴位置错乱
+        syncKonvaPositionsToImagesRef();
         const selectionShapes = getClipboardSelectionShapes();
         if (selectionShapes.length === 0) return;
         writeClipboard(selectionShapes);
@@ -912,6 +916,35 @@ function Home() {
             if (!touchedLayer) touchedLayer = node.getLayer();
         });
         if (touchedLayer) touchedLayer.batchDraw();
+    };
+
+    // 把所有 Konva 节点的真实位置回写到 imagesRef.current（不触发 setState）。
+    // 用于复制 / 剪切 / 对齐 / 等距等批量操作前，确保 imagesRef 与 Konva 视觉位置一致，
+    // 避免拖动后偏差累积、刷新 / 复制后元素错位。
+    // 不写 history、不调 setImages，调用方按需后续 setImages + history.push。
+    const syncKonvaPositionsToImagesRef = () => {
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        if (!stage) return false;
+        let mutated = false;
+        const next = imagesRef.current.map((shape) => {
+            if (!shape || !shape.id) return shape;
+            // 锁定元素：不同步（视觉与逻辑就不该飘）
+            if (shape.draggable === false) return shape;
+            const node = stage.findOne('#' + shape.id);
+            if (!node) return shape;
+            const nx = node.x();
+            const ny = node.y();
+            const cx = Number(shape.x) || 0;
+            const cy = Number(shape.y) || 0;
+            // 浮点容差：< 0.5px 视为相等，避免 Konva 内部浮点累积造成无意义抖动
+            if (Math.abs(nx - cx) < 0.5 && Math.abs(ny - cy) < 0.5) return shape;
+            mutated = true;
+            return { ...shape, x: nx, y: ny };
+        });
+        if (mutated) {
+            imagesRef.current = next;
+        }
+        return mutated;
     };
 
     const commitMultiDragPositions = (positionMap) => {
@@ -2254,6 +2287,10 @@ function Home() {
     };
     // Comment translated to English.
     const handleMultiToolBack = (type) => {
+        // 关键：先把 Konva 节点真实位置同步回 imagesRef，避免对齐 / 等距 / 复制基于错位的 imagesRef 计算，
+        // 导致视觉上"看似对齐"但保存到 chart 的 x/y 偏移、刷新后又错位的现象。
+        // del 也要同步，否则删除前临时偏移会丢失（虽然下面 del 分支立即 return，不会读 x/y，但保持调用一致更安全）。
+        syncKonvaPositionsToImagesRef();
         // 多选删除：批量删除 selectedIds（组合点击后 selectedIds 已含整组）
         if (type === 'del') {
             const delIds = new Set(selectedIdsRef.current);
