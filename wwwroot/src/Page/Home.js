@@ -330,6 +330,7 @@ function Home() {
         draggedId: null,
         startPositions: {},
         pendingPositions: null,
+        startPointer: null,
     });
 
     // F7 组合：基于 shape.groupId 维护逻辑组
@@ -945,6 +946,9 @@ function Home() {
     });
 
     // 拖动起手：在第一帧 dragmove 之前就把整组的初始位置 / multiDragRef.active 设好，避免第一帧只有被拖元素动其它成员还在原位
+    // 关键：同时记录鼠标起点（stage pointer），dragmove 改用 pointer delta 而不是 e.target.x() 来计算位移，
+    // 这样无论 React 何时重渲染、无论 <Group {...shapeProps}> 把 Konva 节点拉回到哪个旧位置，
+    // 每一帧的 nextPositions 都从 startPositions + 真实鼠标位移直接得到，不会与 Konva 内部 _dragStartPosition 等状态产生时序耦合
     const handleShapeDragStart = (e, shape) => {
         if (!shape || shape.draggable === false) return;
         // 把同组成员 + 当前 shape 一并算入（非组合多选也走这条路径：expandDragSelectionIds 会包含所有 selectedIds）
@@ -959,54 +963,26 @@ function Home() {
                 draggedId: null,
                 startPositions: {},
                 pendingPositions: null,
+                startPointer: null,
             };
             return;
         }
-        // ============================================================
-        // 漂移根因修复：Konva 在触发 dragstart 之前会把"被拖元素"自动预移动 dragDistance（默认约 3px），
-        // 但其它框选成员仍在原位。若把 startPositions 全部取自 imagesRef.current 的 React state x/y，
-        // 第一帧 dragmove 时 deltaX = e.target.x() - startPositions[被拖].x 会多出这段预移动量，
-        // 导致其它成员在第一帧"漂"出 dragDistance 像素去追被拖元素。
-        //
-        // 解决方法：dragstart 时立即把"其它成员"的 Konva 节点同步预移动相同 offset，让整组在 dragstart 时刻
-        // 已经对齐到 (origin + dragOffset)。startPositions 也用这个对齐后的位置，第一帧 dragmove 时所有成员
-        // 都从同一基准前进，不会再有漂移。
-        // ============================================================
-        const stage = stageRef.current ? stageRef.current.getStage() : null;
-        const draggedNode = stage ? stage.findOne('#' + shape.id) : null;
-        const draggedRefShape = imagesRef.current.find((it) => it.id === shape.id);
-        const baseX = draggedRefShape ? Number(draggedRefShape.x) || 0 : (Number(shape.x) || 0);
-        const baseY = draggedRefShape ? Number(draggedRefShape.y) || 0 : (Number(shape.y) || 0);
-        const dragOffsetX = draggedNode ? (draggedNode.x() - baseX) : 0;
-        const dragOffsetY = draggedNode ? (draggedNode.y() - baseY) : 0;
-
         const startPositions = {};
-        let touchedLayer = null;
         dragIds.forEach((id) => {
             const s = imagesRef.current.find((it) => it.id === id);
-            if (!s) return;
-            if (id === shape.id) {
-                // 被拖元素：保留 Konva 当前位置（origin + dragOffset），避免回跳闪烁
-                startPositions[id] = { x: (Number(s.x) || 0) + dragOffsetX, y: (Number(s.y) || 0) + dragOffsetY };
-                return;
-            }
-            // 其它成员：同步预移动相同 offset，让整组在 dragstart 时刻视觉上已经对齐
-            const node = stage ? stage.findOne('#' + id) : null;
-            const nextX = (Number(s.x) || 0) + dragOffsetX;
-            const nextY = (Number(s.y) || 0) + dragOffsetY;
-            if (node) {
-                node.position({ x: nextX, y: nextY });
-                if (!touchedLayer) touchedLayer = node.getLayer();
-            }
-            startPositions[id] = { x: nextX, y: nextY };
+            if (s) startPositions[id] = { x: Number(s.x) || 0, y: Number(s.y) || 0 };
         });
-        if (touchedLayer) touchedLayer.batchDraw();
-
+        // 记录鼠标起点（画布坐标系）。后续 dragmove 用 pointer delta 而不是 e.target.x() 算位移
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const pointer = stage ? stage.getPointerPosition() : null;
+        const scale = (stageDimensions && stageDimensions.scalex) ? stageDimensions.scalex : 1;
+        const startPointer = pointer ? { x: pointer.x / scale, y: pointer.y / scale } : null;
         multiDragRef.current = {
             active: true,
             draggedId: shape.id,
             startPositions,
             pendingPositions: null,
+            startPointer,
         };
     };
 
@@ -1023,6 +999,7 @@ function Home() {
                 draggedId: null,
                 startPositions: {},
                 pendingPositions: null,
+                startPointer: null,
             };
             applySnapForShape(e.target, shape);
             return;
@@ -1030,19 +1007,24 @@ function Home() {
         if (!snapEnabled) {
             clearSnapGuides();
         }
-        if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
+        // 兜底：dragstart 没注册成功时（理论上不应该），用当前 imagesRef + pointer 当起点
+        if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id || !multiDragRef.current.startPointer) {
             const startPositions = {};
             dragSelectedIds.forEach((id) => {
                 const currentShape = imagesRef.current.find((item) => item.id === id);
                 if (currentShape) {
-                    startPositions[id] = { x: currentShape.x, y: currentShape.y };
+                    startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
                 }
             });
+            const stage0 = stageRef.current ? stageRef.current.getStage() : null;
+            const pointer0 = stage0 ? stage0.getPointerPosition() : null;
+            const scale0 = (stageDimensions && stageDimensions.scalex) ? stageDimensions.scalex : 1;
             multiDragRef.current = {
                 active: true,
                 draggedId: shape.id,
                 startPositions,
                 pendingPositions: null,
+                startPointer: pointer0 ? { x: pointer0.x / scale0, y: pointer0.y / scale0 } : null,
             };
         }
         const startPosition = multiDragRef.current.startPositions[shape.id];
@@ -1050,8 +1032,26 @@ function Home() {
             applySnapForShape(e.target, shape);
             return;
         }
-        const deltaX = e.target.x() - startPosition.x;
-        const deltaY = e.target.y() - startPosition.y;
+        // ============================================================
+        // 关键：用"鼠标指针"在画布坐标系内的 delta 来驱动整组位移，而不是用 e.target.x()。
+        // 原因：被拖元素的 Konva node 受 React <Group {...shapeProps}> 重渲染影响，x()/y() 在某些时序下
+        // 会被 imagesRef 的旧 state 回拉，导致 deltaX = e.target.x() - startPosition.x 算出"假位移"，
+        // 进而把整组的其它成员 + 自身一起带飞。
+        // 鼠标指针位置由浏览器原生事件给出，永远不会被 React 重渲染干扰。
+        // ============================================================
+        const stage = stageRef.current ? stageRef.current.getStage() : null;
+        const pointer = stage ? stage.getPointerPosition() : null;
+        const scale = (stageDimensions && stageDimensions.scalex) ? stageDimensions.scalex : 1;
+        let deltaX = 0;
+        let deltaY = 0;
+        if (pointer && multiDragRef.current.startPointer) {
+            deltaX = (pointer.x / scale) - multiDragRef.current.startPointer.x;
+            deltaY = (pointer.y / scale) - multiDragRef.current.startPointer.y;
+        } else {
+            // 极端兜底：拿不到 pointer 时退回 e.target delta
+            deltaX = e.target.x() - startPosition.x;
+            deltaY = e.target.y() - startPosition.y;
+        }
         let nextPositions = {};
         dragSelectedIds.forEach((id) => {
             const basePos = multiDragRef.current.startPositions[id];
@@ -2100,6 +2100,7 @@ function Home() {
             draggedId: null,
             startPositions: {},
             pendingPositions: null,
+            startPointer: null,
         };
         clearSnapGuides();
         selectShapes([]);
@@ -2176,6 +2177,7 @@ function Home() {
                 draggedId: null,
                 startPositions: {},
                 pendingPositions: null,
+                startPointer: null,
             };
             commitMultiDragPositions(pending);
             return;
@@ -2911,6 +2913,7 @@ function Home() {
                                                     draggedId: null,
                                                     startPositions: {},
                                                     pendingPositions: null,
+                                                    startPointer: null,
                                                 };
                                                 clearSnapGuides();
                                                 return;
@@ -3082,6 +3085,7 @@ function Home() {
                                         draggedId: null,
                                         startPositions: {},
                                         pendingPositions: null,
+                                        startPointer: null,
                                     };
                                     clearSnapGuides();
                                     selectShapes([]);
