@@ -262,9 +262,10 @@ function echart(images, selectedId,alarmData) {
                     var lineoption = {
                         grid: {
                             top: top,
-                            left: 50,
+                            left: 10,
                             right: 20,
-                            bottom: 30,
+                            bottom: 10,
+                            containLabel: true,
                         },
                         tooltip: {
                             trigger: 'axis'
@@ -361,10 +362,14 @@ function echart(images, selectedId,alarmData) {
                             }
                             return chartInfo.sortOrder === 'asc' ? a.sortValue - b.sortValue : b.sortValue - a.sortValue;
                         });
-                        xdata = rows.map((row) => row.name);
+                        // 显示前 N 个柱体：sortTopN > 0 时截取，否则保留全部
+                        const topNRaw = parseInt(chartInfo.sortTopN, 10);
+                        const topN = Number.isFinite(topNRaw) && topNRaw > 0 ? topNRaw : 0;
+                        const limitedRows = topN > 0 ? rows.slice(0, topN) : rows;
+                        xdata = limitedRows.map((row) => row.name);
                         data = data.map((series) => ({
                             ...series,
-                            data: rows.map((row) => {
+                            data: limitedRows.map((row) => {
                                 const currentValue = Array.isArray(series.data) ? series.data[row.index] : 0;
                                 return currentValue === undefined ? 0 : currentValue;
                             })
@@ -406,9 +411,10 @@ function echart(images, selectedId,alarmData) {
                     var baroption = {
                         grid: {
                             top: top,
-                            left: 50,
+                            left: 10,
                             right: 20,
-                            bottom: 30,
+                            bottom: 10,
+                            containLabel: true,
                         },
                         tooltip: {
                             trigger: 'axis'

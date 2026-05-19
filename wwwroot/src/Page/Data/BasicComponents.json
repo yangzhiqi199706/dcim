@@ -1551,6 +1551,12 @@
                 "attrWhere": "Echart"
               },
               {
+                "attrName": "显示前N个",
+                "attrCode": "sortTopN",
+                "attrType": "sortTopN",
+                "attrWhere": "Echart"
+              },
+              {
                 "attrName": "__i18n__.auto.k0069",
                 "attrCode": "yshow",
                 "attrType": "showSelect",
@@ -1609,6 +1615,7 @@
             "sortEnable": "2",
             "sortOrder": "desc",
             "sortTarget": "first",
+            "sortTopN": 0,
             "yshow": "2",
             "yaxisLine": "#000000",
             "yColor": "#000000",

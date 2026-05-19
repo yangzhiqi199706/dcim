@@ -667,7 +667,8 @@ const ElementAttr = memo((props) => {
         } else {
             findAttr.forEach(element => {
                 // if (e.target.value) {
-                element['attrs'][e.target.dataset.attrcode] = e.target.dataset.attrtype === 'number' ? parseFloat(e.target.value) : e.target.value;
+                const isNumberLike = e.target.dataset.attrtype === 'number' || e.target.dataset.attrtype === 'sortTopN';
+                element['attrs'][e.target.dataset.attrcode] = isNumberLike ? parseFloat(e.target.value) : e.target.value;
                 if (e.target.dataset.attrwhere === 'buttonRect') {// Comment translated to English.
                     if (e.target.dataset.attrcode === 'width' || e.target.dataset.attrcode === 'height') {
                         shapeAttr.children[1]['attrs'][e.target.dataset.attrcode] = element['attrs'][e.target.dataset.attrcode];
@@ -1183,6 +1184,22 @@ const ElementAttr = memo((props) => {
                             <option value='desc'>{t('auto.k2004')}</option>
                             <option value='asc'>{t('auto.k2005')}</option>
                         </select>
+                    </div>)
+                }
+                // 排序柱状图：显示前 N 个柱体（0 = 显示全部）
+                if (a.attrType === 'sortTopN') {
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="0=全部"
+                            defaultValue={val.attrs[a.attrCode] == null ? 0 : val.attrs[a.attrCode]}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere} />
                     </div>)
                 }
                 if (a.attrType === 'orientSelect') {// Comment translated to English.
@@ -1721,21 +1738,58 @@ const ElementAttr = memo((props) => {
                     if (ShowParasIndex === 0) {
                         params.forEach(element => {
                             console.log(element)
-                            desc.push({
-                                devkey: element.split('&')[0],
-                                dev: element.split('&')[1].split('/')[0],
-                                name: element.split('&')[1].split('/')[1].split('~')[0],
-                                type: element.split('&')[1].split('/')[1].split('~')[1].split('%')[0],
-                                cmdtype: element.split('&')[1].split('/')[1].split('~')[1].split('%')[1].split('|')[0],
-                                src: element.split('|')[1]
-                            })
+                            // 安全解析：防止设备名/点位名中包含分隔符导致崩溃
+                            try {
+                                if (!element || typeof element !== 'string') return;
+
+                                // 按最后一个 | 分割 src
+                                const lastPipeIndex = element.lastIndexOf('|');
+                                if (lastPipeIndex === -1) return;
+                                const src = element.substring(lastPipeIndex + 1);
+                                const beforeSrc = element.substring(0, lastPipeIndex);
+
+                                // 按第一个 & 分割 devkey
+                                const firstAmpIndex = beforeSrc.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const devkey = beforeSrc.substring(0, firstAmpIndex);
+                                const afterDevkey = beforeSrc.substring(firstAmpIndex + 1);
+
+                                // 按最后一个 ~ 分割 type 和 cmdtype（因为 name 可能包含 /）
+                                const lastTildeIndex = afterDevkey.lastIndexOf('~');
+                                if (lastTildeIndex === -1) return;
+                                const beforeType = afterDevkey.substring(0, lastTildeIndex);
+                                const afterType = afterDevkey.substring(lastTildeIndex + 1);
+
+                                // 按第一个 / 分割 dev 和 name（假设 dev 不含 /，name 可能含 /）
+                                const firstSlashIndex = beforeType.indexOf('/');
+                                if (firstSlashIndex === -1) return;
+                                const dev = beforeType.substring(0, firstSlashIndex);
+                                const name = beforeType.substring(firstSlashIndex + 1);
+
+                                // 按第一个 % 分割 type 和 cmdtype
+                                const firstPercentIndex = afterType.indexOf('%');
+                                if (firstPercentIndex === -1) return;
+                                const type = afterType.substring(0, firstPercentIndex);
+                                const cmdtype = afterType.substring(firstPercentIndex + 1);
+
+                                desc.push({ devkey, dev, name, type, cmdtype, src });
+                            } catch (err) {
+                                console.error('解析参数失败:', element, err);
+                            }
                         });
                     } else {
                         cusparams.forEach(element => {
-                            desc.push({
-                                paramskey: element.split('&')[0],
-                                name: element.split('&')[1]
-                            })
+                            // 安全解析：按第一个 & 分割，允许 name 包含 &
+                            try {
+                                if (!element || typeof element !== 'string') return;
+                                const firstAmpIndex = element.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const paramskey = element.substring(0, firstAmpIndex);
+                                const name = element.substring(firstAmpIndex + 1);
+                                desc.push({ paramskey, name });
+                            } catch (err) {
+                                console.error('解析自定义参数失败:', element, err);
+                            }
                         });
                     }
 
@@ -1776,10 +1830,17 @@ const ElementAttr = memo((props) => {
                 <Button type="primary" onClick={async () => {
                     let desc = [];
                     pages.forEach(element => {
-                        desc.push({
-                            pagekey: element.split('-')[0],
-                            name: element.split('-')[1]
-                        })
+                        // 安全解析：按第一个 - 分割，允许 name 包含 -
+                        try {
+                            if (!element || typeof element !== 'string') return;
+                            const firstDashIndex = element.indexOf('-');
+                            if (firstDashIndex === -1) return;
+                            const pagekey = element.substring(0, firstDashIndex);
+                            const name = element.substring(firstDashIndex + 1);
+                            desc.push({ pagekey, name });
+                        } catch (err) {
+                            console.error('解析页面失败:', element, err);
+                        }
                     });
                     setparamData(JSON.stringify(desc));
                     shapeAttr.attrs.dataKey = desc;
@@ -1851,21 +1912,63 @@ const ElementAttr = memo((props) => {
                     let desc = [];
                     if (ShowEventIndex === 0) {
                         devevents.forEach(element => {
-                            desc.push({
-                                deveventskey: element.split('&')[0],
-                                type: element.split('&')[1].split('/')[0],
-                                src: element.split('&')[1].split('/')[1],
-                            })
+                            // 安全解析：deveventskey & type / src
+                            try {
+                                if (!element || typeof element !== 'string') return;
+                                const firstAmpIndex = element.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const deveventskey = element.substring(0, firstAmpIndex);
+                                const afterAmp = element.substring(firstAmpIndex + 1);
+
+                                const firstSlashIndex = afterAmp.indexOf('/');
+                                if (firstSlashIndex === -1) return;
+                                const type = afterAmp.substring(0, firstSlashIndex);
+                                const src = afterAmp.substring(firstSlashIndex + 1);
+
+                                desc.push({ deveventskey, type, src });
+                            } catch (err) {
+                                console.error('解析设备事件失败:', element, err);
+                            }
                         })
                     } else {
                         events.forEach(element => {
-                            desc.push({
-                                eventsdevname: element.split('&')[0],
-                                eventskey: element.split('&')[1].split('/')[0],
-                                name: element.split('&')[1].split('/')[1].split('~')[0],
-                                eventsdevkey: element.split('&')[1].split('/')[1].split('~')[1].split('%')[1],
-                                src: element.split('%')[1],
-                            })
+                            // 安全解析：eventsdevname & eventskey / name ~ eventsdevkey % src
+                            // 格式：eventsdevname & eventskey / name ~ ? % eventsdevkey % src
+                            try {
+                                if (!element || typeof element !== 'string') return;
+
+                                // 按最后一个 % 分割 src
+                                const lastPercentIndex = element.lastIndexOf('%');
+                                if (lastPercentIndex === -1) return;
+                                const src = element.substring(lastPercentIndex + 1);
+                                const beforeSrc = element.substring(0, lastPercentIndex);
+
+                                // 按倒数第二个 % 分割 eventsdevkey
+                                const secondLastPercentIndex = beforeSrc.lastIndexOf('%');
+                                if (secondLastPercentIndex === -1) return;
+                                const eventsdevkey = beforeSrc.substring(secondLastPercentIndex + 1);
+                                const beforeEventsdevkey = beforeSrc.substring(0, secondLastPercentIndex);
+
+                                // 按第一个 & 分割 eventsdevname
+                                const firstAmpIndex = beforeEventsdevkey.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const eventsdevname = beforeEventsdevkey.substring(0, firstAmpIndex);
+                                const afterAmp = beforeEventsdevkey.substring(firstAmpIndex + 1);
+
+                                // 按第一个 / 分割 eventskey 和 name（允许 name 包含 /）
+                                const firstSlashIndex = afterAmp.indexOf('/');
+                                if (firstSlashIndex === -1) return;
+                                const eventskey = afterAmp.substring(0, firstSlashIndex);
+                                const nameWithTilde = afterAmp.substring(firstSlashIndex + 1);
+
+                                // 按第一个 ~ 分割 name（允许 name 包含 ~）
+                                const firstTildeIndex = nameWithTilde.indexOf('~');
+                                const name = firstTildeIndex === -1 ? nameWithTilde : nameWithTilde.substring(0, firstTildeIndex);
+
+                                desc.push({ eventsdevname, eventskey, name, eventsdevkey, src });
+                            } catch (err) {
+                                console.error('解析事件失败:', element, err);
+                            }
                         });
                     }
                     // console.log(desc)

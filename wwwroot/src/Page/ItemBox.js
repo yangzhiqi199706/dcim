@@ -563,6 +563,7 @@ function ItemBox(props) {
     };
 
     return (
+        <>
         <div className="left">
             <ul>
                 {nav.map((val, i) => (
@@ -658,102 +659,6 @@ function ItemBox(props) {
                                 />
                             )}
                         </div>
-
-                        <div className="layui-layer" style={isdelModalOpen ? { display: 'block' } : { display: 'none' }}>
-                            <div className="layui-layer-title">{t('common.reminder')}</div>
-                            <div className="layui-layer-content">{t('itemBox.deleteConfirmPrefix')}<span style={{ color: '#1E9FFF', fontSize: 18 }}>{editPageName}</span>{t('itemBox.deleteConfirmSuffix')}</div>
-                            <span className="layui-layer-setwin" onClick={() => setIsdelModalOpen(false)}>
-                                <Close />
-                            </span>
-                            <div className="layui-layer-btn">
-                                <Button
-                                    type="primary"
-                                    onClick={async () => {
-                                        let res = await httpsend.getData('DelDmpageKey', {
-                                            id: editPageId
-                                        });
-                                        if (res) {
-                                            if (res.code === 100) {
-                                                let txtres = await httpsend.getDataLocal('imgData', { action: 'delpage', name: editPageTxt });
-                                                if (txtres.code === 100) {
-                                                    message.success(t('itemBox.deleteSuccess'));
-                                                    getImgData('page');
-                                                } else {
-                                                    message.error(t('itemBox.removePageFileFailed'));
-                                                }
-                                            } else {
-                                                message.error(t('itemBox.deleteFailed'));
-                                            }
-                                        }
-                                        setIsdelModalOpen(false);
-                                    }}
-                                >
-                                    {t('common.confirm')}
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="layui-layer" id="editPage" style={showeditPageBox ? { display: 'block' } : { display: 'none' }} key={editPageId}>
-                            <div className="layui-layer-title">{t('itemBox.editPage')}</div>
-                            <div className="layui-layer-content">
-                                <div>
-                                    <label>{t('itemBox.pageName')}</label>
-                                    <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageName(e.target.value)} defaultValue={editPageName} />
-                                </div>
-                                <div>
-                                    <label>{t('itemBox.parentPage')}</label>
-                                    <Cascader options={savePagePidSel} defaultValue={editPagePidName} onChange={(val) => seteditPagePid(val[val.length - 1])} style={{ width: '167px' }} changeOnSelect />
-                                </div>
-                                <div>
-                                    <label>{t('itemBox.pageOrder')}</label>
-                                    <input style={{ width: '167px' }} type="number" onChange={(e) => seteditPageIndex(e.target.value)} defaultValue={editPageIndex} />
-                                </div>
-                                {editPageType === '3' && (
-                                    <div>
-                                        <label>{t('itemBox.jumpUrl')}</label>
-                                        <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageLink(e.target.value)} defaultValue={editPageLink} />
-                                    </div>
-                                )}
-                                <div>
-                                    <label>{t('itemBox.homepageDisplay')}</label>
-                                    <select style={{ width: '167px' }} onChange={(e) => seteditPageTop(e.target.value)}>
-                                        <option value="1" selected={editPageTop === '1'}>{t('common.yes')}</option>
-                                        <option value="-1" selected={editPageTop === '-1'}>{t('common.no')}</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <span className="layui-layer-setwin" onClick={() => setshoweditPageBox(false)}>
-                                <Close />
-                            </span>
-                            <div className="layui-layer-btn">
-                                <Button
-                                    type="primary"
-                                    onClick={async () => {
-                                        let params = {
-                                            id: editPageId,
-                                            PageName: editPageName,
-                                            PageIndex: editPageIndex,
-                                            pid: editPagePid,
-                                            PageTop: editPageTop
-                                        };
-                                        if (editPageType === '3') {
-                                            params.PageTxt = editPageLink;
-                                        }
-                                        let res = await httpsend.getData('ChangeDmpageKey', params);
-                                        if (res && res.code === 100) {
-                                            message.success(t('itemBox.updateSuccess'));
-                                            getImgData('page');
-                                        } else {
-                                            message.error(t('itemBox.updateFailed'));
-                                        }
-                                        setshoweditPageBox(false);
-                                        seteditPageTop('-1');
-                                    }}
-                                >
-                                    {t('common.confirm')}
-                                </Button>
-                            </div>
-                        </div>
                     </>
                 )}
 
@@ -772,6 +677,105 @@ function ItemBox(props) {
                 ))}
             </div>
         </div>
+
+        {/* 删除确认弹窗 - 移到 .left 外面避免被容器裁剪 */}
+        <div className="layui-layer" style={isdelModalOpen ? { display: 'block' } : { display: 'none' }}>
+            <div className="layui-layer-title">{t('common.reminder')}</div>
+            <div className="layui-layer-content">{t('itemBox.deleteConfirmPrefix')}<span style={{ color: '#1E9FFF', fontSize: 18 }}>{editPageName}</span>{t('itemBox.deleteConfirmSuffix')}</div>
+            <span className="layui-layer-setwin" onClick={() => setIsdelModalOpen(false)}>
+                <Close />
+            </span>
+            <div className="layui-layer-btn">
+                <Button
+                    type="primary"
+                    onClick={async () => {
+                        let res = await httpsend.getData('DelDmpageKey', {
+                            id: editPageId
+                        });
+                        if (res) {
+                            if (res.code === 100) {
+                                let txtres = await httpsend.getDataLocal('imgData', { action: 'delpage', name: editPageTxt });
+                                if (txtres.code === 100) {
+                                    message.success(t('itemBox.deleteSuccess'));
+                                    getImgData('page');
+                                } else {
+                                    message.error(t('itemBox.removePageFileFailed'));
+                                }
+                            } else {
+                                message.error(t('itemBox.deleteFailed'));
+                            }
+                        }
+                        setIsdelModalOpen(false);
+                    }}
+                >
+                    {t('common.confirm')}
+                </Button>
+            </div>
+        </div>
+
+        {/* 编辑页面弹窗 - 移到 .left 外面避免被容器裁剪 */}
+        <div className="layui-layer" id="editPage" style={showeditPageBox ? { display: 'block' } : { display: 'none' }} key={editPageId}>
+            <div className="layui-layer-title">{t('itemBox.editPage')}</div>
+            <div className="layui-layer-content">
+                <div>
+                    <label>{t('itemBox.pageName')}</label>
+                    <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageName(e.target.value)} defaultValue={editPageName} />
+                </div>
+                <div>
+                    <label>{t('itemBox.parentPage')}</label>
+                    <Cascader options={savePagePidSel} defaultValue={editPagePidName} onChange={(val) => seteditPagePid(val[val.length - 1])} style={{ width: '167px' }} changeOnSelect />
+                </div>
+                <div>
+                    <label>{t('itemBox.pageOrder')}</label>
+                    <input style={{ width: '167px' }} type="number" onChange={(e) => seteditPageIndex(e.target.value)} defaultValue={editPageIndex} />
+                </div>
+                {editPageType === '3' && (
+                    <div>
+                        <label>{t('itemBox.jumpUrl')}</label>
+                        <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageLink(e.target.value)} defaultValue={editPageLink} />
+                    </div>
+                )}
+                <div>
+                    <label>{t('itemBox.homepageDisplay')}</label>
+                    <select style={{ width: '167px' }} onChange={(e) => seteditPageTop(e.target.value)}>
+                        <option value="1" selected={editPageTop === '1'}>{t('common.yes')}</option>
+                        <option value="-1" selected={editPageTop === '-1'}>{t('common.no')}</option>
+                    </select>
+                </div>
+            </div>
+            <span className="layui-layer-setwin" onClick={() => setshoweditPageBox(false)}>
+                <Close />
+            </span>
+            <div className="layui-layer-btn">
+                <Button
+                    type="primary"
+                    onClick={async () => {
+                        let params = {
+                            id: editPageId,
+                            PageName: editPageName,
+                            PageIndex: editPageIndex,
+                            pid: editPagePid,
+                            PageTop: editPageTop
+                        };
+                        if (editPageType === '3') {
+                            params.PageTxt = editPageLink;
+                        }
+                        let res = await httpsend.getData('ChangeDmpageKey', params);
+                        if (res && res.code === 100) {
+                            message.success(t('itemBox.updateSuccess'));
+                            getImgData('page');
+                        } else {
+                            message.error(t('itemBox.updateFailed'));
+                        }
+                        setshoweditPageBox(false);
+                        seteditPageTop('-1');
+                    }}
+                >
+                    {t('common.confirm')}
+                </Button>
+            </div>
+        </div>
+        </>
     );
 }
 

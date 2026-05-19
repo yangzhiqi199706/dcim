@@ -127,6 +127,9 @@ function Home() {
     // F11b 精简版：5 分钟空闲自动保存
     const dirtyRef = useRef(false);            // 有未保存修改时为 true
     const autoSaveTimerRef = useRef(null);     // 5 分钟自动保存定时器
+    // 页面加载令牌：每次 dealStringPage / newPage 切换页面时换一个新值，
+    // 用于跨页面复制粘贴时判断是否同一页面（草稿页 savePageId 都是 '0' 无法区分）
+    const currentPageTokenRef = useRef('init-' + Date.now());
     const [tabFlash, setTabFlash] = useState('');
     const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
 
@@ -728,6 +731,7 @@ function Home() {
             type: 'page-elements',
             copiedAt: Date.now(),
             sourcePageId: savePageId,
+            sourcePageToken: currentPageTokenRef.current,  // 即使 savePageId 都是 '0'，token 也能区分草稿页
             elements: JSON.parse(JSON.stringify(shapes || [])),
         };
         try { localStorage.setItem(PAGE_DESIGNER_CLIPBOARD_KEY, JSON.stringify(payload)); } catch (e) { }
@@ -817,8 +821,17 @@ function Home() {
         const nextImages = JSON.parse(JSON.stringify(imagesRef.current));
         const clipboardBounds = getClipboardBoundsSimple(payload.elements);
         const viewportCenter = getViewportCenterOnCanvas();
-        const offsetX = clipboardBounds ? (viewportCenter.x - clipboardBounds.centerX + 8) : 8;
-        const offsetY = clipboardBounds ? (viewportCenter.y - clipboardBounds.centerY + 8) : 8;
+        // 跨页面粘贴时保持原始位置（不偏移），同页面内粘贴才偏移到视口中心
+        // 优先用 token 判（草稿页 savePageId 都是 '0' 无法区分），fallback 到 savePageId
+        let isCrossPagePaste = false;
+        if (payload.sourcePageToken && payload.sourcePageToken !== currentPageTokenRef.current) {
+            isCrossPagePaste = true;
+        } else if (!payload.sourcePageToken && payload.sourcePageId && String(payload.sourcePageId) !== String(savePageId)) {
+            // 兼容旧的 localStorage 数据（没有 token）
+            isCrossPagePaste = true;
+        }
+        const offsetX = isCrossPagePaste ? 0 : (clipboardBounds ? (viewportCenter.x - clipboardBounds.centerX + 8) : 8);
+        const offsetY = isCrossPagePaste ? 0 : (clipboardBounds ? (viewportCenter.y - clipboardBounds.centerY + 8) : 8);
 
         payload.elements.forEach((shape, index) => {
             const newId = `${Date.now()}_${index}_${Math.random().toString(36).slice(2, 6)}`;
@@ -1224,6 +1237,43 @@ function Home() {
         selectShapes([...selectedIdsRef.current]);
     };
 
+    // 键盘方向键移动选中元素 / 组合 / 多元素 / 多组合
+    // - 单选：扩展到整组（与拖动一致）
+    // - 多选：直接按 selectedIds 移动（已含整组）
+    // - 锁定元素：跳过
+    // - 复用 sync + applyMultiDragPositions + commitMultiDragPositions，与拖动同一套提交链路
+    // - 每次按键 = 1 次 history.push，撤销精度按 1 步
+    const moveSelectionByArrow = (dx, dy) => {
+        if (isPreview) return;
+        if (!dx && !dy) return;
+        // 收集要移动的 id
+        let targetIds = [];
+        if (Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0) {
+            targetIds = selectedIdsRef.current;
+        } else if (selectedIdRef.current) {
+            targetIds = getExpandedSelectionIds(selectedIdRef.current);
+        }
+        if (targetIds.length === 0) return;
+        // 过滤锁定元素
+        const unlockedIds = targetIds.filter((id) => isShapeUnlocked(id));
+        if (unlockedIds.length === 0) return;
+        // 先把 Konva 真实位置同步回 imagesRef，避免基于过期 x/y 计算（与对齐/复制同一套保护）
+        syncKonvaPositionsToImagesRef();
+        // 构造 positionMap：基于当前 imagesRef.x/y + dx/dy
+        const positionMap = {};
+        unlockedIds.forEach((id) => {
+            const shape = imagesRef.current.find((s) => s.id === id);
+            if (!shape) return;
+            positionMap[id] = {
+                x: (Number(shape.x) || 0) + dx,
+                y: (Number(shape.y) || 0) + dy,
+            };
+        });
+        // 同步推到 Konva 节点（即时视觉反馈），再提交到 state + history
+        applyMultiDragPositions(positionMap);
+        commitMultiDragPositions(positionMap);
+    };
+
     // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions，
     // 避免 <Group {...shapeProps}> 用 imagesRef 旧 x/y 回拉同组成员，造成漂移
     // 用 useLayoutEffect 在浏览器绘制之前同步执行，避免用户看到错位的一帧
@@ -1488,6 +1538,11 @@ function Home() {
 
         // Comment translated to English.
         const onKeyDown = (e) => {
+            // 输入框 / 文本域 / contenteditable 焦点时，不拦截任何按键（让用户正常输入）
+            const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+            const isEditing = tag === 'input' || tag === 'textarea' || tag === 'select'
+                || (e.target && e.target.isContentEditable);
+            if (isEditing) return;
             if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
                 e.preventDefault();
                 ungroupSelectedShapes();
@@ -1506,6 +1561,18 @@ function Home() {
                 handleToolChange('undo');
             } else if (e.ctrlKey && e.key === 'ArrowDown') {
                 handleToolChange('down');
+            } else if (!e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                // 方向键移动选中元素 / 组合 / 多元素 / 多组合
+                // Shift = 10px 加速，否则 1px 精细微调（Figma / Photoshop 标准）
+                // Ctrl + 方向键不在这里处理（Ctrl+↑/↓ 已被层级调整占用）
+                e.preventDefault();
+                const step = e.shiftKey ? 10 : 1;
+                let dx = 0, dy = 0;
+                if (e.key === 'ArrowUp') dy = -step;
+                else if (e.key === 'ArrowDown') dy = step;
+                else if (e.key === 'ArrowLeft') dx = -step;
+                else if (e.key === 'ArrowRight') dx = step;
+                moveSelectionByArrow(dx, dy);
             } else if (e.ctrlKey && (e.key === 'E' || e.key === 'e')) {
                 handleToolChange('top');
             } else if (e.ctrlKey && (e.key === 'B' || e.key === 'b')) {
@@ -2423,6 +2490,8 @@ function Home() {
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         // F11b 精简版：刚加载完页面，把 dirty 状态压回去（避免随之而来的 setImages 把刚加载的内容判脏）
         markPageLoaded();
+        // 切换页面 → 换新 token（用于跨页面复制粘贴判定）
+        currentPageTokenRef.current = 'page-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     }
     // Comment translated to English.
     const handleOnDrop = (e) => {
@@ -2892,6 +2961,8 @@ function Home() {
             scaley: 1,
         });
         setcanvasScale(100);
+        // 新建页面 → 换新 token（用于跨页面复制粘贴判定）
+        currentPageTokenRef.current = 'page-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     }
     // Comment translated to English.
     const loginOut = () => {
