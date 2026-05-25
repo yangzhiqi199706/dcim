@@ -20,6 +20,7 @@
     import: '导入',
     export: '导出',
     preview: '预览',
+    resetView: '返回原点',
   },
   itemBox: {
     topLevelPage: '顶级页面',

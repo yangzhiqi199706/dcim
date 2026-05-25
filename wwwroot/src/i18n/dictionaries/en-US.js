@@ -20,6 +20,7 @@
     import: 'Import',
     export: 'Export',
     preview: 'Preview',
+    resetView: 'Reset View',
   },
   itemBox: {
     topLevelPage: 'Top Level Page',

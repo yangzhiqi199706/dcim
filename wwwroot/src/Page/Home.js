@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { flushSync } from "react-dom";
 import { Stage, Layer, Rect, Transformer, Text, Group, Line } from "react-konva";
 import httpsend from '../Assets/httpsend';
 import ToolList from "./ToolList";
@@ -20,6 +21,10 @@ import Konva from "konva";
 let history = [];
 const PAGE_DESIGNER_CLIPBOARD_KEY = 'page_designer_clipboard_v1';
 const SNAP_GUIDE_OFFSET = 24;
+// F20 Ctrl+wheel zoom: range / step (percent, aligned with the canvasScale slider)
+const ZOOM_MIN_PERCENT = 10;
+const ZOOM_MAX_PERCENT = 300;
+const ZOOM_WHEEL_STEP_PERCENT = 10;
 const params = new URLSearchParams(window.location.search);
 const isPreview = params.get('type') ? true : false;// Comment translated to English.
 const isSwiper = params.get('swiper') ? true : false;// Comment translated to English.
@@ -117,6 +122,10 @@ function Home() {
     const stageHeightRef = useRef(stageHeight);
     const safeStageWidth = normalizeStageSize(stageWidth, 1920);
     const safeStageHeight = normalizeStageSize(stageHeight, 1080);
+    // F20 Ctrl+wheel zoom: physical canvas size = 1x size * scale.
+    // Without this, scale > 1 causes content to be clipped by the Konva canvas bounds.
+    const displayedStageWidth = Math.round(safeStageWidth * (stageDimensions ? stageDimensions.scalex || 1 : 1));
+    const displayedStageHeight = Math.round(safeStageHeight * (stageDimensions ? stageDimensions.scaley || 1 : 1));
     // Comment translated to English.
     const [canvasScale, setcanvasScale] = useState(100);
 
@@ -130,6 +139,9 @@ function Home() {
     // 页面加载令牌：每次 dealStringPage / newPage 切换页面时换一个新值，
     // 用于跨页面复制粘贴时判断是否同一页面（草稿页 savePageId 都是 '0' 无法区分）
     const currentPageTokenRef = useRef('init-' + Date.now());
+    // 切换界面提示保存：当前页面有未保存改动时，点其它页面会弹确认框
+    const [switchConfirmBox, setSwitchConfirmBox] = useState(false);
+    const pendingSwitchRef = useRef(null);     // 暂存被打断的切换动作 {dragUrl, dragAttrs, type}
     const [tabFlash, setTabFlash] = useState('');
     const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
 
@@ -422,6 +434,11 @@ function Home() {
         scalex: 1,
         scaley: 1
     });
+    // F20 Ctrl+wheel zoom: mirror latest values via refs so the native wheel listener never reads stale closures.
+    const stageDimensionsRef = useRef(stageDimensions);
+    useEffect(() => { stageDimensionsRef.current = stageDimensions; }, [stageDimensions]);
+    const canvasScaleRef = useRef(canvasScale);
+    useEffect(() => { canvasScaleRef.current = canvasScale; }, [canvasScale]);
 
     const getBoundedDragPosition = (metrics, x, y) => {
         if (!metrics) {
@@ -2389,6 +2406,25 @@ function Home() {
     // Comment translated to English.
     // Comment translated to English.
     const handleItemDragUrl = async (dragUrl, dragAttrs, type) => {
+        // 切换界面提示保存：当前页面有未保存改动 + 是已存在的正式页面 → 弹确认框
+        if (
+            type
+            && dirtyRef.current
+            && savePageId
+            && savePageId !== '0'
+            && savePageType === '1'
+            && savePageTxt
+        ) {
+            // 暂存这次切换动作，等用户点弹窗里"保存并切换 / 不保存切换"再继续
+            pendingSwitchRef.current = { dragUrl, dragAttrs, type };
+            setSwitchConfirmBox(true);
+            return;
+        }
+        await performItemDragUrl(dragUrl, dragAttrs, type);
+    };
+
+    // 实际执行切换的内部函数（被 handleItemDragUrl 和确认弹窗按钮复用）
+    const performItemDragUrl = async (dragUrl, dragAttrs, type) => {
         setDragUrl(dragUrl);
         if (type) {
             let conres = await httpsend.getDataLocal('imgData', { action: 'page', name: type.split('&')[0] });
@@ -2971,11 +3007,95 @@ function Home() {
     }
     // Comment translated to English.
     const handleCanvasChange = (val) => {
-        setStageDimensions({
-            scalex: val / 100,
-            scaley: val / 100,
+        const next = Math.max(ZOOM_MIN_PERCENT, Math.min(ZOOM_MAX_PERCENT, Number(val) || 100));
+        // Slider zoom: anchor at the .canvasStage scroller center to keep the original "in-place zoom" feel without losing content.
+        applyZoom(next, null);
+    }
+    // F20 Ctrl+wheel zoom core: place the content point under the cursor back to its original screen coordinate after zoom.
+    // anchorClient: { x, y } cursor viewport coords; when null, the visible center of the scroller is used.
+    const applyZoom = (nextPercent, anchorClient) => {
+        const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
+        const canvasEl = scroller ? scroller.querySelector('canvas') : null;
+        const clamped = Math.max(ZOOM_MIN_PERCENT, Math.min(ZOOM_MAX_PERCENT, nextPercent));
+        const oldScale = (stageDimensionsRef.current && stageDimensionsRef.current.scalex) || 1;
+        const newScale = clamped / 100;
+        if (Math.abs(newScale - oldScale) < 1e-4) return;
+
+        // Pre-zoom: use the canvas element's own boundingRect as reference
+        // (avoids the offset ambiguity caused by .canvasStage2's margin: auto centering).
+        let contentX = 0;
+        let contentY = 0;
+        let anchorViewportX = 0;
+        let anchorViewportY = 0;
+        let canMeasure = false;
+        if (scroller && canvasEl) {
+            const scrollerRect = scroller.getBoundingClientRect();
+            const canvasRect = canvasEl.getBoundingClientRect();
+            anchorViewportX = anchorClient ? anchorClient.x : (scrollerRect.left + scroller.clientWidth / 2);
+            anchorViewportY = anchorClient ? anchorClient.y : (scrollerRect.top + scroller.clientHeight / 2);
+            // Cursor offset relative to canvas top-left in physical pixels -> convert to 1x content coordinates.
+            contentX = (anchorViewportX - canvasRect.left) / oldScale;
+            contentY = (anchorViewportY - canvasRect.top) / oldScale;
+            canMeasure = true;
+        }
+
+        // flushSync forces the setState calls to commit synchronously so the next line can read the updated scrollWidth/scrollHeight and canvas physical size.
+        flushSync(() => {
+            setStageDimensions({
+                scalex: newScale,
+                scaley: newScale,
+            });
+            setcanvasScale(clamped);
         });
-        setcanvasScale(val);
+
+        if (scroller && canvasEl && canMeasure) {
+            // Post-zoom canvas position (margin: auto may still be active or may have switched to flush-left).
+            const newCanvasRect = canvasEl.getBoundingClientRect();
+            // We want the same content point (contentX, contentY) to remain at the anchor in the viewport.
+            // The point's post-zoom viewport X = newCanvasRect.left + contentX * newScale,
+            // and the difference from the target anchorViewportX is offset via scrollLeft.
+            const dx = (newCanvasRect.left + contentX * newScale) - anchorViewportX;
+            const dy = (newCanvasRect.top + contentY * newScale) - anchorViewportY;
+            const targetScrollLeft = scroller.scrollLeft + dx;
+            const targetScrollTop = scroller.scrollTop + dy;
+            const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+            const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+            scroller.scrollLeft = Math.max(0, Math.min(maxScrollLeft, targetScrollLeft));
+            scroller.scrollTop = Math.max(0, Math.min(maxScrollTop, targetScrollTop));
+        }
+    }
+    // F20 Ctrl+wheel zoom: register a native wheel listener on .canvasBody (passive:false is required to preventDefault).
+    useEffect(() => {
+        if (isPreview) return undefined;
+        const container = containerRef.current;
+        if (!container) return undefined;
+        const onWheel = (e) => {
+            if (!(e.ctrlKey || e.metaKey)) return;
+            // Only handle wheel zoom inside the canvas (avoid swallowing scroll on the asset panel and elsewhere).
+            const scroller = container.querySelector('.canvasStage');
+            if (!scroller || !scroller.contains(e.target)) return;
+            e.preventDefault();
+            const delta = e.deltaY || e.wheelDelta || 0;
+            if (!delta) return;
+            const direction = delta > 0 ? -1 : 1; // wheel up = zoom in, wheel down = zoom out.
+            const cur = canvasScaleRef.current || 100;
+            const next = cur + direction * ZOOM_WHEEL_STEP_PERCENT;
+            applyZoom(next, { x: e.clientX, y: e.clientY });
+        };
+        container.addEventListener('wheel', onWheel, { passive: false });
+        return () => container.removeEventListener('wheel', onWheel);
+    }, [isPreview]);
+    // F20 reset view: zoom back to 100% and scroll the viewport to the origin.
+    const handleResetView = () => {
+        const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
+        flushSync(() => {
+            setStageDimensions({ scalex: 1, scaley: 1 });
+            setcanvasScale(100);
+        });
+        if (scroller) {
+            scroller.scrollLeft = 0;
+            scroller.scrollTop = 0;
+        }
     }
     // Comment translated to English.
     return (
@@ -3105,15 +3225,34 @@ function Home() {
                         onDrop={handleOnDrop}
                         onDragOver={(e) => e.preventDefault()}
                     >
-                        <div className="canvasRange">
-                            <img src="Images/icon/narrow.png" style={{ 'width': '15px', 'verticalAlign': 'super', 'marginRight': '5px' }} alt={t('auto.k0329')} />
-                            <input type="range" min="10" max="100" onChange={(e) => handleCanvasChange(e.target.value)} defaultValue={canvasScale} />
-                            <img src="Images/icon/enlarge.png" style={{ 'width': '15px', 'verticalAlign': 'super', 'marginLeft': '5px' }} alt={t('auto.k0330')} />
+                        <div className="canvasRange" style={{ display: 'flex', alignItems: 'center' }}>
+                            <span
+                                className="canvasResetBtn"
+                                title={t('common.resetView')}
+                                onClick={handleResetView}
+                                style={{
+                                    display: 'inline-block',
+                                    padding: '0 8px',
+                                    marginRight: '8px',
+                                    height: '20px',
+                                    lineHeight: '20px',
+                                    fontSize: '12px',
+                                    color: '#fff',
+                                    background: '#148cf1',
+                                    border: '1px solid #148cf1',
+                                    borderRadius: '3px',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                }}
+                            >{t('common.resetView')}</span>
+                            <img src="Images/icon/narrow.png" style={{ 'width': '15px', 'marginRight': '5px' }} alt={t('auto.k0329')} />
+                            <input type="range" min={ZOOM_MIN_PERCENT} max={ZOOM_MAX_PERCENT} onChange={(e) => handleCanvasChange(e.target.value)} value={canvasScale} />
+                            <img src="Images/icon/enlarge.png" style={{ 'width': '15px', 'marginLeft': '5px' }} alt={t('auto.k0330')} />
                         </div>
                         {savePageId === '0' && <Stage
                             className="canvasStage canvasStage2"
-                            width={safeStageWidth}
-                            height={safeStageHeight}
+                            width={displayedStageWidth}
+                            height={displayedStageHeight}
                             scaleX={stageDimensions.scalex}
                             scaleY={stageDimensions.scaley}
                             ref={stageRef}
@@ -3126,8 +3265,8 @@ function Home() {
                         </Stage>}
                         {savePageId !== '0' && (savePageType === '1' ? <Stage
                             className="canvasStage canvasStage2"
-                            width={safeStageWidth}
-                            height={safeStageHeight}
+                            width={displayedStageWidth}
+                            height={displayedStageHeight}
                             scaleX={stageDimensions.scalex}
                             scaleY={stageDimensions.scaley}
                             ref={stageRef}
@@ -3283,8 +3422,8 @@ function Home() {
                             </Layer>
                         </Stage> : <Stage
                             className="canvasStage canvasStage2"
-                            width={safeStageWidth}
-                            height={safeStageHeight}
+                            width={displayedStageWidth}
+                            height={displayedStageHeight}
                             scaleX={stageDimensions.scalex}
                             scaleY={stageDimensions.scaley}
                             ref={stageRef}
@@ -3565,6 +3704,54 @@ function Home() {
                                 setresetBox(false);
 
                             }}>{t('auto.k0202')}</Button>
+                        </div>
+                    </div>
+                    {/* 切换界面提示保存：当前页面有未保存改动时切到其它页面会弹这个 */}
+                    <div className="layui-layer" style={switchConfirmBox ? { 'display': 'block' } : { 'display': 'none' }}>
+                        <div className="layui-layer-title">提示</div>
+                        <div className="layui-layer-content">
+                            当前页面《<span style={{ color: '#148cf1', fontSize: 18 }}>{savePageName}</span>》有未保存的修改，是否保存后再切换？
+                        </div>
+                        <span className="layui-layer-setwin" onClick={() => {
+                            // 取消：留在当前页面，丢弃挂起的切换动作
+                            pendingSwitchRef.current = null;
+                            setSwitchConfirmBox(false);
+                        }}>
+                            <Close />
+                        </span>
+                        <div className="layui-layer-btn">
+                            <Button type="primary" onClick={async () => {
+                                // 保存并切换：先静默保存，再执行挂起的切换
+                                const pending = pendingSwitchRef.current;
+                                pendingSwitchRef.current = null;
+                                setSwitchConfirmBox(false);
+                                try {
+                                    await silentAutoSave();
+                                } catch (e) {
+                                    message.error('保存失败');
+                                    return;
+                                }
+                                if (pending) {
+                                    await performItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type);
+                                }
+                            }}>保存并切换</Button>
+                            <Button onClick={async () => {
+                                // 不保存切换：丢弃改动直接切换
+                                const pending = pendingSwitchRef.current;
+                                pendingSwitchRef.current = null;
+                                setSwitchConfirmBox(false);
+                                // 取消正在排程的自动保存定时器，避免随后还触发
+                                cancelAutoSave();
+                                dirtyRef.current = false;
+                                if (pending) {
+                                    await performItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type);
+                                }
+                            }}>不保存切换</Button>
+                            <Button onClick={() => {
+                                // 取消：留在当前页面
+                                pendingSwitchRef.current = null;
+                                setSwitchConfirmBox(false);
+                            }}>取消</Button>
                         </div>
                     </div>
                 </>
