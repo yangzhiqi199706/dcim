@@ -1,0 +1,2061 @@
+-- Generated from sql/dcim_mysql.sql for Dameng (DM)
+-- Scope: schema structure only (tables, primary keys, indexes, views)
+
+CREATE TABLE "dcim-alarmlevellist" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "LevelName" varchar(10) NOT NULL,
+  "AlarmCount" INTEGER NOT NULL DEFAULT '0',
+  "LevelTag" varchar(50) NOT NULL,
+  "Hour" INTEGER NOT NULL DEFAULT '24',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmlist" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AlarmType" INTEGER DEFAULT NULL,
+  "NotifyModeID" INTEGER NOT NULL,
+  "ParamValue" varchar(255) DEFAULT NULL,
+  "NotifyState" INTEGER NOT NULL DEFAULT '1',
+  "NotifyMode" varchar(20) DEFAULT '',
+  "NotifyCount" INTEGER NOT NULL DEFAULT '1',
+  "LastNotifyTime" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "CancelTime" TIMESTAMP NULL DEFAULT NULL,
+  "CancelDesc" varchar(255) DEFAULT NULL,
+  "ConfirmUserId" INTEGER DEFAULT NULL,
+  "ConfirmTime" TIMESTAMP NULL DEFAULT NULL,
+  "Solution" varchar(255) DEFAULT NULL,
+  "DevId" INTEGER DEFAULT NULL,
+  "DevClass" INTEGER DEFAULT NULL,
+  "AlarmLevel" INTEGER DEFAULT NULL,
+  "OrderNumber" varchar(50) DEFAULT NULL,
+  "AlarmStatus" INTEGER DEFAULT '0',
+  "AlarmCount" INTEGER NOT NULL DEFAULT '1',
+  "TextMessage" varchar(255) DEFAULT NULL,
+  "VideoImg" varchar(535) DEFAULT NULL,
+  "VideoMP4" varchar(535) DEFAULT NULL,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmmasterslave" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "StrategyName" varchar(100) NOT NULL,
+  "MasterNotifyMode" INTEGER NOT NULL,
+  "SlaveNotifyMode" varchar(255) NOT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" INTEGER NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmnotifylist" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "NotifyUserID" INTEGER NOT NULL DEFAULT '0',
+  "NotifyAddr" varchar(255) NOT NULL,
+  "NotifyType" INTEGER NOT NULL DEFAULT '0',
+  "AlarmType" INTEGER NOT NULL DEFAULT '0',
+  "NotifyContent" CLOB NOT NULL,
+  "NotifyResult" varchar(255) DEFAULT NULL,
+  "SmsResult" varchar(255) DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT '0',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-alarmnotifymode" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AlarmType" INTEGER DEFAULT '0',
+  "AlarmKey" varchar(100) DEFAULT NULL,
+  "AlarmName" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "DevId" INTEGER NOT NULL,
+  "AlarmUpLimit" varchar(255) DEFAULT '',
+  "AlarmDownLimit" varchar(255) DEFAULT '',
+  "AlarmValue" varchar(255) DEFAULT '',
+  "AlarmLinkage" CLOB,
+  "AlarmID" varchar(25) DEFAULT NULL,
+  "OnlyCode" varchar(50) DEFAULT NULL,
+  "PhoneNotify" INTEGER NOT NULL DEFAULT '0',
+  "SMSNotify" INTEGER NOT NULL DEFAULT '0',
+  "WeixinNotify" INTEGER NOT NULL DEFAULT '0',
+  "WeComNotify" INTEGER NOT NULL DEFAULT '0',
+  "DingdingNotify" INTEGER NOT NULL DEFAULT '0',
+  "EmailNotify" INTEGER NOT NULL DEFAULT '0',
+  "NoiseNotify" INTEGER NOT NULL DEFAULT '0',
+  "UserID" varchar(255) DEFAULT '1',
+  "MasterID" varchar(20) DEFAULT '0',
+  "ConfirmNum" INTEGER NOT NULL DEFAULT '3',
+  "NotifyNum" INTEGER NOT NULL DEFAULT '1',
+  "IntervalTime" INTEGER NOT NULL DEFAULT '1800',
+  "AlarmLevel" INTEGER NOT NULL DEFAULT '1',
+  "UpgradeTime" INTEGER DEFAULT '0',
+  "UpgradeUser" varchar(20) DEFAULT NULL,
+  "Linkage" varchar(255) DEFAULT '',
+  "CancelLinkage" varchar(255) DEFAULT '',
+  "snmpSource" INTEGER DEFAULT NULL,
+  "LinkVideoChannel" varchar(535) DEFAULT NULL,
+  "CommandType" varchar(50) DEFAULT NULL,
+  "OId" varchar(255) DEFAULT NULL,
+  "DataType" varchar(11) DEFAULT NULL,
+  "TogetherAlarm" varchar(535) NOT NULL DEFAULT '',
+  "NotifyWindowID" INTEGER NOT NULL DEFAULT '0',
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmnotifywindow" (
+  "id" BIGINT IDENTITY(1,1) NOT NULL,
+  "WindowName" varchar(100) NOT NULL,
+  "Enabled" SMALLINT NOT NULL DEFAULT '1',
+  "MonSlots" varchar(255) DEFAULT NULL,
+  "TueSlots" varchar(255) DEFAULT NULL,
+  "WedSlots" varchar(255) DEFAULT NULL,
+  "ThuSlots" varchar(255) DEFAULT NULL,
+  "FriSlots" varchar(255) DEFAULT NULL,
+  "SatSlots" varchar(255) DEFAULT NULL,
+  "SunSlots" varchar(255) DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "status" SMALLINT NOT NULL DEFAULT '1',
+  "is_deleted" SMALLINT NOT NULL DEFAULT '1',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-alarmparam" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "event" SMALLINT DEFAULT '1',
+  "massage" SMALLINT DEFAULT '1',
+  "DeployStatus" INTEGER NOT NULL DEFAULT '1',
+  "MasterSlave" INTEGER NOT NULL DEFAULT '1',
+  "CancelNotify" INTEGER NOT NULL DEFAULT '0',
+  "VoiceTime" INTEGER DEFAULT NULL,
+  "VoiceSecond" INTEGER DEFAULT NULL,
+  "SmsOnhourAlarm" INTEGER DEFAULT NULL,
+  "TelOnhourAlarm" INTEGER DEFAULT NULL,
+  "SmsContent" INTEGER DEFAULT NULL,
+  "SmsCustomContent" varchar(255) DEFAULT NULL,
+  "SmsTime" varchar(255) DEFAULT NULL,
+  "TelTime" varchar(255) DEFAULT NULL,
+  "LastSmsAlarmTime" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "LastTelAlarmTime" TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00',
+  "SmsTargetPhone" varchar(255) DEFAULT NULL,
+  "TelTargetPhone" varchar(255) DEFAULT NULL,
+  "SmsParamId" CLOB,
+  "Smtp" varchar(50) DEFAULT NULL,
+  "SmAccount" varchar(50) DEFAULT NULL,
+  "SmPass" varchar(50) DEFAULT NULL,
+  "EventType" INTEGER NOT NULL DEFAULT '1',
+  "AlramTogether" SMALLINT DEFAULT '-1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmsmscontrol" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "Command" varchar(255) DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "UserId" varchar(255) DEFAULT NULL,
+  "ControlId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmsmssearch" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "Command" varchar(255) DEFAULT NULL,
+  "ParamId" CLOB,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmtype" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "TypeName" varchar(255) NOT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT NULL,
+  "status" INTEGER NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-alarmupgrade" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "UpgradeReason" varchar(255) NOT NULL,
+  "UpgradeValue" INTEGER DEFAULT '0',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT NULL,
+  "status" INTEGER NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-area" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AreaParentId" INTEGER DEFAULT '0',
+  "ServerCode" INTEGER DEFAULT NULL,
+  "AreaName" varchar(50) DEFAULT NULL,
+  "AreaLevel" varchar(50) DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT '1',
+  "ECabinet" varchar(50) DEFAULT NULL,
+  "EPower" varchar(50) DEFAULT NULL,
+  "ECold" varchar(50) DEFAULT NULL,
+  "UPSECapacity" varchar(50) DEFAULT NULL,
+  "AreaArea" varchar(50) DEFAULT NULL,
+  "AreaWeight" varchar(50) DEFAULT NULL,
+  "PUEID" INTEGER DEFAULT NULL,
+  "DegreeID" INTEGER DEFAULT NULL,
+  "PowerID" INTEGER DEFAULT NULL,
+  "UPSPowerID" INTEGER DEFAULT NULL,
+  "ColdPowerID" INTEGER DEFAULT NULL,
+  "ColdRatioID" INTEGER DEFAULT NULL,
+  "PowerSupplyID" INTEGER DEFAULT NULL,
+  "AreaWidth" varchar(50) DEFAULT NULL,
+  "AreaHeight" varchar(50) DEFAULT NULL,
+  "AreaImg" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-asset" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ModelId" INTEGER NOT NULL DEFAULT '0',
+  "AssetsDescribe" varchar(255) DEFAULT NULL,
+  "AssetsNumber" varchar(50) DEFAULT NULL,
+  "BuyTime" TIMESTAMP NULL DEFAULT NULL,
+  "AssetsPrice" varchar(50) DEFAULT NULL,
+  "StoreLocationId" INTEGER DEFAULT NULL,
+  "number" INTEGER DEFAULT '1',
+  "AssetsQa" varchar(50) DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "SupplierId" INTEGER DEFAULT NULL,
+  "RentId" INTEGER DEFAULT NULL,
+  "MaintenanceId" INTEGER DEFAULT NULL,
+  "AssetStatus" varchar(50) DEFAULT 'I',
+  "CreateEmpId" INTEGER DEFAULT '1',
+  "UId" varchar(100) DEFAULT NULL,
+  "GatewayId" varchar(100) DEFAULT '',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetattr" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AttrClass" varchar(50) DEFAULT NULL,
+  "AttrNumber" varchar(50) DEFAULT NULL,
+  "AttrName" varchar(50) DEFAULT NULL,
+  "DataType" varchar(50) DEFAULT NULL,
+  "AttrUnit" varchar(50) DEFAULT NULL,
+  "AttrAddWay" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetchangelog" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ChangeType" varchar(50) NOT NULL DEFAULT '0',
+  "ChangeDescribe" varchar(50) DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetcheckplan" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "TaskName" varchar(50) DEFAULT NULL,
+  "TaskNumber" varchar(50) DEFAULT NULL,
+  "PlanComplateTime" TIMESTAMP NULL DEFAULT NULL,
+  "AssetsType" varchar(50) DEFAULT NULL,
+  "DoEmpId" INTEGER DEFAULT NULL,
+  "DoTime" TIMESTAMP NULL DEFAULT NULL,
+  "CheckWay" varchar(50) DEFAULT NULL,
+  "CheckRange" INTEGER DEFAULT NULL,
+  "SeePerson" varchar(50) DEFAULT NULL,
+  "TaskDescribe" varchar(255) DEFAULT NULL,
+  "PlanStatus" varchar(50) DEFAULT '待执行',
+  "EndTime" TIMESTAMP NULL DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "system" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetcheckplanmodel" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PlanName" varchar(50) DEFAULT NULL,
+  "PlanCycle" SMALLINT DEFAULT '1',
+  "ComplateDay" INTEGER DEFAULT NULL,
+  "DeptId" INTEGER DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "SendCycle" varchar(50) DEFAULT NULL,
+  "SendTime" varchar(50) DEFAULT NULL,
+  "AssetsType" varchar(50) DEFAULT NULL,
+  "SeePerson" varchar(50) DEFAULT NULL,
+  "CheckWay" varchar(50) DEFAULT NULL,
+  "CheckRange" varchar(50) DEFAULT NULL,
+  "CheckRangeName" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetcheckresult" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PlanId" INTEGER DEFAULT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "CheckStatus" varchar(50) DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetdeal" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "DealWay" varchar(50) DEFAULT NULL,
+  "DealReason" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetgrounding" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "CabinetId" INTEGER DEFAULT NULL,
+  "ULocation" INTEGER DEFAULT NULL,
+  "DongHuan" CLOB,
+  "EmpId" INTEGER DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetinstall" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "InstallLocation" varchar(50) DEFAULT NULL,
+  "CabinetId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetmsg" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "MainNumber" varchar(50) DEFAULT NULL,
+  "MainName" varchar(50) DEFAULT NULL,
+  "MsgType" varchar(50) DEFAULT NULL,
+  "MsgDescribe" varchar(50) DEFAULT NULL,
+  "MsgStatus" varchar(50) DEFAULT '未确认',
+  "CheckEmpId" INTEGER DEFAULT NULL,
+  "CheckTime" TIMESTAMP NULL DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetprivate" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "AttributeId" INTEGER DEFAULT NULL,
+  "AttributeVal" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetputout" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "PutoutWay" varchar(50) DEFAULT NULL,
+  "PutoutTime" TIMESTAMP NULL DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "EmpId" INTEGER DEFAULT NULL,
+  "PlanReturnTime" TIMESTAMP NULL DEFAULT NULL,
+  "PutoutStatus" varchar(50) DEFAULT 'false',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assetrepair" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "RepairNumber" varchar(50) DEFAULT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "RepairType" varchar(50) DEFAULT NULL,
+  "RepairTime" TIMESTAMP NULL DEFAULT NULL,
+  "RepairEmp" varchar(50) DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "FaultDescribe" varchar(255) DEFAULT NULL,
+  "FaultImg" varchar(255) DEFAULT NULL,
+  "RepairStatus" varchar(255) DEFAULT 'false',
+  "RepairResult" varchar(255) DEFAULT NULL,
+  "FinishTime" TIMESTAMP NULL DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assettype" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsTypeNumber" varchar(255) DEFAULT NULL,
+  "AssetsTypeName" varchar(255) DEFAULT NULL,
+  "AssetsTypeParentId" INTEGER DEFAULT NULL,
+  "level" INTEGER DEFAULT NULL,
+  "system" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-assettypeattr" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsTypeId" INTEGER DEFAULT NULL,
+  "AttributeId" INTEGER DEFAULT NULL,
+  "AttributeVal" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-bc" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "BCName" varchar(50) DEFAULT NULL,
+  "BCstart" varchar(50) DEFAULT NULL,
+  "BCend" varchar(50) DEFAULT NULL,
+  "BCDisable" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-bcground" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ZBZGround" varchar(50) DEFAULT NULL,
+  "ZBZEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-brand" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CompanyId" INTEGER DEFAULT NULL,
+  "BrandName" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-brandmodel" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "BrandId" INTEGER DEFAULT NULL,
+  "AssetsTypeId" INTEGER DEFAULT NULL,
+  "BrandModel" varchar(50) DEFAULT NULL,
+  "BrandModelNumber" varchar(50) DEFAULT NULL,
+  "ModelQa" INTEGER DEFAULT NULL,
+  "ModelScrap" INTEGER DEFAULT NULL,
+  "ModelFrontImg" varchar(255) DEFAULT NULL,
+  "ModelAfterImg" varchar(255) DEFAULT NULL,
+  "ModelAllImg" varchar(255) DEFAULT NULL,
+  "ThrDModelId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-brandmodelattr" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ModelId" INTEGER DEFAULT NULL,
+  "AttributeId" INTEGER DEFAULT NULL,
+  "AttributeVal" varchar(50) DEFAULT NULL,
+  "ModelAttrDisable" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-cabinet" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "column" varchar(50) DEFAULT NULL,
+  "position" varchar(50) DEFAULT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "ParamId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-cabinetu" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CabinetId" INTEGER DEFAULT NULL,
+  "ULocation" INTEGER DEFAULT NULL,
+  "AssetsId" INTEGER DEFAULT NULL,
+  "UStatus" varchar(50) DEFAULT NULL,
+  "UdeviceStatus" varchar(50) DEFAULT NULL,
+  "UTag" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-camera" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CameraBrand" varchar(50) DEFAULT NULL,
+  "CameraName" varchar(50) DEFAULT NULL,
+  "CameraIP" varchar(50) DEFAULT NULL,
+  "CameraPort" varchar(50) DEFAULT NULL,
+  "CameraLoginName" varchar(50) DEFAULT NULL,
+  "CameraLoginPass" varchar(50) DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "CameraStatus" INTEGER NOT NULL DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-camerasetting" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SetName" varchar(535) DEFAULT '',
+  "SetDesc" CLOB,
+  "SetUse" SMALLINT NOT NULL DEFAULT '-1',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-capacityday" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ServerCode" INTEGER DEFAULT '1',
+  "AreaId" INTEGER DEFAULT NULL,
+  "Day" TIMESTAMP NULL DEFAULT NULL,
+  "CabinetNum" INTEGER DEFAULT '0',
+  "TotalU" INTEGER DEFAULT '0',
+  "UsedU" INTEGER DEFAULT '0',
+  "RatedPower" DOUBLE PRECISION DEFAULT '0',
+  "UsedPower" DOUBLE PRECISION DEFAULT '0',
+  "actualPower" DOUBLE PRECISION DEFAULT '0',
+  "actualElectricity" DOUBLE PRECISION DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-capacitylevel" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CapacityLevel" varchar(50) DEFAULT NULL,
+  "CapacityLevelColor" varchar(50) DEFAULT NULL,
+  "MinSpace" varchar(50) DEFAULT NULL,
+  "MaxSpace" varchar(50) DEFAULT NULL,
+  "MinPower" varchar(50) DEFAULT NULL,
+  "MaxPower" varchar(50) DEFAULT NULL,
+  "MinWeight" varchar(50) DEFAULT NULL,
+  "MaxWeight" varchar(50) DEFAULT NULL,
+  "MinJack" varchar(50) DEFAULT NULL,
+  "MaxJack" varchar(50) DEFAULT NULL,
+  "MinPort" varchar(50) DEFAULT NULL,
+  "MaxPort" varchar(50) DEFAULT NULL,
+  "MinSmooth" varchar(50) DEFAULT NULL,
+  "MaxSmooth" varchar(50) DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-capacitymodel" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CapacityModelName" varchar(50) DEFAULT NULL,
+  "SpaceHigh" varchar(50) DEFAULT NULL,
+  "PowerHigh" varchar(50) DEFAULT NULL,
+  "WeightHigh" varchar(50) DEFAULT NULL,
+  "JackHigh" varchar(50) DEFAULT NULL,
+  "PortHigh" varchar(50) DEFAULT NULL,
+  "SmoothHigh" varchar(50) DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-capacityplan" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PlanName" varchar(50) DEFAULT NULL,
+  "PlanUse" varchar(255) DEFAULT NULL,
+  "PlanUseTime" TIMESTAMP NULL DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER DEFAULT '1',
+  "UNeed" INTEGER DEFAULT NULL,
+  "PowerNeed" varchar(50) DEFAULT NULL,
+  "JackNeed" INTEGER DEFAULT NULL,
+  "PortNeed" INTEGER DEFAULT NULL,
+  "SmoothNeed" INTEGER DEFAULT NULL,
+  "WeightNeed" varchar(50) DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-collectordata" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER NOT NULL,
+  "Data" CLOB NOT NULL,
+  "RawData" CLOB,
+  "CommType" varchar(20) DEFAULT NULL,
+  "DataType" INTEGER DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-company" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CompanyName" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-consumablerecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ConsumableId" INTEGER NOT NULL DEFAULT '0',
+  "type" varchar(50) DEFAULT NULL,
+  "number" INTEGER DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "UseEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-consumables" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ConsumablesNumber" varchar(50) DEFAULT NULL,
+  "ConsumablesName" varchar(50) DEFAULT NULL,
+  "ConsumableBrand" varchar(50) DEFAULT NULL,
+  "ConsumableSpec" varchar(50) DEFAULT NULL,
+  "StoreLocationId" INTEGER DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "ConsumableUse" varchar(50) DEFAULT NULL,
+  "SurplusConsumablesNumber" INTEGER DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-department" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AreaId" varchar(255) DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "DeptParentId" INTEGER NOT NULL DEFAULT '0',
+  "DeptName" varchar(50) DEFAULT NULL,
+  "power" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-devcommondsendlist" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER NOT NULL,
+  "Command" varchar(255) DEFAULT NULL,
+  "RecvData" varchar(255) DEFAULT NULL,
+  "SendState" INTEGER NOT NULL DEFAULT '0',
+  "CreateEmpId" INTEGER NOT NULL DEFAULT '0',
+  "SendTime" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "CommandRecv" varchar(255) DEFAULT NULL,
+  "ProtocolCode" varchar(20) DEFAULT NULL,
+  "CommandID" INTEGER DEFAULT NULL,
+  "ip" varchar(50) NOT NULL DEFAULT '',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-device" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DeviceName" varchar(50) DEFAULT NULL,
+  "DeviceType" varchar(50) DEFAULT NULL,
+  "DeviceIP" varchar(50) DEFAULT NULL,
+  "DevicePort" varchar(255) DEFAULT NULL,
+  "SerialNumber" varchar(255) DEFAULT NULL,
+  "OID" varchar(255) DEFAULT NULL,
+  "OnlyCode" varchar(255) DEFAULT NULL,
+  "DeviceAddress" INTEGER NOT NULL DEFAULT '1',
+  "DeviceClass" INTEGER DEFAULT NULL,
+  "ProtocolCode" varchar(10) NOT NULL,
+  "LinkMode" INTEGER NOT NULL DEFAULT '1',
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" varchar(50) DEFAULT '1',
+  "DeviceStatus" INTEGER DEFAULT '0',
+  "DeviceLastData" varchar(255) DEFAULT NULL,
+  "account" varchar(255) DEFAULT NULL,
+  "password" varchar(255) DEFAULT NULL,
+  "SnmpVar" INTEGER DEFAULT NULL,
+  "SnmpRead" varchar(50) DEFAULT NULL,
+  "SnmpWrite" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-deviceclass" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ClassName" varchar(50) DEFAULT NULL,
+  "ProtocolType" varchar(50) DEFAULT NULL,
+  "AlarmUp" varchar(50) DEFAULT NULL,
+  "AlarmDown" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-devicecommand" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER NOT NULL,
+  "Command" varchar(255) NOT NULL,
+  "CommandType" varchar(11) NOT NULL DEFAULT '1',
+  "CommandRecv" CLOB,
+  "CommandDesc" varchar(255) DEFAULT NULL,
+  "ProtocolCode" varchar(10) DEFAULT NULL,
+  "LastReceiveData" CLOB,
+  "RawData" CLOB,
+  "LastValueSaveTime" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "ValueSaveRate" INTEGER NOT NULL DEFAULT '3600',
+  "SendState" INTEGER NOT NULL DEFAULT '1',
+  "IsAlart" INTEGER NOT NULL DEFAULT '0',
+  "status" SMALLINT DEFAULT '1',
+  "state" INTEGER NOT NULL DEFAULT '1',
+  "CommandRate" INTEGER NOT NULL DEFAULT '6',
+  "LastCommandTime" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "OId" varchar(50) NOT NULL DEFAULT '',
+  "LastUpdataTime" TIMESTAMP NULL DEFAULT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-devicectrlrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "IdCard" varchar(50) DEFAULT NULL,
+  "DevID" INTEGER NOT NULL,
+  "DevAction" INTEGER DEFAULT NULL,
+  "Result" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-deviceparam" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER NOT NULL,
+  "ValKey" varchar(255) DEFAULT NULL,
+  "Value" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-deviceprotocol" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ProtocolName" varchar(100) NOT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "ProtocolCode" varchar(10) NOT NULL,
+  "ProtocolValue" CLOB,
+  "ProtocolCtrlValue" CLOB,
+  "ProtocolData" CLOB NOT NULL,
+  "ProtocolType" INTEGER NOT NULL DEFAULT '0',
+  "ProtocolDesc" varchar(255) DEFAULT NULL,
+  "AlarmType" varchar(255) NOT NULL,
+  "ProtocolJson" CLOB,
+  "status" INTEGER NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-deviceprotocolctrl" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ProtocolName" varchar(100) NOT NULL,
+  "ProtocolCode" varchar(10) NOT NULL,
+  "ProtocolValue" varchar(255) NOT NULL,
+  "ProtocolData" CLOB NOT NULL,
+  "ProtocolType" INTEGER DEFAULT '0',
+  "ProtocolDesc" varchar(255) DEFAULT NULL,
+  "status" INTEGER NOT NULL,
+  "cteate_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-devicesnmp" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER NOT NULL,
+  "OID" varchar(50) NOT NULL,
+  "OIDName" varchar(255) NOT NULL DEFAULT '1',
+  "DataType" varchar(50) DEFAULT NULL,
+  "DataList" varchar(255) DEFAULT NULL,
+  "Unit" varchar(10) DEFAULT NULL,
+  "Rate" DOUBLE PRECISION DEFAULT NULL,
+  "status" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-devicesnmpalarm" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER NOT NULL,
+  "OnlyCode" varchar(50) DEFAULT NULL,
+  "AlarmName" varchar(255) NOT NULL,
+  "AlarmID" varchar(255) DEFAULT NULL,
+  "AlarmAdd" varchar(255) DEFAULT NULL,
+  "AlarmCancel" varchar(255) DEFAULT NULL,
+  "AlarmLevel" INTEGER DEFAULT NULL,
+  "AlarmCause" CLOB,
+  "AlarmSolution" CLOB,
+  "status" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-dmpage" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PageName" varchar(255) DEFAULT NULL,
+  "PageIndex" INTEGER DEFAULT NULL,
+  "PageType" INTEGER DEFAULT NULL,
+  "pid" INTEGER DEFAULT '0',
+  "ProId" INTEGER DEFAULT '0',
+  "PageTxt" varchar(255) DEFAULT NULL,
+  "PageTop" SMALLINT DEFAULT '-1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-doorattlog" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SN" varchar(50) DEFAULT NULL,
+  "DevId" INTEGER DEFAULT NULL,
+  "Pin" varchar(50) DEFAULT NULL,
+  "Time" TIMESTAMP DEFAULT NULL,
+  "dataStatus" varchar(50) DEFAULT NULL,
+  "Verify" varchar(50) DEFAULT NULL,
+  "Workcode" varchar(50) DEFAULT NULL,
+  "EventAddr" varchar(50) DEFAULT NULL,
+  "EventIndex" varchar(50) DEFAULT NULL,
+  "SiteCode" varchar(50) DEFAULT NULL,
+  "LinkId" varchar(10) DEFAULT NULL,
+  "MaskFlag" varchar(10) DEFAULT NULL,
+  "Temperature" varchar(50) DEFAULT NULL,
+  "ConvTemperature" varchar(50) DEFAULT NULL,
+  "DoorDevId" varchar(10) DEFAULT NULL,
+  "DoorCardNum" varchar(50) NOT NULL DEFAULT '',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-doorcurstate" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SN" varchar(50) DEFAULT NULL,
+  "DevId" INTEGER DEFAULT NULL,
+  "time" TIMESTAMP NULL DEFAULT NULL,
+  "sensor" varchar(255) DEFAULT NULL,
+  "relay" varchar(255) DEFAULT NULL,
+  "doorId" varchar(50) DEFAULT NULL,
+  "alarm" varchar(255) DEFAULT NULL
+);
+
+CREATE TABLE "dcim-doorerrorlog" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SN" varchar(50) DEFAULT NULL,
+  "DevId" INTEGER DEFAULT NULL,
+  "ErrCode" varchar(50) DEFAULT NULL,
+  "ErrMsg" varchar(255) DEFAULT NULL,
+  "DataOrigin" varchar(50) DEFAULT NULL,
+  "CmdId" varchar(50) DEFAULT NULL,
+  "Additional" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-dooroperlog" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SN" varchar(50) DEFAULT NULL,
+  "DevId" INTEGER DEFAULT NULL,
+  "OpType" varchar(50) DEFAULT NULL,
+  "OpWho" varchar(50) DEFAULT NULL,
+  "OpTime" TIMESTAMP NULL DEFAULT NULL,
+  "Value1" varchar(50) DEFAULT NULL,
+  "Value2" varchar(50) DEFAULT NULL,
+  "Value3" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-doorparam" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SN" varchar(50) DEFAULT NULL,
+  "DevId" INTEGER DEFAULT NULL,
+  "userSync" INTEGER DEFAULT '0',
+  "attSync" INTEGER DEFAULT '0',
+  "clearUser" INTEGER DEFAULT '0',
+  "changeUser" INTEGER DEFAULT '0',
+  "delUser" INTEGER DEFAULT '0',
+  "cmd" INTEGER DEFAULT '0',
+  "changeFingerImg" INTEGER NOT NULL DEFAULT '0',
+  "changeFingerImg2" INTEGER NOT NULL DEFAULT '0',
+  "changeFaceImg" INTEGER NOT NULL DEFAULT '0',
+  "GroupId" varchar(50) DEFAULT NULL,
+  "changePower" INTEGER NOT NULL DEFAULT '0',
+  "changeTZ" INTEGER NOT NULL DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-doorpower" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "GroupName" varchar(255) NOT NULL,
+  "DoorId" varchar(50) DEFAULT NULL,
+  "PersonGroupId" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-doorrecordadk" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "deptName" varchar(255) DEFAULT NULL,
+  "rdatetime" TIMESTAMP NULL DEFAULT NULL,
+  "personTypeName" varchar(255) DEFAULT NULL,
+  "psnID" varchar(255) NOT NULL,
+  "pname" varchar(255) NOT NULL,
+  "smacname" varchar(255) NOT NULL,
+  "macNo" varchar(255) NOT NULL,
+  "sInOrOut" varchar(255) NOT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-dooruser" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SN" varchar(50) DEFAULT NULL,
+  "Pin" varchar(50) DEFAULT NULL,
+  "Name" varchar(50) DEFAULT NULL,
+  "Pri" INTEGER DEFAULT NULL,
+  "Passwd" varchar(50) DEFAULT NULL,
+  "Card" varchar(50) DEFAULT NULL,
+  "Grp" varchar(50) DEFAULT NULL,
+  "TZ" varchar(50) DEFAULT NULL,
+  "Verify" varchar(50) DEFAULT NULL,
+  "ViceCard" varchar(50) DEFAULT NULL,
+  "Phone" varchar(50) DEFAULT NULL,
+  "Gender" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-electric" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ElectricName" varchar(50) DEFAULT NULL,
+  "ElectricDirection" SMALLINT NOT NULL DEFAULT '1',
+  "DegreeId" varchar(255) DEFAULT NULL,
+  "PowerId" varchar(255) DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-electricprice" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "EleRuleName" varchar(255) DEFAULT NULL,
+  "SharpTime" varchar(50) DEFAULT NULL,
+  "HighTime" varchar(50) DEFAULT NULL,
+  "FlatTime" varchar(50) DEFAULT NULL,
+  "LowTime" varchar(50) DEFAULT NULL,
+  "HighPrice" varchar(50) DEFAULT NULL,
+  "FlatPrice" varchar(50) DEFAULT NULL,
+  "LowPrice" varchar(50) DEFAULT NULL,
+  "SharpPrice" varchar(50) DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "EleMonth" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-faultsubtype" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "FaultTypeId" INTEGER NOT NULL DEFAULT '0',
+  "FaultSubTypeName" varchar(50) DEFAULT NULL,
+  "ExecutorEmpId" INTEGER DEFAULT '1',
+  "OtherExecutorEmpId" varchar(50) DEFAULT NULL,
+  "ExamineEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-faulttype" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "FaultTypeName" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-key" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "KeyNumber" varchar(50) DEFAULT NULL,
+  "KeyName" varchar(50) DEFAULT NULL,
+  "KeyStatus" varchar(50) DEFAULT '正常',
+  "PutinTime" TIMESTAMP NULL DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "KeyRecordStatus" varchar(255) DEFAULT '未借出',
+  "KeyRecordId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-keyrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "KeyId" INTEGER NOT NULL DEFAULT '0',
+  "type" varchar(50) NOT NULL DEFAULT '0',
+  "LendPerson" varchar(50) DEFAULT NULL,
+  "LendTel" varchar(50) DEFAULT NULL,
+  "LendTime" TIMESTAMP NULL DEFAULT NULL,
+  "ReturnTime" TIMESTAMP NULL DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-knowledge" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "EventName" varchar(50) DEFAULT NULL,
+  "KeyWord" varchar(50) DEFAULT NULL,
+  "Flag" varchar(50) DEFAULT NULL,
+  "FaultSubTypeLsh" INTEGER DEFAULT NULL,
+  "FaultSolution" varchar(255) DEFAULT NULL,
+  "KnowledgeFile" varchar(255) DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "UpdateEmpId" INTEGER DEFAULT NULL,
+  "KnowledgeRead" INTEGER DEFAULT '0',
+  "ReadLastTime" TIMESTAMP NULL DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-maintenance" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "MaintenanceName" varchar(50) DEFAULT NULL,
+  "MaintenanceNumber" varchar(50) DEFAULT NULL,
+  "MaintenanceType" varchar(50) DEFAULT NULL,
+  "SupplierId" INTEGER DEFAULT NULL,
+  "SignPerson" varchar(50) DEFAULT NULL,
+  "SignTime" TIMESTAMP NULL DEFAULT NULL,
+  "MaintenanceMonth" INTEGER DEFAULT NULL,
+  "StartTime" TIMESTAMP NULL DEFAULT NULL,
+  "MaintenanceTelName" varchar(50) DEFAULT NULL,
+  "MaintenanceTel" varchar(50) DEFAULT NULL,
+  "AcceptType" varchar(50) DEFAULT NULL,
+  "MaintenanceCon" varchar(255) DEFAULT NULL,
+  "MaintenanceFile" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-menu" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "menu_name" varchar(255) DEFAULT NULL,
+  "pid" INTEGER NOT NULL DEFAULT '0',
+  "url" varchar(255) NOT NULL DEFAULT '',
+  "icon" varchar(255) NOT NULL DEFAULT '',
+  "sort_order" INTEGER NOT NULL DEFAULT '0',
+  "is_menu" SMALLINT NOT NULL DEFAULT '0',
+  "action_url" varchar(255) NOT NULL DEFAULT '',
+  "status" SMALLINT NOT NULL DEFAULT '1',
+  "dcim" SMALLINT NOT NULL DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-nyclass" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "NYClassName" varchar(50) DEFAULT NULL,
+  "PUEId" CLOB,
+  "DegreeId" CLOB,
+  "PowerId" CLOB,
+  "ColdPowerId" CLOB,
+  "ColdRatioId" CLOB,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-nydnrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ServerCode" INTEGER DEFAULT '1',
+  "AreaId" INTEGER DEFAULT NULL,
+  "ElectricId" varchar(50) DEFAULT NULL,
+  "Day" TIMESTAMP NULL DEFAULT NULL,
+  "CurrentDegree" varchar(50) DEFAULT NULL,
+  "CurrentPower" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-nydnrecordday" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "DevID" INTEGER DEFAULT '1',
+  "DeviceName" varchar(50) DEFAULT NULL,
+  "ServerCode" INTEGER DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "Day" TIMESTAMP NULL DEFAULT NULL,
+  "Electric" varchar(50) DEFAULT NULL,
+  "HighElectric" varchar(50) DEFAULT NULL,
+  "FlatElectric" varchar(50) DEFAULT NULL,
+  "LowElectric" varchar(50) DEFAULT NULL,
+  "HighPrice" varchar(50) DEFAULT NULL,
+  "FlatPrice" varchar(50) DEFAULT NULL,
+  "LowPrice" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1',
+  "YearMonth" INTEGER
+);
+
+CREATE TABLE "dcim-nyrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ServerCode" INTEGER DEFAULT '1',
+  "AreaId" INTEGER DEFAULT NULL,
+  "NYClass" varchar(50) DEFAULT NULL,
+  "NYEnergy" varchar(50) DEFAULT NULL,
+  "NYPower" varchar(50) DEFAULT NULL,
+  "NYPue" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-nyrecordday" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ServerCode" INTEGER DEFAULT '1',
+  "AreaId" INTEGER DEFAULT NULL,
+  "NYClass" varchar(50) DEFAULT NULL,
+  "NYEnergy" varchar(50) DEFAULT NULL,
+  "NYPower" varchar(50) DEFAULT NULL,
+  "NYPue" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-onduty" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "OndutyYm" varchar(50) DEFAULT NULL,
+  "OndutyDay" varchar(50) DEFAULT NULL,
+  "MorningEmpId" INTEGER DEFAULT NULL,
+  "MiddleEmpId" INTEGER DEFAULT NULL,
+  "EveningEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-ondutylog" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PBDate" varchar(50) DEFAULT NULL,
+  "BCName" varchar(50) DEFAULT NULL,
+  "OnDutyGroup" varchar(50) DEFAULT NULL,
+  "OnDutyEmps" varchar(50) DEFAULT NULL,
+  "JiaoBanGroup" varchar(50) DEFAULT NULL,
+  "JiaoBanEmps" varchar(50) DEFAULT NULL,
+  "JiaoBanTime" varchar(50) DEFAULT NULL,
+  "LogContext" varchar(255) DEFAULT NULL,
+  "JieBanGroup" varchar(255) DEFAULT NULL,
+  "JieBanBCName" varchar(255) DEFAULT NULL,
+  "JieBanEmps" varchar(255) DEFAULT NULL,
+  "JieBanTime" varchar(255) DEFAULT NULL,
+  "onDutyStartTime" varchar(255) DEFAULT NULL,
+  "onDutyEndTime" varchar(255) DEFAULT NULL,
+  "OnDutyLogStatus" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-order" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "OrderName" varchar(50) DEFAULT NULL,
+  "OrderNumber" varchar(50) DEFAULT NULL,
+  "OrderDescript" varchar(50) DEFAULT NULL,
+  "OrderType" varchar(50) DEFAULT '自动工单',
+  "FaultSubTypeLsh" INTEGER DEFAULT NULL,
+  "EmpId" INTEGER NOT NULL DEFAULT '0',
+  "CreateEmpId" INTEGER NOT NULL DEFAULT '0',
+  "SLA" INTEGER DEFAULT NULL,
+  "CompleteEndDate" TIMESTAMP NULL DEFAULT NULL,
+  "OrderNotice" INTEGER DEFAULT '0',
+  "NoticeWay" varchar(50) DEFAULT NULL,
+  "NoticeEmpId" INTEGER DEFAULT NULL,
+  "OrderStatus" varchar(50) DEFAULT '待办',
+  "ZhuanExecuteEmpId" INTEGER DEFAULT NULL,
+  "ZhuanTime" TIMESTAMP NULL DEFAULT NULL,
+  "ReceiveTime" TIMESTAMP NULL DEFAULT NULL,
+  "DealSituation" varchar(255) DEFAULT NULL,
+  "DealTime" TIMESTAMP NULL DEFAULT NULL,
+  "OrderImg" varchar(255) DEFAULT NULL,
+  "CheckResult" varchar(50) DEFAULT NULL,
+  "CheckEmpId" INTEGER DEFAULT NULL,
+  "CheckTime" TIMESTAMP NULL DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-orderrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "OrderId" INTEGER NOT NULL DEFAULT '0',
+  "MsgCon" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-param" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ParamName" varchar(50) DEFAULT NULL,
+  "ParamIdOne" CLOB,
+  "ParamIdTwo" CLOB,
+  "Calc" varchar(50) DEFAULT NULL,
+  "Result" varchar(50) DEFAULT NULL,
+  "type" INTEGER DEFAULT '1',
+  "DoorPushOrder" varchar(20) DEFAULT '',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-paramday" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ParamId" INTEGER DEFAULT NULL,
+  "ParamName" varchar(50) DEFAULT NULL,
+  "Day" TIMESTAMP NULL DEFAULT NULL,
+  "Result" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1',
+  "YearMonth" INTEGER
+);
+
+CREATE TABLE "dcim-person" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PersonName" varchar(50) DEFAULT NULL,
+  "PersonNumber" varchar(50) DEFAULT NULL,
+  "DeptId" INTEGER DEFAULT NULL,
+  "sex" varchar(50) DEFAULT NULL,
+  "PersonPhone" varchar(50) DEFAULT NULL,
+  "WeicomUrl" varchar(255) DEFAULT NULL,
+  "DingdingUrl" varchar(255) DEFAULT NULL,
+  "PersonAccount" varchar(50) DEFAULT NULL,
+  "PersonPass" varchar(255) DEFAULT NULL,
+  "email" varchar(50) DEFAULT NULL,
+  "RoleId" INTEGER DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "PersonStatus" SMALLINT DEFAULT '1',
+  "token" varchar(255) DEFAULT NULL,
+  "GroupId" varchar(50) DEFAULT NULL,
+  "FaceImg" CLOB,
+  "FingerImg" CLOB,
+  "FingerId" varchar(10) DEFAULT NULL,
+  "FingerValid" varchar(50) DEFAULT '1',
+  "DoorPass" varchar(255) DEFAULT NULL,
+  "DoorCardNum" varchar(50) DEFAULT NULL,
+  "DoorTZ" varchar(50) DEFAULT '0000000000000000',
+  "DoorPri" varchar(50) DEFAULT NULL,
+  "HikDoorPri" varchar(50) NOT NULL DEFAULT '',
+  "ZktDoorPri" varchar(50) NOT NULL DEFAULT '',
+  "DoorGrp" varchar(10) DEFAULT '1',
+  "DoorViceCard" varchar(50) DEFAULT NULL,
+  "DoorVerify" varchar(10) DEFAULT '-1',
+  "DoorUId" varchar(50) DEFAULT NULL,
+  "DoorDisable" varchar(10) NOT NULL DEFAULT '0',
+  "PalmVeinNum" varchar(10) DEFAULT NULL,
+  "PalmVeinDuress" varchar(10) DEFAULT NULL,
+  "PalmVeinTmp" CLOB,
+  "ValidStratTime" TIMESTAMP NULL DEFAULT NULL,
+  "ValidEndTime" TIMESTAMP NULL DEFAULT NULL,
+  "DoorCardList" varchar(1000) DEFAULT '',
+  "DoorType" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-persongroup" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "GroupName" varchar(50) DEFAULT NULL,
+  "SatEnd" varchar(50) DEFAULT NULL,
+  "SatStart" varchar(50) DEFAULT NULL,
+  "FriEnd" varchar(50) DEFAULT NULL,
+  "FriStart" varchar(50) DEFAULT NULL,
+  "ThursEnd" varchar(50) DEFAULT NULL,
+  "ThursStart" varchar(50) DEFAULT NULL,
+  "WedEnd" varchar(50) DEFAULT NULL,
+  "WedStart" varchar(50) DEFAULT NULL,
+  "TuesEnd" varchar(50) DEFAULT NULL,
+  "TuesStart" varchar(50) DEFAULT NULL,
+  "MonEnd" varchar(50) DEFAULT NULL,
+  "MonStart" varchar(50) DEFAULT NULL,
+  "SunEnd" varchar(50) DEFAULT NULL,
+  "SunStart" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-preemption" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "PreNumber" INTEGER DEFAULT NULL,
+  "PreWeight" varchar(50) DEFAULT NULL,
+  "PrePower" varchar(50) DEFAULT NULL,
+  "PreJackPort" INTEGER DEFAULT NULL,
+  "PreNetworkPort" INTEGER DEFAULT NULL,
+  "PreSmoothPort" INTEGER DEFAULT NULL,
+  "PreCapacityModelId" INTEGER DEFAULT NULL,
+  "PreUPosition" varchar(50) DEFAULT NULL,
+  "PreCabinetId" INTEGER DEFAULT NULL,
+  "PreDescribe" varchar(255) DEFAULT NULL,
+  "PreStatus" varchar(50) DEFAULT '预占',
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-role" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "role_name" varchar(255) DEFAULT NULL,
+  "role_menus" CLOB,
+  "role_dmpage" CLOB,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-route" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "A" INTEGER DEFAULT NULL,
+  "B" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-server" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ServerName" varchar(50) DEFAULT NULL,
+  "ServerCode" varchar(50) DEFAULT NULL,
+  "ServerIP" varchar(50) DEFAULT NULL,
+  "ServerAddress" varchar(50) DEFAULT NULL,
+  "ServerStatus" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-setting" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "logo" varchar(255) NOT NULL,
+  "ProId" INTEGER NOT NULL DEFAULT '0',
+  "ProName" varchar(50) NOT NULL,
+  "License" varchar(50) NOT NULL,
+  "version" varchar(50) DEFAULT NULL,
+  "dcim" SMALLINT DEFAULT '-1',
+  "IndexPage" SMALLINT NOT NULL DEFAULT '-1',
+  "IndexTxt" varchar(100) DEFAULT NULL,
+  "pushData" SMALLINT NOT NULL DEFAULT '-1',
+  "pushAddr" varchar(50) DEFAULT NULL,
+  "webAccount" varchar(50) NOT NULL,
+  "webPass" varchar(255) NOT NULL,
+  "webToken" varchar(255) NOT NULL,
+  "MasterSlaveOpen" INTEGER NOT NULL DEFAULT '1',
+  "MasterSlaveRelation" INTEGER NOT NULL DEFAULT '1',
+  "MasterIp" varchar(50) DEFAULT NULL,
+  "MasterSpareIp" varchar(50) DEFAULT NULL,
+  "SlaveIp" varchar(255) DEFAULT NULL'ServerIp’:''127.0.0.1'',''ServerCode'':''001''}] ',
+  "DoorPush" SMALLINT DEFAULT '-1',
+  "DoorPushAddr" varchar(255) DEFAULT NULL,
+  "SpareState3" varchar(10) DEFAULT NULL,
+  "SpareState2" varchar(10) DEFAULT NULL,
+  "SpareState1" varchar(10) DEFAULT NULL,
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim-smsrecv" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "RecvContent" varchar(255) NOT NULL,
+  "RecvAddr" varchar(20) NOT NULL,
+  "SendState" INTEGER NOT NULL DEFAULT '0',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-spareparts" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AssetsTypeId" INTEGER DEFAULT NULL,
+  "BackupsModel" varchar(50) DEFAULT NULL,
+  "BackupsNumber" varchar(50) DEFAULT NULL,
+  "BackupsCompany" varchar(50) DEFAULT NULL,
+  "BackupsName" varchar(50) DEFAULT NULL,
+  "BackupsSpec" varchar(50) DEFAULT NULL,
+  "BackupsSize" varchar(50) DEFAULT NULL,
+  "BackupsStoreLocationId" INTEGER DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "AllBackupsNumber" INTEGER DEFAULT '0',
+  "SurplusBackupsNumber" INTEGER DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-spareuserecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SpareId" INTEGER NOT NULL DEFAULT '0',
+  "type" varchar(50) DEFAULT NULL,
+  "number" INTEGER DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "source" varchar(50) DEFAULT NULL,
+  "BuyTime" TIMESTAMP NULL DEFAULT NULL,
+  "price" varchar(50) DEFAULT NULL,
+  "supplier" varchar(50) DEFAULT NULL,
+  "person" varchar(50) DEFAULT NULL,
+  "tel" varchar(50) DEFAULT NULL,
+  "remark" varchar(50) DEFAULT NULL,
+  "PutoutType" varchar(50) DEFAULT NULL,
+  "UseTime" TIMESTAMP NULL DEFAULT NULL,
+  "UseEmpId" INTEGER DEFAULT NULL,
+  "PlanReturnTime" TIMESTAMP NULL DEFAULT NULL,
+  "ReturnNumber" varchar(50) DEFAULT '0',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-store" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "StoreLocationName" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-supplier" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SupplierName" varchar(50) DEFAULT NULL,
+  "SupplierAddress" varchar(255) DEFAULT NULL,
+  "BankAccount" varchar(255) DEFAULT NULL,
+  "phone1" varchar(50) DEFAULT NULL,
+  "phone2" varchar(50) DEFAULT NULL,
+  "phone3" varchar(50) DEFAULT NULL,
+  "SupplierLicence" varchar(255) DEFAULT NULL,
+  "SupplierPhoto" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-syslog" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "content" varchar(255) DEFAULT NULL,
+  "EmpId" INTEGER DEFAULT NULL,
+  "params" CLOB,
+  "ip" varchar(50) NOT NULL DEFAULT '',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tableair" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AirTableName" varchar(50) DEFAULT NULL,
+  "ParamId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tablecapacity" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "CapacityTableName" varchar(50) DEFAULT NULL,
+  "CabinetId" varchar(50) DEFAULT NULL,
+  "CabinetStatistics" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tablegeneral" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "GeneralTableName" varchar(50) DEFAULT NULL,
+  "ParamId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tablepower" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "PowerTableName" varchar(50) DEFAULT NULL,
+  "ParamId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tableups" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "UPSTableName" varchar(50) DEFAULT NULL,
+  "ParamId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tablewsd" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "WSDTableName" varchar(50) DEFAULT NULL,
+  "ParamId" CLOB,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tenant" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "TenantName" varchar(50) DEFAULT NULL,
+  "TenantTelName" varchar(50) DEFAULT NULL,
+  "TenantTel" varchar(50) DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tenantu" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "TenantId" INTEGER NOT NULL DEFAULT '0',
+  "CabinetId" INTEGER DEFAULT NULL,
+  "TenantUlocation" varchar(50) DEFAULT NULL,
+  "TenantStartTime" TIMESTAMP NULL DEFAULT NULL,
+  "TenantDuration" INTEGER DEFAULT NULL,
+  "TenantStatus" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tenanturecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "RentId" INTEGER DEFAULT NULL,
+  "RentType" varchar(50) DEFAULT NULL,
+  "duration" INTEGER DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-tool" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ToolNumber" varchar(50) DEFAULT NULL,
+  "ToolName" varchar(50) DEFAULT NULL,
+  "ToolSpec" varchar(50) DEFAULT NULL,
+  "ToolStatus" varchar(50) DEFAULT '正常',
+  "PutinTime" TIMESTAMP NULL DEFAULT NULL,
+  "ToolLocation" varchar(50) DEFAULT NULL,
+  "ToolRecordId" INTEGER DEFAULT NULL,
+  "ToolRecordStatus" varchar(50) DEFAULT '未借出',
+  "remark" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-toolrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ToolId" INTEGER NOT NULL DEFAULT '0',
+  "type" varchar(50) DEFAULT NULL,
+  "LendPerson" varchar(50) DEFAULT NULL,
+  "LendTel" varchar(50) DEFAULT NULL,
+  "LendTime" TIMESTAMP NULL DEFAULT NULL,
+  "ReturnTime" TIMESTAMP NULL DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-udevice" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "UIP" varchar(50) DEFAULT NULL,
+  "UPort" varchar(50) DEFAULT NULL,
+  "UAddress" varchar(50) DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "CabinetId" INTEGER DEFAULT NULL,
+  "UDirection" varchar(50) DEFAULT NULL,
+  "UDescribe" varchar(255) DEFAULT NULL,
+  "UDeviceStatus" varchar(255) DEFAULT NULL,
+  "UDisable" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-udevicestatus" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "AreaId" INTEGER NOT NULL,
+  "ServerCode" INTEGER NOT NULL DEFAULT '1',
+  "CabinetId" INTEGER DEFAULT NULL,
+  "ULocation" varchar(255) DEFAULT NULL,
+  "Ustatus" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-wbrecord" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "WBPerson" varchar(50) DEFAULT NULL,
+  "WBtel" varchar(50) DEFAULT NULL,
+  "WBContent" varchar(50) DEFAULT NULL,
+  "SupplierId" INTEGER DEFAULT NULL,
+  "WBHandle" varchar(255) DEFAULT NULL,
+  "WBTime" TIMESTAMP NULL DEFAULT NULL,
+  "WBResponseSpeed" INTEGER DEFAULT NULL,
+  "WBQa" INTEGER DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "HandlerEmpId" INTEGER DEFAULT NULL,
+  "WBFile" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-whplan" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "WHPlanName" varchar(50) DEFAULT NULL,
+  "WHEmpId" INTEGER DEFAULT NULL,
+  "WHComplateDays" INTEGER DEFAULT NULL,
+  "WHCycle" SMALLINT DEFAULT '1',
+  "DistributeCycle" varchar(50) DEFAULT NULL,
+  "DistributeTime" varchar(50) DEFAULT NULL,
+  "WHContent" varchar(50) DEFAULT NULL,
+  "DeviceId" varchar(50) DEFAULT NULL,
+  "remark" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-whtask" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "WHTaskName" varchar(50) DEFAULT NULL,
+  "WHTaskNumber" varchar(50) DEFAULT NULL,
+  "WHTaskCon" varchar(255) DEFAULT NULL,
+  "WHEmpId" INTEGER DEFAULT NULL,
+  "WHDeviceId" varchar(50) DEFAULT NULL,
+  "PlanComplateDate" TIMESTAMP NULL DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "WHStatus" varchar(50) DEFAULT '待执行',
+  "WHPeople" varchar(50) DEFAULT NULL,
+  "SubmitTime" TIMESTAMP NULL DEFAULT NULL,
+  "WHSituation" varchar(50) DEFAULT NULL,
+  "WHImg" varchar(255) DEFAULT NULL,
+  "EndTime" TIMESTAMP NULL DEFAULT NULL,
+  "EndEmpId" INTEGER DEFAULT NULL,
+  "EndRemark" varchar(255) DEFAULT NULL,
+  "system" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-xjmodel" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "XJModelName" varchar(50) DEFAULT NULL,
+  "XJModelType" varchar(50) DEFAULT '自由',
+  "XJEmpId" INTEGER DEFAULT NULL,
+  "XJPointId" varchar(50) DEFAULT NULL,
+  "XJCycle" SMALLINT DEFAULT '1',
+  "XJComplateDays" INTEGER DEFAULT NULL,
+  "DistributeCycle" varchar(50) DEFAULT NULL,
+  "DistributeTime" varchar(50) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-xjpoint" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "XJPointName" varchar(50) DEFAULT NULL,
+  "XJPointType" varchar(50) DEFAULT NULL,
+  "XJPointInfo" varchar(50) DEFAULT NULL,
+  "XJPointParamId" varchar(255) DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-xjtask" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "XJTaskName" varchar(50) DEFAULT NULL,
+  "XJTaskNumber" varchar(50) DEFAULT NULL,
+  "XJModelId" INTEGER DEFAULT NULL,
+  "XJPlanComplateTime" TIMESTAMP NULL DEFAULT NULL,
+  "XJDescribe" varchar(255) DEFAULT NULL,
+  "XJStatus" varchar(50) DEFAULT '待执行',
+  "XJEmpId" INTEGER DEFAULT NULL,
+  "CreateEmpId" INTEGER DEFAULT NULL,
+  "EndTime" TIMESTAMP NULL DEFAULT NULL,
+  "EndEmpId" INTEGER DEFAULT NULL,
+  "EndRemark" varchar(255) DEFAULT NULL,
+  "AnalysisResult" varchar(255) DEFAULT NULL,
+  "system" SMALLINT DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-xjtaskdetail" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "TaskId" INTEGER DEFAULT NULL,
+  "DeviceId" INTEGER DEFAULT NULL,
+  "ParamName" varchar(50) DEFAULT NULL,
+  "HisValue" varchar(50) DEFAULT NULL,
+  "HisDate" TIMESTAMP NULL DEFAULT NULL,
+  "HisImg" varchar(255) DEFAULT NULL,
+  "ParamStatus" varchar(50) DEFAULT NULL,
+  "remark" varchar(255) DEFAULT NULL,
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT DEFAULT '1'
+);
+
+CREATE TABLE "dcim-xjtasksign" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "TableName" varchar(100) DEFAULT '巡检签到表',
+  "ReportTime" varchar(8) DEFAULT NULL,
+  "SignName" varchar(255) NOT NULL,
+  "SignPerson" varchar(100) NOT NULL,
+  "SignTime" TIMESTAMP NOT NULL,
+  "TypeList" CLOB,
+  "DeviceCount" INTEGER DEFAULT '0',
+  "SignStatus" SMALLINT DEFAULT '0',
+  "CreateEmpId" INTEGER DEFAULT '0',
+  "status" SMALLINT NOT NULL DEFAULT '1',
+  "is_deleted" SMALLINT NOT NULL DEFAULT '1',
+  "create_time" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim-xjtasksign-device" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "SignId" INTEGER NOT NULL,
+  "DeviceId" INTEGER NOT NULL,
+  "DeviceName" varchar(255) DEFAULT NULL,
+  "AreaId" INTEGER DEFAULT NULL,
+  "AreaName" varchar(255) DEFAULT NULL,
+  "DeviceClass" varchar(255) DEFAULT NULL,
+  "DeviceStatus" varchar(20) DEFAULT NULL,
+  "AlarmStatus" varchar(255) DEFAULT NULL,
+  "DeviceSignStatus" SMALLINT NOT NULL DEFAULT '0',
+  "status" SMALLINT NOT NULL DEFAULT '1',
+  "is_deleted" SMALLINT NOT NULL DEFAULT '1',
+  "create_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE "dcim_protocol_alarmmode" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ProtocolCode" varchar(50) NOT NULL,
+  "CommandType" varchar(50) DEFAULT NULL,
+  "ParamKey" varchar(255) DEFAULT NULL,
+  "AlarmType" INTEGER DEFAULT '0',
+  "AlarmKey" varchar(100) DEFAULT NULL,
+  "AlarmName" varchar(255) DEFAULT NULL,
+  "AlarmUpLimit" varchar(255) DEFAULT '',
+  "AlarmDownLimit" varchar(255) DEFAULT '',
+  "AlarmValue" varchar(255) DEFAULT '',
+  "PhoneNotify" INTEGER NOT NULL DEFAULT '0',
+  "SMSNotify" INTEGER NOT NULL DEFAULT '0',
+  "WeixinNotify" INTEGER NOT NULL DEFAULT '0',
+  "WeComNotify" INTEGER NOT NULL DEFAULT '0',
+  "DingdingNotify" INTEGER NOT NULL DEFAULT '0',
+  "EmailNotify" INTEGER NOT NULL DEFAULT '0',
+  "NoiseNotify" INTEGER NOT NULL DEFAULT '0',
+  "UserID" varchar(255) DEFAULT '1',
+  "MasterID" varchar(20) DEFAULT '0',
+  "ConfirmNum" INTEGER NOT NULL DEFAULT '3',
+  "NotifyNum" INTEGER NOT NULL DEFAULT '1',
+  "IntervalTime" INTEGER NOT NULL DEFAULT '1800',
+  "AlarmLevel" INTEGER NOT NULL DEFAULT '1',
+  "UpgradeTime" INTEGER DEFAULT '0',
+  "UpgradeUser" varchar(20) DEFAULT NULL,
+  "Linkage" varchar(255) DEFAULT '',
+  "CancelLinkage" varchar(255) DEFAULT '',
+  "snmpSource" INTEGER DEFAULT NULL,
+  "LinkVideoChannel" varchar(535) DEFAULT NULL,
+  "DataType" varchar(11) DEFAULT NULL,
+  "TogetherAlarm" varchar(535) NOT NULL DEFAULT '',
+  "NotifyWindowID" INTEGER NOT NULL DEFAULT '0',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim_protocol_command" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ProtocolCode" varchar(50) NOT NULL,
+  "ProtocolType" varchar(20) NOT NULL DEFAULT '',
+  "CommandType" varchar(50) NOT NULL,
+  "CommandDesc" varchar(255) DEFAULT '',
+  "RequestTemplate" CLOB,
+  "AddrMode" varchar(50) DEFAULT '',
+  "CrcMode" varchar(50) DEFAULT '',
+  "Transport" varchar(20) DEFAULT '',
+  "SortNo" INTEGER NOT NULL DEFAULT '0',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+CREATE TABLE "dcim_protocol_param" (
+  "id" INTEGER IDENTITY(1,1) NOT NULL,
+  "ProtocolCode" varchar(50) NOT NULL,
+  "CommandType" varchar(50) NOT NULL,
+  "ParamNo" varchar(20) DEFAULT '',
+  "ParamKey" varchar(255) NOT NULL DEFAULT '',
+  "ParamName" varchar(255) DEFAULT '',
+  "ProcessType" varchar(50) DEFAULT '',
+  "ProcessModel" varchar(100) DEFAULT '',
+  "Rate" varchar(50) DEFAULT '',
+  "Unit" varchar(50) DEFAULT '',
+  "DataLen" varchar(50) DEFAULT '',
+  "DataOrder" varchar(50) DEFAULT '',
+  "DataOffset" varchar(50) DEFAULT '',
+  "DataFixed" varchar(50) DEFAULT '',
+  "DataType" varchar(50) DEFAULT '',
+  "SortNo" INTEGER NOT NULL DEFAULT '0',
+  "create_time" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "update_time" TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  "status" SMALLINT NOT NULL DEFAULT '1'
+);
+
+ALTER TABLE "dcim-alarmlevellist" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmlist" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmmasterslave" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmnotifylist" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmnotifymode" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmnotifywindow" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmparam" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmsmscontrol" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmsmssearch" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmtype" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-alarmupgrade" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-area" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-asset" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetattr" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetchangelog" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetcheckplan" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetcheckplanmodel" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetcheckresult" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetdeal" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetgrounding" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetinstall" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetmsg" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetprivate" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetputout" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assetrepair" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assettype" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-assettypeattr" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-bc" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-bcground" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-brand" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-brandmodel" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-brandmodelattr" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-cabinet" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-cabinetu" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-camera" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-camerasetting" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-capacityday" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-capacitylevel" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-capacitymodel" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-capacityplan" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-collectordata" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-company" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-consumablerecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-consumables" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-department" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-devcommondsendlist" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-device" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-deviceclass" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-devicecommand" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-devicectrlrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-deviceparam" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-deviceprotocol" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-deviceprotocolctrl" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-devicesnmp" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-devicesnmpalarm" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-dmpage" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-doorattlog" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-doorcurstate" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-doorerrorlog" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-dooroperlog" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-doorparam" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-doorpower" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-doorrecordadk" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-dooruser" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-electric" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-electricprice" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-faultsubtype" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-faulttype" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-key" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-keyrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-knowledge" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-maintenance" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-menu" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-nyclass" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-nydnrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-nydnrecordday" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-nyrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-nyrecordday" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-onduty" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-ondutylog" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-order" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-orderrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-param" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-paramday" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-person" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-persongroup" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-preemption" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-role" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-route" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-server" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-setting" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-smsrecv" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-spareparts" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-spareuserecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-store" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-supplier" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-syslog" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tableair" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tablecapacity" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tablegeneral" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tablepower" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tableups" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tablewsd" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tenant" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tenantu" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tenanturecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-tool" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-toolrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-udevice" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-udevicestatus" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-wbrecord" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-whplan" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-whtask" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-xjmodel" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-xjpoint" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-xjtask" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-xjtaskdetail" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-xjtasksign" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim-xjtasksign-device" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim_protocol_alarmmode" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim_protocol_command" ADD PRIMARY KEY ("id");
+ALTER TABLE "dcim_protocol_param" ADD PRIMARY KEY ("id");
+
+CREATE INDEX idx_dcim_alarmlist_devid ON "dcim-alarmlist" ("DevId");
+CREATE INDEX idx_dcim_alarmlist_devid_2 ON "dcim-alarmlist" ("DevId");
+CREATE INDEX idx_dcim_alarmlist_idx_alarm_lookup ON "dcim-alarmlist" ("DevId", "NotifyModeID", "AlarmType", "AlarmStatus", "status");
+CREATE INDEX idx_dcim_alarmlist_idx_alarmcount_cover ON "dcim-alarmlist" ("DevId", "NotifyModeID", "AlarmType", "AlarmStatus", "status", "AlarmCount");
+CREATE INDEX idx_dcim_alarmlist_idx_alarmlist_feed ON "dcim-alarmlist" ("AlarmStatus", "status", "create_time", "AlarmLevel");
+CREATE INDEX idx_dcim_alarmnotifymode_devid ON "dcim-alarmnotifymode" ("DevId");
+CREATE INDEX idx_dcim_alarmnotifymode_idx_nmode_cover_name ON "dcim-alarmnotifymode" ("DevId", "AlarmKey", "status", "AlarmName");
+CREATE INDEX idx_dcim_alarmnotifymode_idx_nmode_cover_limits ON "dcim-alarmnotifymode" ("DevId", "AlarmKey", "status", "AlarmUpLimit", "AlarmDownLimit", "AlarmValue");
+CREATE INDEX idx_dcim_alarmnotifymode_idx_am_dev_cmd_status ON "dcim-alarmnotifymode" ("DevId", "CommandType", "status");
+CREATE INDEX idx_dcim_alarmnotifywindow_idx_alarmnotifywindow_enabled ON "dcim-alarmnotifywindow" ("Enabled");
+CREATE INDEX idx_dcim_alarmnotifywindow_idx_alarmnotifywindow_status ON "dcim-alarmnotifywindow" ("status");
+CREATE INDEX idx_dcim_collectordata_devid ON "dcim-collectordata" ("DevID");
+CREATE INDEX idx_dcim_collectordata_idx_query ON "dcim-collectordata" ("DataType", "DevID", "create_time");
+CREATE INDEX idx_dcim_devicecommand_devid ON "dcim-devicecommand" ("DevID");
+CREATE INDEX idx_dcim_devicecommand_idx_dc_dev_cmd_status ON "dcim-devicecommand" ("DevID", "CommandType", "status");
+CREATE INDEX idx_dcim_devicecommand_idx_dc_dev_cmd_id ON "dcim-devicecommand" ("DevID", "CommandType", "id");
+CREATE INDEX idx_dcim_doorattlog_devid ON "dcim-doorattlog" ("DevId");
+CREATE INDEX idx_dcim_doorerrorlog_devid ON "dcim-doorerrorlog" ("DevId");
+CREATE INDEX idx_dcim_dooroperlog_devid ON "dcim-dooroperlog" ("DevId");
+CREATE INDEX idx_dcim_nydnrecordday_idx_nydn_month_grp ON "dcim-nydnrecordday" ("status", "YearMonth", "DevID", "ServerCode", "AreaId");
+CREATE INDEX idx_dcim_paramday_idx_paramday_grp ON "dcim-paramday" ("status", "YearMonth", "ParamId", "ParamName");
+CREATE INDEX idx_dcim_xjtasksign_idx_reporttime ON "dcim-xjtasksign" ("ReportTime");
+CREATE INDEX idx_dcim_xjtasksign_idx_signtime ON "dcim-xjtasksign" ("SignTime");
+CREATE INDEX idx_dcim_xjtasksign_idx_signperson ON "dcim-xjtasksign" ("SignPerson");
+CREATE INDEX idx_dcim_xjtasksign_idx_status ON "dcim-xjtasksign" ("status");
+CREATE UNIQUE INDEX idx_dcim_xjtasksign_device_uk_sign_device ON "dcim-xjtasksign-device" ("SignId", "DeviceId");
+CREATE INDEX idx_dcim_xjtasksign_device_idx_signid ON "dcim-xjtasksign-device" ("SignId");
+CREATE INDEX idx_dcim_xjtasksign_device_idx_deviceid ON "dcim-xjtasksign-device" ("DeviceId");
+CREATE INDEX idx_dcim_xjtasksign_device_idx_status ON "dcim-xjtasksign-device" ("status");
+CREATE INDEX idx_dcim_protocol_alarmmode_idx_protocol_code ON "dcim_protocol_alarmmode" ("ProtocolCode");
+CREATE INDEX idx_dcim_protocol_command_idx_protocol_code ON "dcim_protocol_command" ("ProtocolCode");
+CREATE INDEX idx_dcim_protocol_command_idx_protocol_code_cmd ON "dcim_protocol_command" ("ProtocolCode", "CommandType");
+CREATE INDEX idx_dcim_protocol_param_idx_protocol_code ON "dcim_protocol_param" ("ProtocolCode");
+CREATE INDEX idx_dcim_protocol_param_idx_protocol_code_param ON "dcim_protocol_param" ("ProtocolCode", "ParamKey");
+
+CREATE VIEW "dcim-alarmnotifymode-deviceview" AS SELECT "dcim-device"."DeviceName" AS "DeviceName", "dcim-alarmnotifymode"."id" AS "id", "dcim-alarmnotifymode"."AlarmType" AS "AlarmType", "dcim-alarmnotifymode"."AlarmKey" AS "AlarmKey", "dcim-alarmnotifymode"."AlarmName" AS "AlarmName", "dcim-alarmnotifymode"."create_time" AS "create_time", "dcim-alarmnotifymode"."update_time" AS "update_time", "dcim-alarmnotifymode"."DevId" AS "DevId", "dcim-alarmnotifymode"."AlarmUpLimit" AS "AlarmUpLimit", "dcim-alarmnotifymode"."AlarmDownLimit" AS "AlarmDownLimit", "dcim-alarmnotifymode"."AlarmValue" AS "AlarmValue", "dcim-alarmnotifymode"."AlarmLinkage" AS "AlarmLinkage", "dcim-alarmnotifymode"."AlarmID" AS "AlarmID", "dcim-alarmnotifymode"."PhoneNotify" AS "PhoneNotify", "dcim-alarmnotifymode"."SMSNotify" AS "SMSNotify", "dcim-alarmnotifymode"."WeixinNotify" AS "WeixinNotify", "dcim-alarmnotifymode"."WeComNotify" AS "WeComNotify", "dcim-alarmnotifymode"."DingdingNotify" AS "DingdingNotify", "dcim-alarmnotifymode"."EmailNotify" AS "EmailNotify", "dcim-alarmnotifymode"."NoiseNotify" AS "NoiseNotify", "dcim-alarmnotifymode"."UserID" AS "UserID", "dcim-alarmnotifymode"."MasterID" AS "MasterID", "dcim-alarmnotifymode"."ConfirmNum" AS "ConfirmNum", "dcim-alarmnotifymode"."NotifyNum" AS "NotifyNum", "dcim-alarmnotifymode"."IntervalTime" AS "IntervalTime", "dcim-alarmnotifymode"."AlarmLevel" AS "AlarmLevel", "dcim-alarmnotifymode"."UpgradeTime" AS "UpgradeTime", "dcim-alarmnotifymode"."UpgradeUser" AS "UpgradeUser", "dcim-alarmnotifymode"."Linkage" AS "Linkage", "dcim-alarmnotifymode"."CancelLinkage" AS "CancelLinkage", "dcim-alarmnotifymode"."snmpSource" AS "snmpSource", "dcim-alarmnotifymode"."LinkVideoChannel" AS "LinkVideoChannel", "dcim-alarmnotifymode"."CommandType" AS "CommandType", "dcim-alarmnotifymode"."OId" AS "OId", "dcim-alarmnotifymode"."DataType" AS "DataType", "dcim-alarmnotifymode"."status" AS "status" FROM ("dcim-alarmnotifymode" join "dcim-device" on((("dcim-device"."id" = "dcim-alarmnotifymode"."DevId") and ("dcim-device"."status" <> -(1))))) WHERE ("dcim-alarmnotifymode"."status" <> -(1));
+
+CREATE VIEW "dcim-alarmnotifymode-ipmonitorview" AS SELECT "a"."DeviceName" AS "DevName", "a"."DeviceIP" AS "DeviceIP", "b"."id" AS "IPMonitor", "c"."create_time" AS "IPMonitorAlarmTime", "c"."AlarmCount" AS "AlarmCount", "c"."id" AS "AlarmsId", "b"."DeviceClass" AS "DeviceClass", "b"."DeviceName" AS "DeviceName", "b"."AreaId" AS "AreaId", "dcim-alarmnotifymode"."id" AS "id", "dcim-alarmnotifymode"."AlarmType" AS "AlarmType", "dcim-alarmnotifymode"."AlarmKey" AS "AlarmKey", "dcim-alarmnotifymode"."AlarmName" AS "AlarmName", "dcim-alarmnotifymode"."create_time" AS "create_time", "dcim-alarmnotifymode"."update_time" AS "update_time", "dcim-alarmnotifymode"."DevId" AS "DevId", "dcim-alarmnotifymode"."AlarmUpLimit" AS "AlarmUpLimit", "dcim-alarmnotifymode"."AlarmDownLimit" AS "AlarmDownLimit", "dcim-alarmnotifymode"."AlarmValue" AS "AlarmValue", "dcim-alarmnotifymode"."AlarmLinkage" AS "AlarmLinkage", "dcim-alarmnotifymode"."AlarmID" AS "AlarmID", "dcim-alarmnotifymode"."PhoneNotify" AS "PhoneNotify", "dcim-alarmnotifymode"."SMSNotify" AS "SMSNotify", "dcim-alarmnotifymode"."WeixinNotify" AS "WeixinNotify", "dcim-alarmnotifymode"."WeComNotify" AS "WeComNotify", "dcim-alarmnotifymode"."DingdingNotify" AS "DingdingNotify", "dcim-alarmnotifymode"."EmailNotify" AS "EmailNotify", "dcim-alarmnotifymode"."NoiseNotify" AS "NoiseNotify", "dcim-alarmnotifymode"."UserID" AS "UserID", "dcim-alarmnotifymode"."MasterID" AS "MasterID", "dcim-alarmnotifymode"."ConfirmNum" AS "ConfirmNum", "dcim-alarmnotifymode"."NotifyNum" AS "NotifyNum", "dcim-alarmnotifymode"."IntervalTime" AS "IntervalTime", "dcim-alarmnotifymode"."AlarmLevel" AS "AlarmLevel", "dcim-alarmnotifymode"."UpgradeTime" AS "UpgradeTime", "dcim-alarmnotifymode"."UpgradeUser" AS "UpgradeUser", "dcim-alarmnotifymode"."Linkage" AS "Linkage", "dcim-alarmnotifymode"."CancelLinkage" AS "CancelLinkage", "dcim-alarmnotifymode"."snmpSource" AS "snmpSource", "dcim-alarmnotifymode"."LinkVideoChannel" AS "LinkVideoChannel", "dcim-alarmnotifymode"."CommandType" AS "CommandType", "dcim-alarmnotifymode"."OId" AS "OId", "dcim-alarmnotifymode"."DataType" AS "DataType", "dcim-alarmnotifymode"."status" AS "status" FROM ((("dcim-alarmnotifymode" join "dcim-device" "a" on((("a"."id" = "dcim-alarmnotifymode"."DevId") and ("a"."status" <> -(1))))) left join "dcim-device" "b" on((("a"."DeviceIP" = "b"."DeviceIP") and ("b"."status" <> -(1)) and ("b"."ProtocolCode" = '19001')))) left join "dcim-alarmlist" "c" on((("c"."DevId" = "b"."id") and ("c"."status" <> -(1)) and ("c"."AlarmType" = '5') and ("c"."AlarmStatus" = '0')))) WHERE (("dcim-alarmnotifymode"."status" <> -(1)) AND ("dcim-alarmnotifymode"."AlarmType" = '5'));
+
+CREATE VIEW "dcim-assetputout-areaview" AS SELECT "a"."id" AS "id", "a"."ModelId" AS "ModelId", "a"."AssetsDescribe" AS "AssetsDescribe", "a"."AssetsNumber" AS "AssetsNumber", "a"."BuyTime" AS "BuyTime", "a"."AssetsPrice" AS "AssetsPrice", "a"."StoreLocationId" AS "StoreLocationId", "a"."number" AS "number", "a"."AssetsQa" AS "AssetsQa", "a"."EmpId" AS "EmpId", "a"."SupplierId" AS "SupplierId", "a"."RentId" AS "RentId", "a"."MaintenanceId" AS "MaintenanceId", "a"."AssetStatus" AS "AssetStatus", "a"."CreateEmpId" AS "CreateEmpId", "a"."UId" AS "UId", "a"."create_time" AS "create_time", "a"."update_time" AS "update_time", "a"."status" AS "status", "b"."AreaId" AS "AreaId", "b"."update_time" AS "updateTime" FROM ("dcim-asset" "a" left join (select "ap"."AreaId" AS "AreaId","ap"."AssetsId" AS "AssetsId","ap"."update_time" AS "update_time" from ("dcim-assetputout" "ap" join (select "dcim-assetputout"."AssetsId" AS "AssetsId",max("dcim-assetputout"."update_time") AS "latest_update_time" from "dcim-assetputout" where ("dcim-assetputout"."status" = 1) group by "dcim-assetputout"."AssetsId") "latest" on((("ap"."AssetsId" = "latest"."AssetsId") and ("ap"."update_time" = "latest"."latest_update_time"))))) "b" on(("a"."id" = "b"."AssetsId"))) WHERE (("a"."status" = 1) AND (("a"."AssetStatus" = 'W') OR ("a"."AssetStatus" = 'F') OR ("a"."AssetStatus" = 'FR') OR ("a"."AssetStatus" = 'DF') OR ("a"."AssetStatus" = 'T') OR ("a"."AssetStatus" = 'O')));
+
+CREATE VIEW "dcim-cabinetu-assetview" AS SELECT "a"."id" AS "id", "a"."CabinetId" AS "CabinetId", "a"."ULocation" AS "ULocation", "a"."AssetsId" AS "AssetsId", "a"."UStatus" AS "UStatus", "a"."UdeviceStatus" AS "UdeviceStatus", "a"."UTag" AS "UTag", "a"."create_time" AS "create_time", "a"."update_time" AS "update_time", "a"."status" AS "status", "ast"."UId" AS "UId", "ast"."GatewayId" AS "GatewayId", "asu"."AssetsNumber" AS "AssetsNumber", "ar"."AreaName" AS "AreaName", "c"."column" AS "column", "c"."position" AS "position", "dev"."DeviceAddress" AS "DeviceAddress" FROM ((((("dcim-cabinetu" "a" join "dcim-cabinet" "c" on(("c"."id" = "a"."CabinetId"))) join "dcim-area" "ar" on(("ar"."id" = "c"."AreaId"))) left join "dcim-asset" "asu" on(("asu"."id" = "a"."AssetsId"))) left join "dcim-asset" "ast" on(("ast"."id" = "c"."AssetsId"))) left join "dcim-device" "dev" on(("dev"."id" = "ast"."GatewayId"))) WHERE ("a"."status" = 1) ORDER BY "a"."id" ASC;
+
+CREATE VIEW "dcim-command-deviceinfoview" AS SELECT "dcim-devicecommand"."LastReceiveData" AS "LastReceiveData", "dcim-devicecommand"."RawData" AS "RawData", "dcim-devicecommand"."CommandType" AS "CommandType", "a"."id" AS "id", "a"."DeviceName" AS "DeviceName", "a"."DeviceType" AS "DeviceType", "a"."DeviceIP" AS "DeviceIP", "a"."DevicePort" AS "DevicePort", "a"."SerialNumber" AS "SerialNumber", "a"."OID" AS "OID", "a"."OnlyCode" AS "OnlyCode", "a"."DeviceAddress" AS "DeviceAddress", "a"."DeviceClass" AS "DeviceClass", "a"."ProtocolCode" AS "ProtocolCode", "a"."LinkMode" AS "LinkMode", "a"."AreaId" AS "AreaId", "a"."ServerCode" AS "ServerCode", "a"."DeviceStatus" AS "DeviceStatus", "a"."DeviceLastData" AS "DeviceLastData", "a"."account" AS "account", "a"."password" AS "password", "a"."SnmpVar" AS "SnmpVar", "a"."SnmpRead" AS "SnmpRead", "a"."SnmpWrite" AS "SnmpWrite", "a"."create_time" AS "create_time", "a"."update_time" AS "update_time", "a"."status" AS "status", "dcim-server"."ServerCode" AS "OnlyCodeServerCode" FROM (("dcim-devicecommand" join "dcim-device" "a" on((("a"."id" = "dcim-devicecommand"."DevID") and ("a"."status" <> -(1))))) join "dcim-server" on((("a"."ServerCode" = "dcim-server"."id") and ("a"."status" <> -(1))))) WHERE ("dcim-devicecommand"."status" <> -(1));
+
+CREATE VIEW "dcim-command-deviceview" AS SELECT "a"."DeviceName" AS "DeviceName", "dcim-devicecommand"."id" AS "id", "dcim-devicecommand"."DevID" AS "DevID", "dcim-devicecommand"."Command" AS "Command", "dcim-devicecommand"."CommandType" AS "CommandType", "dcim-devicecommand"."CommandRecv" AS "CommandRecv", "dcim-devicecommand"."CommandDesc" AS "CommandDesc", "dcim-devicecommand"."ProtocolCode" AS "ProtocolCode", "dcim-devicecommand"."LastReceiveData" AS "LastReceiveData", "dcim-devicecommand"."RawData" AS "RawData", "dcim-devicecommand"."LastValueSaveTime" AS "LastValueSaveTime", "dcim-devicecommand"."ValueSaveRate" AS "ValueSaveRate", "dcim-devicecommand"."SendState" AS "SendState", "dcim-devicecommand"."IsAlart" AS "IsAlart", "dcim-devicecommand"."status" AS "status", "dcim-devicecommand"."state" AS "state", "dcim-devicecommand"."CommandRate" AS "CommandRate", "dcim-devicecommand"."LastCommandTime" AS "LastCommandTime", "dcim-devicecommand"."OId" AS "OId", "dcim-devicecommand"."LastUpdataTime" AS "LastUpdataTime", "dcim-devicecommand"."create_time" AS "create_time", "dcim-devicecommand"."update_time" AS "update_time" FROM ("dcim-devicecommand" join "dcim-device" "a" on((("a"."id" = "dcim-devicecommand"."DevID") and ("a"."status" <> -(1))))) WHERE ("dcim-devicecommand"."status" <> -(1));
+
+CREATE VIEW "dcim-nydnrecorddayview" AS SELECT "dcim-nydnrecordday"."DevID" AS "DevID", "dcim-nydnrecordday"."ServerCode" AS "ServerCode", "dcim-nydnrecordday"."AreaId" AS "AreaId", to_char("dcim-nydnrecordday"."Day",'YYYY-MM') AS "Month", sum(cast("dcim-nydnrecordday"."DeviceName" as decimal(10,2))) AS "TotalDF", sum(cast("dcim-nydnrecordday"."Electric" as decimal(10,2))) AS "TotalElectric", sum(cast("dcim-nydnrecordday"."HighElectric" as decimal(10,2))) AS "TotalHighElectric", sum(cast("dcim-nydnrecordday"."FlatElectric" as decimal(10,2))) AS "TotalFlatElectric", sum(cast("dcim-nydnrecordday"."LowElectric" as decimal(10,2))) AS "TotalLowElectric", count(0) AS "RecordCount" FROM "dcim-nydnrecordday" WHERE ("dcim-nydnrecordday"."status" = 1) GROUP BY "dcim-nydnrecordday"."DevID", "dcim-nydnrecordday"."ServerCode", "dcim-nydnrecordday"."AreaId", "dcim-nydnrecordday"."YearMonth";
+
+CREATE VIEW "dcim-paramcollectvalview" AS SELECT "am"."id" AS "id", "am"."AlarmKey" AS "AlarmKey", "am"."AlarmName" AS "AlarmName", "am"."DevId" AS "DevId", "am"."CommandType" AS "CommandType", "am"."OId" AS "OId", "am"."DataType" AS "DataType", "am"."status" AS "status", "dc"."LastReceiveData" AS "LastReceiveData", "d"."DeviceName" AS "DeviceName" FROM (("dcim-alarmnotifymode" "am" join "dcim-device" "d" on(("d"."id" = "am"."DevId"))) join "dcim-devicecommand" "dc" on((("dc"."DevID" = "am"."DevId") and ("dc"."CommandType" = "am"."CommandType")))) WHERE (("am"."status" <> -(1)) AND ("dc"."status" <> -(1)));
+
+CREATE VIEW "dcim-paramdayview" AS SELECT "dcim-paramday"."ParamId" AS "ParamId", "dcim-paramday"."ParamName" AS "ParamName", to_char("dcim-paramday"."Day",'YYYY-MM') AS "Month", sum(cast("dcim-paramday"."Result" as decimal(10,2))) AS "TotalResult", count(0) AS "RecordCount" FROM "dcim-paramday" WHERE ("dcim-paramday"."status" = 1) GROUP BY "dcim-paramday"."ParamId", "dcim-paramday"."ParamName", to_char("dcim-paramday"."Day",'YYYYMM');

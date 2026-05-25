@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">报表名称<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="GeneralTableName" value="{{data.GeneralTableName}}" name="GeneralTableName" lay-verify="required" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">配置项<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <textarea id="ParamId" name="ParamId" lay-verify="required" class="layui-textarea" readonly>{{data.ParamId}}</textarea>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择配置项','report-tableparam-choose.html?inputid=ParamId&value='+encodeURI(encodeURI($('#ParamId').val())))">选择参数</a>
+                        </div>
+                    </div> 
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"></label>
+                        <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                    </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            var id = GetString("id");
+
+            //获取详情
+            list.info("GetGeneralTableDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    
+                    //监听提交
+				    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("ChangeGeneralTableKey", strformData, function (r) {
+                            backToparent("修改成功");
+                        });
+                    });
+                });
+            });	
+        });
+    </script>
+</body>
+</html>

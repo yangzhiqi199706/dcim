@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->知识库</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入关键词" name="search" autocomplete="off">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" onclick="xadmin.open('添加知识库','yunwei-knowledge-add.html')">
+                            <i class="layui-icon"></i>添加知识库
+                        </button>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <table class="layui-table layui-col-tree">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>名称</th>
+                                    <th>关键词</th>
+                                    <th>故障类型</th>
+                                    <th>故障子类型</th>
+                                    <th>解决方案</th>
+                                    <th>更新人</th>
+                                    <th>更新时间</th>
+                                    <th>阅读次数</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.EventName}}</td>
+                                        <td>{{list.KeyWord}}</td>
+                                        <td>{{list.FaultTypeName}}</td>
+                                        <td>{{list.FaultSubTypeName}}</td>
+                                        <td>{{list.FaultSolution}}</td>
+                                        <td>{{list.UpdateEmpName}}</td>
+                                        <td>{{list.update_time}}</td>
+                                        <td>{{list.KnowledgeRead}}</td>
+                                        <td>
+                                            <a title="编辑" onclick="xadmin.open('编辑','yunwei-knowledge-edit.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe642;</i>
+                                            </a>
+                                            {{if list.KnowledgeFile}}
+                                            <a title="浏览图片" class="fancybox-view" href="{{list.KnowledgeFile}}">
+                                                <i class="layui-icon">&#xe64a;</i>
+                                                <img src="{{list.KnowledgeFile}}" alt="" style="display:none;">
+                                            </a>
+                                            {{/if}}
+                                            <a title="删除" onclick="x_admin_del('确认删除吗？','DelKnowledgeBaseKey','{{list.id}}',this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetKnowledgeBaseListKey ";
+        $(function () {
+            //初始化数据
+            list.get(url, param,dealdata);
+            //初始化数据
+            param.ComboBox = "all";
+            //类型树形列表
+            var treedata=[];
+            var search='';
+            list.info('GetFaultTypeListKey', param,function(r){
+                $.each(r.data,function(n,val){
+                    var newdata={
+                        title:val.FaultTypeName,
+                        id:val.id,
+                        spread:false,
+                        other:1,
+                        children:[]
+                    };
+                    param.FaultTypeId=val.id;
+                    list.info('GetFaultSubTypeListKey', param,function(re){
+                        if(re.data.length!=0){
+                            $.each(re.data,function(x,y){
+                                var subdata={
+                                    title:y.FaultSubTypeName,
+                                    id:y.id,
+                                    spread:false,
+                                    other:2
+                                };
+                                newdata.children.push(subdata);
+                            })
+                        }
+                        treedata.push(newdata);
+                        if(n==r.data.length-1){
+                            layui.use(["form", "tree"], function () {
+                                $ = layui.jquery;
+                                var form = layui.form;
+                                var tree = layui.tree;
+
+                                tree.render({
+                                    elem: "#tree",
+                                    data: treedata,
+                                    click: function (obj) {
+                                        if (!obj.data.children) {
+                                            $('.layui-tree-txt').removeAttr('style');
+                                            $(obj.elem).find('.layui-tree-txt').css('color', '#148cf1');
+                                            delete param['ComboBox'];
+                                            param.pageNo = 1;
+                                            param.search = search;
+                                            param.FaultSubTypeLsh = obj.data.id;
+                                            list.get(url, param,dealdata);
+                                        }
+                                    }
+                                });
+                                //监听提交
+                                form.on("submit(search)", function (data) {
+                                    delete param['ComboBox'];
+                                    param.pageNo = 1;
+                                    param.search = search = data.field.search;
+                                    list.get(url, param,dealdata);
+                                    return false;
+                                });
+                                 //预览图片
+                                fnFancyBox('.fancybox-view');
+                            });
+                        }
+                    })
+                })
+            });
+        })
+        //数据处理
+        function dealdata(r){
+            $.each(r.data.info,function(n,val){
+                if(val.KnowledgeFile && val.KnowledgeFile.indexOf('http')<0){
+                    val.KnowledgeFile=imgUrl+val.KnowledgeFile;
+                }
+            });
+        }
+        //分页回调
+        function pagechange(curr) {
+            delete param['ComboBox'];
+            param.pageNo = curr;
+            list.get(url, param,dealdata);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        #local,
+        #list {
+            display: none;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>动环监控->监控管理</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <a class="layui-btn" href="donghuan-video-list.html">
+                            视频预览
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="donghuan-camera-list.html">
+                            监控设备
+                        </a>
+                        <a class="layui-btn" href="donghuan-camera-setting.html">
+                            国标28181服务器配置
+                        </a>
+                        <button class="layui-btn x-right" type="button"
+                            onclick="displayexport('down','outtable','监控设备');" id="down">导出</button>
+                    </div>
+                    <form class="layui-form layui-card-body" id="local">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>设备编号</th>
+                                    <th>名称</th>
+                                    <th>所属区域</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listlocaltemplate">
+                                    {{if data && data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>{{list.id}}</td>
+                                        <td>{{list.CameraName}}</td>
+                                        <td>{{list.AreaName}}</td>
+                                    </tr>
+                                    {{/each}}
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </form>
+                    <form class="layui-form layui-card-body" id="list">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>名称</th>
+                                    <th>设备编号</th>
+                                    <th>地址</th>
+                                    <th>厂家</th>
+                                    <th>流传输模式</th>
+                                    <th>通道数</th>
+                                    <th>状态</th>
+                                    <th>最近心跳</th>
+                                    <th>最近注册</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data && data.list.length!=0}} {{each data.list as list i}}
+                                    <tr>
+                                        <td>{{list.name}}</td>
+                                        <td>{{list.deviceId}}</td>
+                                        <td>{{list.ip}}:{{list.port}}</td>
+                                        <td>{{list.manufacturer}}</td>
+                                        <td style="width:140px">
+                                            <select name="streamMode" lay-verify="required" 
+                                            lay-filter="streamMode" data-id="{{list.deviceId}}" >
+                                                <option value="UDP" {{if list.streamMode=='UDP'}}selected{{/if}}>
+                                                    UDP
+                                                </option>
+                                                <option value="TCP-ACTIVE" {{if list.streamMode=='TCP-ACTIVE'}}selected{{/if}}>
+                                                    TCP主动模式
+                                                </option>
+                                                <option value="TCP-PASSIVE" {{if list.streamMode=='TCP-PASSIVE'}}selected{{/if}}>
+                                                    TCP被动模式
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td>{{list.channelCount}}</td>
+                                        <td>{{if list.onLine==true}}在线{{else}}离线{{/if}}</td>
+                                        <td>{{list.keepaliveTime}}</td>
+                                        <td>{{list.registerTime}}</td>
+                                        <td>{{list.createTime}}</td>
+                                        <td>
+                                            <a onclick="Refresh('{{list.deviceId}}')" title="刷新" href="javascript:;">
+                                                <i class="layui-icon">&#xe666;</i>
+                                            </a>
+                                            <!-- <a title="删除" onclick="x_admin_del('确认删除吗？','DelCameraKey',{{list.id}},this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a> -->
+                                            <a onclick="xadmin.open('通道列表','donghuan-camera-channel.html?deviceId={{list.deviceId}}')" 
+                                                title="通道" href="javascript:;">
+                                                <i class="layui-icon">&#xe6ed;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </form>
+                    <table class="layui-table" style="display: none;" id="outtable">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>设备编号</th>
+                                <th>地址</th>
+                                <th>厂家</th>
+                                <th>流传输模式</th>
+                                <th>通道数</th>
+                                <th>状态</th>
+                                <th>最近心跳</th>
+                                <th>最近注册</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <script type="text/html" id="outlisttemplate">
+                                {{if data && data.list.length!=0}} {{each data.list as list i}}
+                                <tr>
+                                    <td>{{list.name}}</td>
+                                    <td>{{list.deviceId}}</td>
+                                    <td>{{list.ip}}:{{list.port}}</td>
+                                    <td>{{list.manufacturer}}</td>
+                                    <td>
+                                        {{if list.streamMode=='UDP'}}
+                                            UDP
+                                        {{else if list.streamMode=='TCP-ACTIVE'}}
+                                            TCP主动模式
+                                        {{else if list.streamMode=='TCP-PASSIVE'}}
+                                            TCP被动模式
+                                        {{/if}}</td>
+                                    <td>{{list.channelCount}}</td>
+                                    <td>{{if list.onLine==true}}在线{{else}}离线{{/if}}</td>
+                                    <td>{{list.keepaliveTime}}</td>
+                                    <td>{{list.registerTime}}</td>
+                                    <td>{{list.createTime}}</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                let arealist = [];
+                $.ajaxSettings.async = false;
+                list.info('GetAreaListKey', {
+                    token: token,
+                    ComboBox: 'all'
+                }, function (r) {
+                    if (r.data && r.data.length > 0) {
+                        arealist = r.data;
+                    }
+                })
+                $.ajaxSettings.async = true;
+
+                //初始化数据
+                // getDoorInfo('video', {
+                //     addr: videoUrl,
+                //     isapi: 'api/device/query/devices?page=1&count=100',
+                //     format: 'json'
+                // }, function (re) {
+                videolist.info('get', 'api/device/query/devices?page=1&count=100', '', function (re) {
+                    var html = template("listtemplate", re);
+                    $("#list").show().find("tbody").html(html);
+
+                    var outhtml = template("outlisttemplate", re);
+                    $("#outtable").find("tbody").html(outhtml);
+                    form.render();
+                    //更新流模式监听提交
+                    form.on("select(streamMode)", function (data) {
+                        var modelurl = 'api/device/query/transport/' + data.elem.getAttribute('data-id') + '/' + data.value;
+                        // getDoorInfo('video', {
+                        //     addr: videoUrl,
+                        //     isapi: modelurl,
+                        //     format: 'json',
+                        //     method: 'post'
+                        // }, function (r) {
+                        videolist.info('post', modelurl, '', function (r) {
+                            if (r.msg.indexOf('失败') >= 0) {
+                                layer.msg(r.msg, {
+                                    icon: 5,
+                                    time: 1000
+                                });
+                            } else {
+                                layer.msg(r.msg, {
+                                    icon: 1,
+                                    time: 1000
+                                });
+                            }
+                        });
+                    });
+                });
+            })
+        })
+        //刷新通道
+        function Refresh(id) {
+            var refreshurl = 'api/device/query/devices/' + id + '/sync';
+            // getDoorInfo('video', {
+            //     addr: videoUrl,
+            //     isapi: refreshurl,
+            //     format: 'json'
+            // }, function (r) {
+            videolist.info('get', refreshurl, '', function (r) {
+                if (r.code == 0) {
+                    var statusurl = 'api/device/query/' + id + '/sync_status/';
+                    var intr = setInterval(() => {
+                        // getDoorInfo('video', {
+                        //     addr: videoUrl,
+                        //     isapi: statusurl,
+                        //     format: 'json'
+                        // }, function (r) {
+                        videolist.info('get', statusurl, '', function (r) {
+                            if (r.msg.indexOf('失败') > -1) {
+                                layer.msg(r.msg, {
+                                    icon: 5,
+                                    time: 2000
+                                });
+                                clearInterval(intr);
+                            } else {
+                                if (r.msg) {
+                                    layer.msg(r.msg, {
+                                        icon: 1,
+                                        time: 2000
+                                    });
+                                    clearInterval(intr);
+                                }
+                            }
+                        });
+                    }, 3000);
+                }
+            })
+        };
+    </script>
+</body>
+
+</html>

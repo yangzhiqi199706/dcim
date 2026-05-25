@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+	<link rel="stylesheet" href="./css/login.css">
+</head>
+
+<body class="login-bg">
+	<div class="login layui-anim layui-anim-up">
+		<div class="message">后台管理登录</div>
+		<div id="darkbannerwrap"></div>
+		<form method="post" class="layui-form">
+			<input name="username" placeholder="用户名" type="text" lay-verify="required" class="layui-input" value="">
+			<hr class="hr15">
+			<input name="password" lay-verify="required" placeholder="密码" type="password" class="layui-input" value="">
+			<hr class="hr15">
+			<input value="登录" lay-submit lay-filter="login" type="submit">
+			<hr class="hr20">
+		</form>
+	</div>
+	<script>
+		$(function () {
+			layui.use("form", function () {
+				var form = layui.form;
+				//监听提交
+				form.on("submit(login)", function (data) {
+					$.ajax({
+						type: "post",
+						url: ajaxUrl + "LoginKey",
+						async: true,
+						data: {
+							userName: data.field.username,
+							passWord: data.field.password
+						},
+					success: function (r) {
+						// Backend sometimes prefixes UTF-8 BOM(s); strip before JSON.parse.
+						if (typeof r === "string") {
+							r = r.replace(/^\ufeff+/, "");
+						}
+						r = JSON.parse(r);
+						if (r.code == 100) {
+							localStorage.setItem("token", r.data.token);
+							localStorage.setItem("name", r.data.adminName);
+							localStorage.setItem("userId", r.data.userId);
+								layer.msg("登录成功", {
+									icon: 1,
+									time: 1000
+								}, function () {
+									location.href = "welcome.html";
+								});
+							} else {
+								layer.msg(r.msg, {
+									icon: 5
+								});
+							}
+						}
+					});
+					return false;
+				});
+			});
+		});
+	</script>
+</body>
+</html>

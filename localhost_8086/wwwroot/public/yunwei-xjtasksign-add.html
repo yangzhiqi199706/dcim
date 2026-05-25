@@ -1,0 +1,385 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入设备名称" id="searchDeviceName">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block" id="deviceClassDiv">
+                                <select id="DeviceClass" lay-filter="DeviceClass">
+                                    <option value="">设备分类</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+
+                        <a class="layui-btn x-right" id="yes" style="margin-left: 5px;">确定</a>
+                        <div class="x-right">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入巡检名称" name="xjsign_name">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入巡检人" name="xjsign_person">
+                            </div>
+                        </div>
+                    </div>
+                    <form class="layui-form layui-card-body" id="formNow">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="checkall" lay-filter="checkall" lay-skin="primary"></th>
+                                    <th>设备名称</th>
+                                    <th>设备型号</th>
+                                    <th>IP:端口/串口地址</th>
+                                    <th>设备分类</th>
+                                    <th>所属服务器</th>
+                                    <th>所属区域</th>
+                                    <th>当前状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="id" value="{{list.id}}" lay-skin="primary" lay-filter="checkone"
+                                                data-deviceid="{{list.id}}"
+                                                data-name="{{list.DeviceName}}"
+                                                data-type="{{list.ClassName}}"
+                                                data-area="{{list.AreaName}}"
+                                                data-areaid="{{list.AreaId}}"
+                                                data-status="{{list.DeviceStatus}}"
+                                                {{if list.check}}checked{{/if}}>
+                                        </td>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.DeviceType}}</td>
+                                        <td>{{if list.LinkMode==1}}{{list.DeviceIP}}:{{list.DevicePort}}{{else}}{{list.DeviceIP}}{{/if}}</td>
+                                        <td>{{list.ClassName}}</td>
+                                        <td>{{list.ServerName}}</td>
+                                        <td>{{list.AreaName}}</td>
+                                        <td>{{if list.DeviceStatus==0}}离线{{else}}在线{{/if}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var url = "GetDeviceListKey";
+        var form;
+        var alldata = { data: [] };
+        var selectedIds = [];
+        var value = GetString("value");
+
+        function toStatusText(v) {
+            return (v + "") === "0" ? "离线" : "在线";
+        }
+
+        function dealdata(r) {
+            if (!r || !r.data) return;
+            for (var i = 0; i < r.data.length; i++) {
+                r.data[i].check = selectedIds.indexOf(String(r.data[i].id)) !== -1;
+            }
+        }
+
+        function renderTable(dataObj) {
+            var html = template("listtemplate", dataObj || { data: [] });
+            $("tbody").html(html);
+            $('#checkall').prop('checked', false);
+            checkall(form);
+            form.render('checkbox');
+        }
+
+        function setDeviceChecked(id, checked) {
+            var sid = String(id);
+            for (var i = 0; i < alldata.data.length; i++) {
+                if (String(alldata.data[i].id) === sid) {
+                    alldata.data[i].check = !!checked;
+                    break;
+                }
+            }
+            selectedIds = [];
+            for (var j = 0; j < alldata.data.length; j++) {
+                if (alldata.data[j].check) selectedIds.push(String(alldata.data[j].id));
+            }
+        }
+
+        function getSelectedRows() {
+            var rows = [];
+            var checkedMap = {};
+            $('input[name=id]:checked').each(function () {
+                checkedMap[String($(this).val())] = true;
+            });
+            if (Object.keys(checkedMap).length > 0) {
+                for (var i = 0; i < alldata.data.length; i++) {
+                    if (checkedMap[String(alldata.data[i].id)]) {
+                        rows.push(alldata.data[i]);
+                    }
+                }
+                return rows;
+            }
+            for (var j = 0; j < alldata.data.length; j++) {
+                if (alldata.data[j].check) {
+                    rows.push(alldata.data[j]);
+                }
+            }
+            return rows;
+        }
+
+        function parseApiRes(res) {
+            if (typeof res === "string") {
+                try {
+                    return JSON.parse(res);
+                } catch (e) {
+                    return {};
+                }
+            }
+            return res || {};
+        }
+
+        function getApiHeaders() {
+            var t = token || localStorage.getItem("token") || "";
+            var headers = {};
+            if (t) {
+                headers.Auth = t;
+                headers.Authorization = "Bearer " + t;
+            }
+            return headers;
+        }
+
+        function callApiPost(path, payload, done) {
+            $.ajax({
+                type: "POST",
+                url: ajaxUrl.replace(/\/+$/, "") + "/" + path.replace(/^\/+/, ""),
+                headers: getApiHeaders(),
+                data: JSON.stringify(payload || {}),
+                contentType: "application/json; charset=utf-8",
+                processData: false,
+                success: function (res) {
+                    var r = parseApiRes(res);
+                    done(r);
+                },
+                error: function () {
+                    layer.msg("请求失败", { icon: 5, time: 1200 });
+                }
+            });
+        }
+
+        function callApiFilter(path, paramsObj, limit, pageNo, done) {
+            var l = parseInt(limit, 10) || 15;
+            var p = parseInt(pageNo, 10) || 1;
+            $.ajax({
+                type: "GET",
+                url: ajaxUrl.replace(/\/+$/, "") + "/" + path.replace(/^\/+/, "") + "/filter",
+                headers: getApiHeaders(),
+                data: {
+                    limit: l,
+                    offset: (p - 1) * l,
+                    params: JSON.stringify(paramsObj || {})
+                },
+                success: function (res) {
+                    var r = parseApiRes(res);
+                    done(r);
+                },
+                error: function () {
+                    layer.msg("请求失败", { icon: 5, time: 1200 });
+                }
+            });
+        }
+
+        function getRowsFromApiRes(res) {
+            if (!res) return [];
+            if ($.isArray(res.data)) return res.data;
+            if (res.data && $.isArray(res.data.info)) return res.data.info;
+            if (res.data && res.data.data && $.isArray(res.data.data)) return res.data.data;
+            if (res.data && res.data.data && $.isArray(res.data.data.info)) return res.data.data.info;
+            return [];
+        }
+
+        function resolveSignId(createRes, fallbackParam, callback) {
+            var signId = "";
+            if (createRes && createRes.data) {
+                if (typeof createRes.data === 'string' || typeof createRes.data === 'number') {
+                    signId = createRes.data;
+                }
+                if (createRes.data.id) signId = createRes.data.id;
+                else if (createRes.data.data && createRes.data.data.id) signId = createRes.data.data.id;
+            }
+            if (signId) {
+                callback(signId);
+                return;
+            }
+            callApiFilter("/dcim-xjtasksign", fallbackParam, 1, 1, function (res) {
+                var rows = getRowsFromApiRes(res);
+                var one = rows.length ? rows[0] : null;
+                callback(one ? one.id : "");
+            });
+        }
+
+        function createDetailRows(signId, rows, idx, done) {
+            if (idx >= rows.length) {
+                done();
+                return;
+            }
+            var one = rows[idx];
+            var payload = {
+                SignId: signId,
+                DeviceId: one.id,
+                DeviceName: one.DeviceName || "",
+                AreaId: one.AreaId || 0,
+                AreaName: one.AreaName || "",
+                DeviceClass: one.ClassName || "",
+                DeviceStatus: toStatusText(one.DeviceStatus),
+                AlarmStatus: "无",
+                DeviceSignStatus: 1,
+                status: 1
+            };
+            callApiPost("/dcim-xjtasksign-device", payload, function () {
+                createDetailRows(signId, rows, idx + 1, done);
+            });
+        }
+
+        function submitSign() {
+            var name = ($('input[name=xjsign_name]').val() || "").trim();
+            if (!name) {
+                layer.msg('请输入巡检名称！', { icon: 5, time: 1200 });
+                return false;
+            }
+            var person = ($('input[name=xjsign_person]').val() || "").trim();
+            if (!person) {
+                layer.msg('请输入巡检人！', { icon: 5, time: 1200 });
+                return false;
+            }
+
+            $('input[name=id]').each(function () {
+                setDeviceChecked($(this).val(), this.checked);
+            });
+            var rows = getSelectedRows();
+            if (!rows.length) {
+                layer.msg('请选择设备！', { icon: 5, time: 1200 });
+                return false;
+            }
+
+            var signTime = getDateTime();
+            var reportTime = signTime.split(' ')[0].replace(/-/g, '');
+            var types = [];
+            for (var i = 0; i < rows.length; i++) {
+                if (rows[i].ClassName && types.indexOf(rows[i].ClassName) === -1) {
+                    types.push(rows[i].ClassName);
+                }
+            }
+
+            var mainPayload = {
+                TableName: "巡检签到表",
+                ReportTime: reportTime,
+                SignName: name,
+                SignPerson: person,
+                SignTime: signTime,
+                TypeList: types.join(','),
+                DeviceCount: rows.length,
+                SignStatus: 0,
+                CreateEmpId: userId || 0,
+                status: 1
+            };
+
+            callApiPost("/dcim-xjtasksign", mainPayload, function (res) {
+                resolveSignId(res, {
+                    SignName: name,
+                    SignPerson: person,
+                    ReportTime: reportTime
+                }, function (signId) {
+                    if (!signId) {
+                        layer.msg('创建签到主表成功，但未获取到主表ID', { icon: 5, time: 1500 });
+                        return;
+                    }
+                    createDetailRows(signId, rows, 0, function () {
+                        backToparent('新增成功');
+                    });
+                });
+            });
+        }
+
+        $(function () {
+            layui.use("form", function () {
+                $ = layui.jquery;
+                form = layui.form;
+
+                if (value) {
+                    selectedIds = value.split(',').map(function (v) { return (v || '').trim(); }).filter(function (v) { return !!v; });
+                }
+
+                list.info("GetClassListKey", {
+                    token: token,
+                    ComboBox: 'all'
+                }, function (res) {
+                    var classhtml = '<option value="">请选择分类</option>';
+                    $.each(res.data || [], function (n, val) {
+                        classhtml += '<option value="' + val.ClassName + '">' + val.ClassName + '</option>';
+                    });
+                    $("#DeviceClass").html(classhtml);
+                    form.render("select");
+                });
+
+                param.ComboBox = "all";
+                list.info(url, param, function (r) {
+                    alldata = r || { data: [] };
+                    dealdata(alldata);
+                    renderTable(alldata);
+                });
+
+                form.on('checkbox(checkone)', function (data) {
+                    setDeviceChecked(data.value, data.elem.checked);
+                });
+
+                form.on('checkbox(checkall)', function (data) {
+                    $('input[name=id]').each(function () {
+                        setDeviceChecked($(this).val(), data.elem.checked);
+                    });
+                });
+
+                form.on("submit(search)", function (data) {
+                    var search = ($('#searchDeviceName').val() || "").trim();
+                    var className = ($('#DeviceClass').val() || "").trim();
+                    var newdata = { data: [] };
+                    $.each(alldata.data || [], function (n, val) {
+                        var hitName = !search || (val.DeviceName || '').indexOf(search) >= 0;
+                        var hitClass = !className || val.ClassName == className;
+                        if (hitName && hitClass) newdata.data.push(val);
+                    });
+                    renderTable(newdata);
+                    return false;
+                });
+
+                $('#yes').click(function () {
+                    submitSign();
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

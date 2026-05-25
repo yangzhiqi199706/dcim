@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属服务器<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属区域<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">机柜列<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="column" value="" name="column" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">机柜位(个)<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="number" value="" name="number" autocomplete="off" class="layui-input" onkeyup="this.value=this.value.replace(/\D|^0/g,'')">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //服务器
+                getServer(form,function(){
+                    form.on("select(ServerCode)", function (data) {
+                        param.ServerCode=data.value;
+                        getArea(form,data);
+                    });
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    strformData.delete("number");
+                    var position='';
+                    if(data.field.number==1){
+                        strformData.append("position", '1');
+                        list.form("CreateCabinetKey", strformData, function (r) {
+                            backToparent("添加成功");
+                        });
+                    }else{
+                        for(var i=1;i<=data.field.number;i++){
+                            strformData.delete("position");
+                            strformData.append("position", i);
+                            list.form("CreateCabinetKey", strformData, function (r) {});
+                            if(i==data.field.number){
+                                backToparent("添加成功");
+                            }
+                        }
+                    }
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

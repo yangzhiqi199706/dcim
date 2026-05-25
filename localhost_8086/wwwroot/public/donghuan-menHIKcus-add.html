@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">工号<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="employeeNo" value="" name="employeeNo" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">姓名<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="name" value="" name="name" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                        <input type="hidden" id="userType" value="normal" name="userType" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">性别</label>
+                    <div class="layui-input-inline">
+                        <select id="gender" name="gender">
+                            <option value="male">男</option>
+                            <option value="female">女</option>
+                            <option value="unknown">未知</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- <div class="layui-form-item">
+                    <label class="layui-form-label">邮箱</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="email" value="" name="email" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">手机号</label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="phone" value="" name="phone" autocomplete="off" class="layui-input">
+                    </div>
+                </div> -->
+                <div class="layui-form-item">
+                    <label class="layui-form-label">访问有效期</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="beginTime" value="" name="beginTime" autocomplete="off"
+                            class="layui-input" placeholder="开始时间">
+                        <input type="text" id="endTime" value="" name="endTime" autocomplete="off" class="layui-input"
+                            placeholder="结束时间">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">卡号凭证</label>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('绑定卡号','donghuan-menHIKcard-add.html')">绑定卡号</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <div class="layui-input-block" id="cardbox">
+                    </div>
+                </div>
+                <!-- <div class="layui-form-item">
+                    <label class="layui-form-label">备注</label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入内容" id="remark" name="remark" class="layui-textarea"></textarea>
+                    </div>
+                </div> -->
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        var form;
+        $(function () {
+            var ip = GetString("ip");
+            var port = GetString("port");
+            var id = GetString("id");
+            var user = GetString("user");
+            var password = GetString("password");
+
+            layui.use(["form", 'laydate'], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                var laydate = layui.laydate;
+
+                let time = new Date();
+                time = time.setFullYear(time.getFullYear() + 10);//10年之后
+                let newtime = new Date(time);
+
+                laydate.render({
+                    elem: '#beginTime',
+                    type: 'datetime',
+                    format: 'yyyy-MM-ddTHH:mm:ss',
+                    value: new Date()
+                });
+                laydate.render({
+                    elem: '#endTime',
+                    type: 'datetime',
+                    format: 'yyyy-MM-ddTHH:mm:ss',
+                    value: newtime
+                });
+                //新增人员一开始需获取门禁事件列表的列表doorNo
+                let doorRight='1',doorNo=1;
+                $.ajaxSettings.async = false;
+                /*getDoorInfo('hik', {
+                    addr: ip + ':' + port,
+                    user: user,
+                    password: password,
+                    isapi: 'ISAPI/AccessControl/AcsEvent',
+                    method: 'POST',
+                    format: 'json',
+                    data: JSON.stringify({
+                        "AcsEventCond": {
+                            //"searchID": devid,
+                            "searchResultPosition": 0,
+                            "maxResults": 1,
+                            "major": 0,
+                            "minor": 0,
+                            "timeReverseOrder": true,
+                            "isAttendanceInfo": true,
+
+                            "startTime":getDateTime(new Date(now - 1000 * 60 * 60 * 24 * 1)),
+                            "endTime":getDateTime()
+                        }
+                    })
+                }, function (res) {
+                    if (res.AcsEvent.totalMatches > 0) {
+                        doorNo = res.AcsEvent.InfoList[0].doorNo || doorNo;
+                        doorRight = res.AcsEvent.InfoList[0].doorNo.toString() || doorRight;
+                    }
+                })*/
+                $.ajaxSettings.async = true;
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    var userdata = {
+                        "UserInfo": {
+                            "employeeNo": strformData.get('employeeNo'),
+                            "name": strformData.get('name'),
+                            "userType": strformData.get('userType'),
+                            "gender": strformData.get('gender'),
+                            "Valid": {
+                                "enable": true,
+                                "beginTime": strformData.get('beginTime'),
+                                "endTime": strformData.get('endTime')
+                            },
+                            "deviceID": id,
+                            "doorRight": doorRight,
+                            "RightPlan":[{"doorNo":doorNo,"planTemplateNo":'1'}],
+                        }
+                    }
+                    //新增人员
+                    getDoorInfo('hik', {
+                        addr: ip + ':' + port,
+                        user: user,
+                        password: password,
+                        isapi: 'ISAPI/AccessControl/UserInfo/Record',
+                        method: 'POST',
+                        format: 'json',
+                        data: JSON.stringify(userdata)
+                    }, function (res) {
+                        if (res.statusString != 'OK') {
+                            layer.msg(res.subStatusCode, {
+                                icon: 5,
+                                time: 3000
+                            });
+                        } else {
+                            if ($("input[name=cardNo]").length > 0) {
+                                $.each($("input[name=cardNo]"), function (n, val) {
+                                    var infodata = {
+                                        "CardInfo": {
+                                            "employeeNo": strformData.get('employeeNo'),
+                                            "cardNo": $(val).attr('data-cardNo'),
+                                            "cardType": $(val).attr('data-cardType'),
+                                            "checkEmployeeNo": false,
+                                            "checkCardNo": false,
+                                            "operateType": "byTerminal",
+                                            "terminalNoList": [1]
+                                        }
+                                    }
+                                    //新增卡号
+                                    getDoorInfo('hik', {
+                                        addr: ip + ':' + port,
+                                        user: user,
+                                        password: password,
+                                        isapi: 'ISAPI/AccessControl/CardInfo/Record',
+                                        method: 'POST',
+                                        format: 'json',
+                                        data: JSON.stringify(infodata)
+                                    }, function (res) {
+                                        // console.log(res)
+                                        if (res.statusString != 'OK') {
+                                            layer.msg(res.subStatusCode, {
+                                                icon: 5,
+                                                time: 3000
+                                            });
+                                        } else {
+                                            if (n == $("input[name=cardNo]").length - 1) {
+                                                backToparent("新增成功");
+                                            }
+                                        }
+                                    });
+                                })
+                            } else {
+                                backToparent("新增成功");
+                            }
+                        }
+                    });
+
+                });
+            });
+        })
+        //编辑卡
+        function editCard(obj, cardNo, cardType) {
+            xadmin.open('编辑卡号', 'donghuan-menHIKcard-edit.html?cardNo=' + cardNo + '&cardType=' + cardType)
+        }
+        //删除卡
+        function delCard(obj, cardNo) {
+            $('#' + cardNo).remove();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .laydate-time-list li {
+            width: 50%;
+        }
+
+        .laydate-time-list>li:last-child {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">修改班次时间</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="BCstart" value="{{data.BCstart}}" name="BCstart" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                        <input type="text" id="BCend" value="{{data.BCend}}" name="BCend" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                        <input type="hidden" id="BCDisable" value="{{data.BCDisable}}" name="BCDisable" lay-verify="required" autocomplete="off"
+                        class="layui-input>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确认</button>
+                </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+            //获取详情
+            list.info("GetBCDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form", "laydate"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var laydate = layui.laydate;
+                    laydate.render({
+                        elem: '#BCstart'
+                        , type: 'time'
+                        , format: 'HH:mm'
+                    });
+                    laydate.render({
+                        elem: '#BCend'
+                        , type: 'time'
+                        , format: 'HH:mm'
+                    });
+                    form.render();
+                    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("ChangeBCKey", strformData, function (r) {
+                            backToparent("添加成功");
+                        });
+                    });
+                });
+                //监听提交
+            });
+        });
+    </script>
+</body>
+
+</html>

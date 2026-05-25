@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                            <script type="text/html" id="detailtpl">
+                                {{each data as list i}}
+                                    <input type="checkbox" name="day" value="{{list.day}}" title="{{list.day}}" lay-skin="primary">
+                                {{/each}}
+                            </script>
+                            <div id="detail"></div>
+                            <div class="layui-form-item">
+                                <button class="layui-btn x-right" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function(){
+            var r={
+                data:[
+                    {'day':'1'},
+                    {'day':'2'},
+                    {'day':'3'},
+                    {'day':'4'},
+                    {'day':'5'},
+                    {'day':'6'},
+                    {'day':'7'},
+                    {'day':'8'},
+                    {'day':'9'},
+                    {'day':'10'},
+                    {'day':'11'},
+                    {'day':'12'},
+                    {'day':'13'},
+                    {'day':'14'},
+                    {'day':'15'},
+                    {'day':'16'},
+                    {'day':'17'},
+                    {'day':'18'},
+                    {'day':'19'},
+                    {'day':'20'},
+                    {'day':'21'},
+                    {'day':'22'},
+                    {'day':'23'},
+                    {'day':'24'},
+                    {'day':'25'},
+                    {'day':'26'},
+                    {'day':'27'},
+                    {'day':'28'},
+                    {'day':'29'},
+                    {'day':'30'},
+                    {'day':'31'}
+                ]
+            }
+            var html=template('detailtpl',r);
+            $('#detail').html(html);
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                form.render();
+                 //监听提交
+				form.on("submit(submit)", function (data) {
+                    var index = parent.layer.getFrameIndex(window.name);
+                    parent.layer.close(index);
+                    var strformData = new FormData($("#formNow")[0]);
+                    $(window.parent.document).find('#SendTime').val(strformData.getAll('day'));
+                });
+            })
+        })  
+    </script>
+</body>
+
+</html>

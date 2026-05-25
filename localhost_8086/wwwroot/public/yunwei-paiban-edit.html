@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">值班日期</label>
+                        <div class="layui-input-inline">
+                            <input type="text" value="{{data.OndutyYm}}-{{data.OndutyDay}}" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">早班</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="MorningEmpName" value="{{data.MorningEmpName}}" name="MorningEmpName" autocomplete="off" class="layui-input" lay-verify="required" readonly>
+                            <input type="hidden" id="MorningEmpId" value="{{data.MorningEmpId}}" name="MorningEmpId" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择人员','choose-paibanperson.html?type=morning')">选择</a>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">中班</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="MiddleEmpName" value="{{data.MiddleEmpName}}" name="MiddleEmpName" autocomplete="off" class="layui-input" lay-verify="required" readonly>
+                            <input type="hidden" id="MiddleEmpId" value="{{data.MiddleEmpId}}" name="MiddleEmpId" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择人员','choose-paibanperson.html?type=middle')">选择</a>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">晚班</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="EveningEmpName" value="{{data.EveningEmpName}}" name="EveningEmpName" autocomplete="off" lay-verify="required" class="layui-input" readonly>
+                            <input type="hidden" id="EveningEmpId" value="{{data.EveningEmpId}}" name="EveningEmpId" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择人员','choose-paibanperson.html?type=evening')">选择</a>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"></label>
+                        <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确认</button>
+                    </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <Script>
+        $(function () {
+            var id = GetString("id");
+            //获取详情
+            list.info("GetPBDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    //监听提交
+                    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("ChangePBKey", strformData, function (r) {
+                            backToparent("修改成功");
+                        });
+                    });
+                });
+            });
+        });
+    </Script>
+</body>
+
+</html>

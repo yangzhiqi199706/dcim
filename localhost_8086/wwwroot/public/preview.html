@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body class="body-bg">
+    <!--顶部开始 -->
+    <div class="container">
+        <div class="logo" id="logo"></div>
+    </div>
+    <!--顶部结束 -->
+    <!--中部开始 -->
+    <!--左侧菜单开始 -->
+    <div class="left-nav">
+        <div id="side-nav">
+            <ul id="nav">
+                <li>
+                    <a href="javascript:;">
+                        <i class="iconfont">&#xe6a7;</i>
+                        <cite>动环监控系统</cite>
+                        <i class="iconfont nav_right">&#xe697;</i>
+                    </a>
+                    <ul class="sub-menu thr-menu" id="dmpage"></ul>
+                </li>
+            </ul>
+        </div>
+        <div class="person-box">
+            <img src="images/user.png" />
+            <span>欢迎您！</span>
+            <a href="javascript:;" id="userName">管理员</a>
+        </div>
+    </div>
+    <!--左侧菜单结束 -->
+    <!--右侧主体开始 -->
+    <div class="page-content">
+        <div class="layui-tab tab" lay-filter="xbs_tab" lay-allowclose="false">
+            <ul class="layui-tab-title" id="tab-title">
+                <li class="home">
+                    <i class="layui-icon">&#xe68e;</i>首页
+                </li>
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <iframe src="" frameborder="0" scrolling="yes"
+                        class="x-iframe" allowfullscreen="true"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="page-content-bg"></div>
+    <!--右侧主体结束 -->
+    <!--中部结束 -->
+    <script type="text/javascript">
+        $(function(){
+            //获取动画页面
+            list.info('GetDmpageListKey', {
+                    token: token,
+                    ComboBox: '1'
+                }, function (res) {
+                    let dmhtml = '';
+                    if (res.data.length != 0) {
+                        $.each(res.data, function (n, val) {
+                            dmhtml += `<li>`;
+                            dmhtml += setDmnav(val);
+                            if (val.children.length != 0) {
+                                dmhtml += `<ul class="sub-menu four-menu">`;
+                                $.each(val.children, function (x, y) {
+                                    dmhtml += `<li>`;
+                                    dmhtml += setDmnav(y);
+                                    if (y.children.length != 0) {
+                                        dmhtml += `<ul class="sub-menu five-menu">`;
+                                        $.each(y.children, function (m, n) {
+                                            dmhtml += `<li>`;
+                                            dmhtml += setDmnav(n);
+                                            dmhtml += `</li>`;
+                                        })
+                                        dmhtml += `</ul>`;
+                                    }
+                                    dmhtml += `</li>`;
+                                })
+                                dmhtml += `</ul>`;
+                            }
+                            dmhtml += `</li>`;
+
+                        })
+                    }
+                    $('#dmpage').html(dmhtml);
+                })
+            let title = GetString("title");
+            if(title){
+                $('iframe').attr('src', window.location.protocol + '//' + window.location.hostname+':8081/index.html?type=preview&title='+title)
+            }else{
+                $('iframe').attr('src', window.location.protocol + '//' + window.location.hostname+':8081/index.html?type=preview')
+            }
+        })
+        function setDmnav(val) {
+            let dmhtml = '';
+            if (val.PageType == 1) {//组态设计
+                dmhtml += `<a onclick="xadmin.add_tab('` + val.PageName + `', window.location.protocol + '//' + window.location.hostname + ':8081?type=preview&title=` + val.PageTxt + `',true)">
+                            <i class="iconfont">&#xe6a7;</i>
+                            <cite>`+ val.PageName + `</cite>`;
+                if (val.children.length != 0) {
+                    dmhtml += `<i class="iconfont nav_right">&#xe697;</i>`;
+                }
+                dmhtml += `</a>`;
+            }
+            if (val.PageType == 2) {//空白页
+                dmhtml += `<a href="javascript:;">
+                            <i class="iconfont">&#xe6a7;</i>
+                            <cite>`+ val.PageName + `</cite>`;
+                if (val.children.length != 0) {
+                    dmhtml += `<i class="iconfont nav_right">&#xe697;</i>`;
+                }
+                dmhtml += `</a>`;
+            }
+            if (val.PageType == 3) {//链接跳转
+                dmhtml += `<a onclick="xadmin.add_tab('` + val.PageName + `','` + val.PageTxt + `',true)">
+                            <i class="iconfont">&#xe6a7;</i>
+                            <cite>`+ val.PageName + `</cite>`;
+                if (val.children.length != 0) {
+                    dmhtml += `<i class="iconfont nav_right">&#xe697;</i>`;
+                }
+                dmhtml += `</a>`;
+            }
+            return dmhtml;
+        }
+    </script>
+</body>
+</html>

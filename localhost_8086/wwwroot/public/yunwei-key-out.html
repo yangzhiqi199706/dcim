@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">借用人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="LendPerson" value="{{data.LendPerson}}" name="LendPerson" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">联系电话<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="LendTel" value="{{data.LendTel}}" name="LendTel" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">借用时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="LendTime" value="{{data.LendTime}}" name="LendTime" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">借用备注</label>
+                    <div class="layui-input-block">
+                        <textarea name="remark" id="remark" value="{{data.remark}}" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+            //获取详情
+            list.info("GetKeyDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form", "laydate"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var laydate = layui.laydate;
+                    laydate.render({
+                        type: 'datetime',
+                        elem: '#LendTime' //指定元素
+                    });
+                    //服务器
+                    //监听提交
+                    // form.render();
+                    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("LendKeyKey", strformData, function (r) {
+                            backToparent("借用成功");
+                        });
+                    });
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

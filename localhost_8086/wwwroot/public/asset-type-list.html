@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>资产管理->基础配置->资产信息->资产类型</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <!-- <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入类型名称" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div> -->
+                        </form>
+                        <div class="x-right">
+                            <!-- <button class="layui-btn " onclick="">导入</button>
+                            <button class="layui-btn" onclick="">类型模板</button> -->
+                            <button class="layui-btn" onclick="xadmin.open('添加顶级类型','asset-type-add.html')">
+                                <i class="layui-icon"></i>添加顶级类型
+                            </button>
+                        </div>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <ul id="menu">
+                            <li></li>
+                            <li>编辑节点</li>
+                            <li>删除节点</li>
+                        </ul>
+                        <table class="layui-table layui-col-tree">
+                            <thead>
+                                <tr>
+                                    <th>属性编号</th>
+                                    <th>属性名称</th>
+                                    <th>数据类型</th>
+                                    <th>属性默认值</th>
+                                    <th>属性单位</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.AttrNumber}}</td>
+                                        <td>{{list.AttrName}}</td>
+                                        <td>{{list.DataType}}</td>
+                                        <td>{{list.AttributeVal}}</td>
+                                        <td>{{list.AttrUnit}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            //请求地址
+            var url = "GetAssetsTypeListKey";
+            //初始化数据
+            param.ComboBox = "all";
+            //类型树形列表
+            list.info(url, param, function (r) {
+                var data = [];
+                //按pid排序
+                r.data.sort(function (a, b) {
+                    if (parseInt(a.AssetsTypeParentId) < parseInt(b.AssetsTypeParentId)) {
+                        return -1;
+                    } else if (parseInt(a.AssetsTypeParentId) == parseInt(b.AssetsTypeParentId)) {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                });
+                //树形数据
+                var firstthrchild = -1;
+                $.each(r.data, function (n, val) {
+                    if (val.AssetsTypeParentId == 0) {
+                        var newdata = {
+                            title: val.AssetsTypeName,
+                            id: val.id,
+                            spread: false,
+                            other: 1,
+                            parentName:val.AssetsTypeName,
+                            grandparentName:val.AssetsTypeName,
+                            children: []
+                        }
+                        data.push(newdata);
+                    } else {
+                        $.each(data, function (x, y) {
+                            if (y.id == val.AssetsTypeParentId) {
+                                y.children.push({
+                                    title: val.AssetsTypeName,
+                                    id: val.id,
+                                    spread: false,
+                                    other: 2,
+                                    parentName:y.title,
+                                    grandparentName:y.title,
+                                    children: []
+                                })
+                            } else {
+                                if (y.children.length != 0) {
+                                    $.each(y.children, function (m, l) {
+                                        if (l.id == val.AssetsTypeParentId) {
+                                            if (firstthrchild == -1) {
+                                                l.children.push({
+                                                    title: val.AssetsTypeName,
+                                                    id: val.id,
+                                                    spread: false,
+                                                    checked: true,
+                                                    parentName:l.title,
+                                                    grandparentName:l.parentName,
+                                                    other: 3
+                                                })
+                                                firstthrchild = val.id;
+                                            } else {
+                                                l.children.push({
+                                                    title: val.AssetsTypeName,
+                                                    id: val.id,
+                                                    parentName:l.title,
+                                                    grandparentName:l.parentName,
+                                                    spread: false,
+                                                    other: 3
+                                                })
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+                })
+                delete (param['ComboBox']);//去掉不分页参数
+                layui.use(["form", "tree"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var tree = layui.tree;
+                    tree.render({
+                        elem: "#tree",
+                        data: data,
+                        id: 'treeId',
+                        click: function (obj) {
+                            if (obj.data.other == 3) {
+                                $('.layui-tree-txt').removeAttr('style');
+                                $(obj.elem).find('.layui-tree-txt').css('color', '#148cf1');
+                                //属性列表
+                                param.AssetsTypeId = obj.data.id;
+                                list.get('GetAssetsTypeAttrKey', param);
+                            }
+                        }
+                    });
+                });
+                //初始属性列表
+                $('.layui-tree-checkedFirst').find('.layui-tree-txt').css('color', '#148cf1');
+                param.AssetsTypeId = firstthrchild;
+                list.get('GetAssetsTypeAttrKey', param);
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get('GetAssetsTypeAttrKey', param);
+        }
+        //树形右键菜单
+        function setMenu(e, left, top) {
+            $('#menu').show().css({
+                'left': left,
+                'top': top - 100,
+            })
+            switch (e[0].dataset.other) {
+                case '1':
+                    $('#menu li').first().html('增加二级节点');
+                    break;
+                case '2':
+                    $('#menu li').first().html('增加三级节点');
+                    break;
+                case '3':
+                    $('#menu li').first().html('配置属性');
+                    break;
+            }
+            $('#menu li').unbind('click').click(function (event) {
+                let liindex = $(this).index();
+                let id = e[0].dataset.id;
+                switch (liindex) {
+                    case 0:
+                        if (e[0].dataset.other == 3) {
+                            if(e[0].dataset.parentname=='机柜'){
+                                xadmin.open('配置属性','choose-asset-typeattr.html?id='+id+'&jigui=1');
+                            }else if(e[0].dataset.grandparentname=='IT设备类'){
+                                xadmin.open('配置属性','choose-asset-typeattr.html?id='+id+'&jigui=2');
+                            }else{
+                                xadmin.open('配置属性','choose-asset-typeattr.html?id='+id+'&jigui=0');
+                            }
+                        } else {
+                            xadmin.open('添加子类型', 'asset-type-addchild.html?id=' + id + '&level=' + (parseInt(e[0].dataset.other) + 1));
+                        }
+                        break;
+                    case 1:
+                        xadmin.open('编辑节点', 'asset-type-edit.html?id=' + id);
+                        break;
+                    case 2:
+                        layer.confirm('确认删除吗？', function (index) {
+                            list.del('DelAssetsTypeKey', {
+                                token: token,
+                                id: id
+                            }, function () {
+                                layer.msg("已删除!", {
+                                    icon: 1,
+                                    time: 1000
+                                }, function () {
+                                    window.location.reload();
+                                })
+                            })
+                        });
+                        break;
+                }
+            })
+            //任意点击hide
+            $('body').click(function () {
+                $('#menu').hide();
+            })
+        }
+    </script>
+</body>
+
+</html>

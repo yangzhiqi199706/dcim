@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表管理->资产查询->资产盘点报表</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>关键词</text>
+                                <input type="text" name="search" placeholder="输入盘点任务名称、任务编号" autocomplete="off"
+                                    class="layui-input">
+                                <text>执行时间</text>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="startDateTime" name="startDateTime" class="layui-input"
+                                        placeholder="开始日期">
+                                </div>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="endDateTime" name="endDateTime" class="layui-input"
+                                        placeholder="结束日期">
+                                </div>
+                                <div class="two-search three-search">
+                                    <!-- <button class="layui-btn" lay-submit lay-filter="SubmitClear" type="button">清空条件</button> -->
+                                    <button class="layui-btn" type="button" onclick="displayexport('down','exportTable','型号统计');displayexport('down','exportTableType','类型统计')" id="down">导出</button>
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">筛选</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-left">
+                            <text>任务列表</text>
+                            <ul>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <li data-id="{{list.id}}" class="checkresult-li">{{i+1}}.{{list.TaskName}}</li>
+                                    {{/each}}
+                                    {{else}}
+                                    无任务
+                                    {{/if}}
+                                </script>
+                            </ul>
+                        </div>
+
+                        <div class="two-left four-right">
+                            <text>盘点情况</text>
+                            <div id="detail"></div>
+                            <script type="text/html" id="detailtpl">
+                                <table class="layui-table">
+                                    <tbody>
+                                        <tr>
+                                            <td>计划日期:</td>
+                                            <td>{{data.PlanComplateTime}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>执行日期:</td>
+                                            <td>{{data.DoTime}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>执行人:</td>
+                                            <td>{{data.DoEmpPersonName}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>资产总数:</td>
+                                            <td>{{data.TotalNumber}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>正常数量:</td>
+                                            <td>{{data.NormalNumber}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>异常数量:</td>
+                                            <td>{{data.AbnormalNumber}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>未盘数量:</td>
+                                            <td>{{data.NocheckNumber}}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>符合率:</td>
+                                            <td>{{((data.NormalNumber/(data.TotalNumber==0?1:data.TotalNumber))*100).toFixed(2)}}%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </script>
+                            <div id="checkplanchart"></div>
+                        </div>
+                        <div class="three-right four-three-right">
+                            <div id="model"></div>
+                            <script type="text/html" id="modeltpl">
+                                <text>按型号统计</text>
+                                <table class="layui-table" id="exportTable">
+                                    <thead>
+                                        <tr>
+                                            <th>型号</th>
+                                            <th>小计数量</th>
+                                            <th>正常数量</th>
+                                            <th>异常数量</th>
+                                            <th>未盘数量</th>
+                                            <th>符合率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{if data.brandmodel.length!=0}} {{each data.brandmodel as list i}}
+                                        <tr>
+                                            <td>{{list.BrandModel}}</td>
+                                            <td>{{list.total}}</td>
+                                            <td>{{list.normal}}</td>
+                                            <td>{{list.abnormal}}</td>
+                                            <td>{{list.nocheck}}</td>
+                                            <td>{{((list.normal/(list.total==0?1:list.total))*100).toFixed(2)}}%</td>
+                                        </tr>
+                                        {{/each}}{{/if}}
+                                        <tr>
+                                            <td>总计</td>
+                                            <td>{{data.TotalNumber}}</td>
+                                            <td>{{data.NormalNumber}}</td>
+                                            <td>{{data.AbnormalNumber}}</td>
+                                            <td>{{data.NocheckNumber}}</td>
+                                            <td>{{((data.NormalNumber/(data.TotalNumber==0?1:data.TotalNumber))*100).toFixed(2)}}%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <text>按类型统计</text>
+                                <table class="layui-table"  id="exportTableType">
+                                    <thead>
+                                        <tr>
+                                            <th>资产类型名称</th>
+                                            <th>小计数量</th>
+                                            <th>正常数量</th>
+                                            <th>异常数量</th>
+                                            <th>未盘数量</th>
+                                            <th>符合率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{if data.assetstype.length!=0}} {{each data.assetstype as list i}}
+                                        <tr>
+                                            <td>{{list.AssetsTypeName}}</td>
+                                            <td>{{list.total}}</td>
+                                            <td>{{list.normal}}</td>
+                                            <td>{{list.abnormal}}</td>
+                                            <td>{{list.nocheck}}</td>
+                                            <td>{{((list.normal/(list.total==0?1:list.total))*100).toFixed(2)}}%</td>
+                                        </tr>
+                                        {{/each}}{{/if}}
+                                        <tr>
+                                            <td>总计</td>
+                                            <td>{{data.TotalNumber}}</td>
+                                            <td>{{data.NormalNumber}}</td>
+                                            <td>{{data.AbnormalNumber}}</td>
+                                            <td>{{data.NocheckNumber}}</td>
+                                            <td>{{((data.NormalNumber/(data.TotalNumber==0?1:data.TotalNumber))*100).toFixed(2)}}%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var checkparam = {
+            token: token,
+            ComboBox: 'all'
+        }
+        $(function () {
+            getCheckList();
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#startDateTime',
+                });
+                laydate.render({
+                    elem: '#endDateTime',
+                });
+                //监听事件提交
+                form.on("submit(search)", function (data) {
+                    checkparam.search = data.field.search;
+                    checkparam.startDateTime = data.field.startDateTime;
+                    checkparam.endDateTime = data.field.endDateTime;
+                    getCheckList();
+                });
+            });
+
+        })
+        function getCheckList() {
+            list.info('GetCheckPlanListKey', checkparam, function (r) {
+                var lists = template("listtemplate", r);
+                $(".two-left ul").html(lists);
+                $(".two-left ul>li").unbind('click').click(function () {
+                    $(this).addClass('check').siblings().removeClass('check');
+                    list.info('GetAssetCheckHisInfoKey', {
+                        token: token,
+                        id: $(this).attr('data-id')
+                    }, function (r) {
+                        var detail = template("detailtpl", r);
+                        $("#detail").html(detail);
+                        var model = template("modeltpl", r);
+                        $("#model").html(model);
+
+                        var chartDom = document.getElementById('checkplanchart');
+                        var myChart = echarts.init(chartDom);
+                        var option;
+
+                        option = {
+                            tooltip: {
+                                trigger: 'item'
+                            },
+                            legend: {
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '11',
+                                    lineHeight: 15,
+                                },
+                                orient: 'vertical',
+                                left: 'right'
+                            },
+                            series: [
+                                {
+                                    name: '盘点结果',
+                                    type: 'pie',
+                                    radius: '50%',
+                                    data: [
+                                        { value: r.data.NormalNumber, name: '正常数量' },
+                                        { value: r.data.AbnormalNumber, name: '异常数量' },
+                                        { value: r.data.NocheckNumber, name: '未盘数量' }
+                                    ],
+                                    label: {
+                                        normal: {
+                                            show: true,
+                                            formatter: '{b}' + '\n\r' + '{c}({d}%)',
+                                            textStyle: {
+                                                color:'#ffffff',
+                                                fontSize:'14',
+                                                lineHeight: 15
+                                            },
+                                        },
+                                    },
+                                    emphasis: {
+                                        itemStyle: {
+                                            shadowBlur: 10,
+                                            shadowOffsetX: 0,
+                                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                        }
+                                    }
+                                }
+                            ]
+                        };
+
+                        option && myChart.setOption(option);
+                    })
+                }).first().click();
+            })
+        }
+    </script>
+</body>
+
+</html>

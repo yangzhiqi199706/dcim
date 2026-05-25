@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">计划名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PlanName" value="" name="PlanName" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">周期性盘点<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="PlanCycle" name="PlanCycle" lay-verify="required" lay-filter="PlanCycle">
+                            <option value="1">启用</option>
+                            <option value="-1">禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">完成天数（天）<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="PlanNComplateDayame" value="" name="ComplateDay" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">执行部门<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="DeptName" value="" name="DeptName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="DeptId" value="" name="DeptId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择部门','choose-department.html?type=dept')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">执行人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PersonName" value="" name="PersonName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="EmpId" value="" name="EmpId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=person')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">派发周期<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="SendCycle" name="SendCycle" lay-verify="required" lay-filter="SendCycle">
+                            <option value="year">年</option>
+                            <option value="month">月</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">派发时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SendTime" value="" name="SendTime" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" id="SendOpen">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">资产类型<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="AssetsType" name="AssetsType" lay-verify="required" lay-filter="AssetsType">
+                            <option value="A">所有资产</option>
+                            <option value="F">在架资产</option>
+                            <option value="CF">非在架资产</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">盘点方式<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <input type="radio" name="CheckWay" value="area" title="按区域" checked lay-filter="CheckWay">
+                        <input type="radio" name="CheckWay" value="dept" title="按部门" lay-filter="CheckWay">
+                        <input type="radio" name="CheckWay" value="store" title="按仓库" lay-filter="CheckWay">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">盘点范围<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="CheckRangeName" value="" name="CheckRangeName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="CheckRange" value="" name="CheckRange" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" id="RangeOpen">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">监盘人</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SeePerson" value="" name="SeePerson" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //派发周期
+                $('#SendOpen').click(function(){
+                    xadmin.open('选择时间','choose-year.html')
+                })
+				form.on("select(SendCycle)", function (data) {
+                    $('#SendTime').val('');
+                    var url='';
+                    if(data.value=='year'){
+                        url='choose-year';
+                    }else{
+                        url='choose-time';
+                    }
+                    $('#SendOpen').unbind('click').click(function(){
+                        xadmin.open('选择时间',url+'.html')
+                    })
+                });
+                //盘点范围方式
+                $('#RangeOpen').click(function(){
+                    xadmin.open('选择范围','choose-area.html?type=range')
+                })
+                form.on("radio(CheckWay)", function (data) {
+                    $('#CheckRange,#CheckRangeName').val('');
+                    var url='';
+                    switch (data.value){
+                        case 'area':url='choose-area';break;
+                        case 'dept':url='choose-department';break;
+                        case 'store':url='choose-store';break;
+                    }
+                    $('#RangeOpen').unbind('click').click(function(){
+                        xadmin.open('选择范围',url+'.html?type=range')
+                    })
+                });
+                //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateCheckPlanModelKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        });
+    </script>
+</body>
+</html>

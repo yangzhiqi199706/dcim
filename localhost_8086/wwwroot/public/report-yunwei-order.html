@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .massage-chart{height:280px}
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表管理->运维管理->工单</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" value="month" title="本月" lay-filter="type" checked>
+                                <input type="radio" name="type" value="upmonth" title="上月" lay-filter="type">
+                                <input type="radio" name="type" value="auto" title="自定义" lay-filter="type">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="startDateTime" name="startDateTime" class="layui-input"
+                                    placeholder="开始日期" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="endDateTime" name="endDateTime" class="layui-input"
+                                    placeholder="结束日期" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <div class="layui-inline layui-show-xs-block x-right">
+                            <button class="layui-btn search" lay-submit type="button" onclick="displayexport('down','view-route','工单统计');exportlist(this,'ExportYWWorkOrderKey')" id="down">导出</button>
+                        </div>
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">当期情况</div>
+                            <div id="yearChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">当期总计情况</div>
+                            <div id="totalChart" class="massage-chart"></div>
+                        </div>
+                        <div class="two-left1 massage-box-md12">
+                            <div class="capacity-statistics-title">工单统计</div>
+                            <table class="layui-table" id="view-route">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>执行人</th>
+                                        <th>之前遗留</th>
+                                        <th>当期发起</th>
+                                        <th>当期待解决</th>
+                                        <th>当期解决</th>
+                                        <th>往后移交</th>
+                                        <th>解决率</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="onelist" class="chooseTable">
+                                    <script type="text/html" id="onelisttemplate">
+                                        {{if data.length!=0}} {{each data as list i}}
+                                        <tr>
+                                            <td>{{list.EmpId}}</td>
+                                            <td>{{list.PersonName}}</td>
+                                            <td>{{list.OrderZQYL}}</td>
+                                            <td>{{list.OrderFQ}}</td>
+                                            <td>{{list.OrderDJJ}}</td>
+                                            <td>{{list.OrderYJJ}}</td>
+                                            <td>{{list.OrderWHYJ}}</td>
+                                            <td>{{list.OrderJJL}}%</td>
+                                        </tr>
+                                        {{/each}}
+                                        <tr>
+                                            <td>总计</td>
+                                            <td>-</td>
+                                            <td>{{ZQYL}}</td>
+                                            <td>{{FQ}}</td>
+                                            <td>{{DJJ}}</td>
+                                            <td>{{YJJ}}</td>
+                                            <td>{{WHYJ}}</td>
+                                            <td>{{JJL.toFixed(2)}}%</td>
+                                        </tr>
+                                        {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="two-left1 massage-box-md12">
+                            <div class="capacity-statistics-title">工单详细信息</div>
+                            <table class="layui-table" id="orderDetatil">
+                                <thead>
+                                    <tr>
+                                        <th>工单编号</th>
+                                        <th>工单名称</th>
+                                        <th>工单描述</th>
+                                        <th>工单状态</th>
+                                        <th>服务器</th>
+                                        <!-- <th>事件ID</th> -->
+                                        <th>设备名称</th>
+                                        <th>故障类型</th>
+                                        <th>故障子类型</th>
+                                        <th>SLA服务等级</th>
+                                        <th>发起人</th>
+                                        <th>发起时间</th>
+                                        <th>完成截止时间</th>
+                                        <th>接收时间</th>
+                                        <th>终止/完成人</th>
+                                        <th>终止/完成时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>{{list.OrderNumber}}</td>
+                                            <td>{{list.OrderName}}</td>
+                                            <td>{{list.OrderDescript}}</td>
+                                            <td>{{list.OrderStatus}}</td>
+                                            <th>{{list.ServerName}}</th>
+                                            <td>{{list.DeviceName}}</td>
+                                            <td>{{list.FaultTypeName}}</td>
+                                            <td>{{list.FaultSubTypeName}}</td>
+                                            {{if list.SLA == '1'}}
+                                            <td> 一般</td>
+                                            {{/if}}
+                                            {{if list.SLA == '2'}}
+                                            <td> 次要</td>
+                                            {{/if}}
+                                            {{if list.SLA == '3'}}
+                                            <td> 重要</td>
+                                            {{/if}}
+                                            {{if list.SLA == '4'}}
+                                            <td> 严重</td>
+                                            {{/if}}
+                                            {{if list.SLA == '5'}}
+                                            <td> 紧急</td>
+                                            {{/if}}
+                                            <td>{{list.CreateEmpName}}</td>
+                                            <td>{{list.create_time}}</td>
+                                            <td>{{list.CompleteEndDate}}</td>
+                                            <td>{{list.ReceiveTime}}</td>
+                                            <td>{{list.CheckEmpName}}</td>
+                                            <td>{{list.CheckTime}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetYWWorkOrderKey";
+        $(function () {
+            var m = new Date().getMonth() + 1;
+            m = m < 10 ? ("0" + m) : m;
+            //参数
+            var dataparam = {
+                token: token,
+                startDateTime: getOnemonth(new Date().getFullYear() + '-' + m)[0],
+                endDateTime: getOnemonth(new Date().getFullYear() + '-' + m)[1]
+            }
+            //初始化列表数据
+            param.startDateTime = dataparam.startDateTime;
+            param.endDateTime = dataparam.endDateTime;
+            list.get(url, param);
+            //统计
+            GetData(dataparam);
+            function GetData(dataparam) {
+                list.info('GetOrderAllHisInfoKey', dataparam, function (r) {
+
+                    var yeartitle = [];
+                    var yeardata = [];
+                    var yeardata2 = [];
+
+                    r.ZQYL = 0;
+                    r.FQ = 0;
+                    r.DJJ = 0;
+                    r.YJJ = 0;
+                    r.WHYJ = 0;
+                    r.JJL = 0;
+
+                    $.each(r.data, function (n, val) {
+                        yeartitle.push(val.PersonName);
+                        yeardata.push(val.OrderDJJ);
+                        yeardata2.push(val.OrderYJJ);
+                        r.ZQYL += parseFloat(val.OrderZQYL);
+                        r.FQ += parseFloat(val.OrderFQ);
+                        r.DJJ += parseFloat(val.OrderDJJ);
+                        r.YJJ += parseFloat(val.OrderYJJ);
+                        r.WHYJ += parseFloat(val.OrderWHYJ);
+                        r.JJL += parseFloat(val.OrderJJL);
+                    });
+
+                    var html = template("onelisttemplate", r);
+                    $("#onelist").html(html);
+
+                    var yearChartDom = document.getElementById('yearChart');
+                    var yearChart = echarts.init(yearChartDom);
+                    var yearChartoption = {
+                        legend: {
+                            textStyle: {
+                                color:'#A2CAE1',
+                                fontSize:'11',
+                                lineHeight: 15
+                            },
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: yeartitle,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    type: 'solid',
+                                    color: '#1898ED',
+                                    width: '1'
+                                }
+                            },
+                            axisLabel: {
+                                interval: 0,
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: 'rgba(24, 152, 237, 0.17)',
+                                    type: 'dashed'
+                                }
+                            },
+                        },
+                        grid: {
+                            x: 60,
+                            y: 40,
+                            x2: 25,
+                            y2: 30
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            }
+                        },
+                        series: [{
+                            data: yeardata,
+                            label: {
+                                show: true,
+                                position: 'top'
+                            },
+                            type: 'bar',
+                            name: '当期待解决',
+                            barWidth: 20,
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: '#F4F8FB'
+                            },
+                        },
+                        {
+                            data: yeardata2,
+                            label: {
+                                show: true,
+                                position: 'top'
+                            },
+                            type: 'bar',
+                            name: '当期解决',
+                            barWidth: 20,
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: '#F4F8FB'
+                            },
+                        }
+                        ]
+                    };
+                    yearChartoption && yearChart.setOption(yearChartoption);
+
+                    var totalChartDom = document.getElementById('totalChart');
+                    var totalChart = echarts.init(totalChartDom);
+                    var totaltitle = [{ 'name': '当前解决', 'icon': 'circle' },
+                    { 'name': '往后移交', 'icon': 'circle' }];
+                    var totaldata = [{ 'value': r.YJJ, 'name': '当前解决' },
+                    { 'value': r.WHYJ, 'name': '往后移交' }];
+                    var totalChartoption = {
+                        legend: {
+                            orient: 'vertical',
+                            data: totaltitle,
+                            right: 0,
+                            top: 55,
+                            itemWidth: 6,
+                            itemHeight: 6,
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '11',
+                                lineHeight: 15,
+                            },
+                            formatter: function (name) {
+                                var total = 0;
+                                var tarValue = 0;
+                                for (var i = 0, l = totaldata.length; i < l; i++) {
+                                    total += totaldata[i].value;
+                                    if (totaldata[i].name == name) {
+                                        tarValue = totaldata[i].value;
+                                    }
+                                }
+                                total = total == 0 ? 1 : total;
+                                var p = (tarValue / total * 100).toFixed(2);
+                                return name + ' ' + p + '%';
+                            }
+                        },
+                        color: ['#35DFFC', '#3783FF', '#FFCC37', '#FF9000', '#F96055'],
+                        series: [
+                            {
+                                name: '',
+                                type: 'pie',
+                                radius: ['65%', '90%'],
+                                top: 25,
+                                left: -80,
+                                bottom: 0,
+                                itemStyle: {
+                                    shadowColor: 'rgba(225, 229, 255, 0.69)',
+                                    shadowBlur: 16
+                                }, label: {
+                                    show: false,
+                                    position: 'center',
+                                    textStyle: {
+                                        color:'#ffffff',
+                                        fontSize:'14',
+                                        lineHeight: 15
+                                    },
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true,
+                                        fontSize: '14.3',
+                                        fontWeight: 'bold',
+                                        formatter: '{b}：{c}'
+                                    }
+                                },
+                                data: totaldata
+                            }
+                        ]
+                    };
+                    totalChartoption && totalChart.setOption(totalChartoption);
+                })
+            }
+
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#startDateTime',
+                    type: 'datetime'
+                });
+                laydate.render({
+                    elem: '#endDateTime',
+                    type: 'datetime'
+                });
+                form.render();
+                var type = 'month';
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    type = data.value;
+                    if (data.value != 'auto') {
+                        $('#startDateTime,#endDateTime').hide();
+                    } else {
+                        $('#startDateTime,#endDateTime').show();
+                    }
+                    return false;
+                });
+                form.render();
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    switch (type) {
+                        case 'month':
+                            dataparam.startDateTime = getOnemonth(new Date().getFullYear() + '-' + m)[0];
+                            dataparam.endDateTime = getOnemonth(new Date().getFullYear() + '-' + m)[1];
+                            break;
+                        case 'upmonth':
+                            var year = new Date().getFullYear();
+                            var upm = m;
+                            if (upm == '01') {
+                                upm = '12';
+                                year = year - 1;
+                            } else {
+                                upm = upm - 1;
+                            }
+                            dataparam.startDateTime = getOnemonth(year + '-' + upm)[0];
+                            dataparam.endDateTime = getOnemonth(year + '-' + upm)[1];
+                            break;
+                        case 'auto':
+                            dataparam.startDateTime = data.field.startDateTime;
+                            dataparam.endDateTime = data.field.endDateTime;
+                            break;
+                    }
+                    GetData(dataparam);
+
+                    param.startDateTime = dataparam.startDateTime;
+                    param.endDateTime = dataparam.endDateTime;
+                    param.pageNo = 1;
+                    list.get(url, param);
+                    return false;
+                });
+            });
+
+        })
+        //导出数据模板
+        //obj 操作 a对象
+        function exportlist(obj,url){
+            var html='<a href='+ajaxUrl+url+'?token='+token;
+                if(param.startDateTime)html+='&startDateTime='+ (Date.parse(param.startDateTime)/1000)
+                if(param.endDateTime)html+='&endDateTime='+ (Date.parse(param.endDateTime)/1000);
+                html+=' id="exportlist"></a>';
+            $(obj).parent().append(html);
+
+            $('#exportlist')[0].click();
+            setTimeout(function(){
+                $('#exportlist').remove();
+            },3000);
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+
+</html>

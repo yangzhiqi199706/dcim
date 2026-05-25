@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .top-area {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            column-gap: 46px;
+        }
+
+        .top-area>div {
+            flex: 1;
+            min-width: 200px;
+            padding: 0 12px;
+            background-color: rgba(30, 74, 129, 0.4);
+            height: 100%
+        }
+
+        .top-box-title {
+            font-size: 18px;
+            color: #fff;
+            height: 46px;
+            line-height: 46px;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .top-box-title div {
+            font-size: 22px;
+            color: #F4B645;
+            float: right;
+        }
+
+        .top-box-title::after,
+        .bottom-box-title::after {
+            position: absolute;
+            content: '';
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right,
+                    #399FE7 0%,
+                    #194389 75%,
+                    #133076 100%);
+        }
+
+        .top-box-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-top: 13.5px;
+            color: #fff;
+            font-size: 17px;
+            line-height: 1;
+            /* font-weight: 500; */
+        }
+
+        .top-box-content div:nth-child(2) {
+            white-space: nowrap;
+        }
+
+        .top-area>div:last-child .top-box-content {
+            flex-direction: column;
+            row-gap: 12px;
+        }
+
+        .bottom-area {
+            display: flex;
+            gap: 30px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 20px;
+        }
+
+        .bottom-left,
+        .bottom-right {
+            width: 400px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            row-gap: 12px;
+        }
+
+        .bottom-mid {
+            flex: 1;
+            min-width: 700px;
+
+        }
+
+        .bottom-box {
+            background-color: rgba(23, 33, 92, 0.9);
+        }
+
+        .bottom-box-title {
+            font-size: 16px;
+            color: #fff;
+            font-weight: 600;
+            padding-left: 12px;
+            margin-top: 5px;
+            line-height: 2.2;
+            position: relative;
+        }
+
+        .bottom-box-title span {
+            font-size: 14px;
+            color: #aaa;
+            margin-left: 8px;
+        }
+
+        .bottom-box-content {
+            height: calc(100% - 40px)
+        }
+
+        .activePower {
+            width: 100%;
+            height: calc(100% - 40px);
+            background: transparent url('images/nenghao-1.png') no-repeat 50% 25px;
+            background-size: auto;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0px 120px;
+        }
+
+        .activePower>div {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            /* background-color: #fff; */
+            min-height: 100px;
+            height: 100%;
+        }
+
+        .activePower>div>div:first-child {
+            color: #ddd;
+            font-size: 14px;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+
+        .activePower>div>div:last-child {
+            color: #333;
+            font-size: 30px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .powerFactor {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            padding: 0 16px;
+        }
+
+        .powerFactor>div {
+            background: transparent no-repeat center;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            background-position: 0px 56px;
+        }
+
+        .powerFactor>div>div:first-child {
+            font-size: 14px;
+            color: #ddd;
+            margin-bottom: 25px;
+            margin-top: 30px;
+        }
+
+        .powerFactor>div>div:last-child {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .powerEleTable .layui-table,
+        .bottomTable .layui-table {
+            margin: 0;
+        }
+
+        .powerEleTable .layui-table thead tr {
+            background: linear-gradient(to right,
+                    rgba(57, 159, 231, 0.4) 0%,
+                    rgba(25, 67, 137, 0.4) 75%,
+                    rgba(19, 48, 118, 0.4)) 100%;
+        }
+
+        .powerEleTable .layui-table thead tr td,
+        .bottomTable .layui-table thead tr td {
+            font-size: 16px;
+            color: #fff;
+            font-weight: 600;
+            line-height: 22px;
+        }
+
+        .powerEleTable .layui-table tr,
+        .bottomTable .layui-table tr {
+            background: transparent;
+        }
+
+        .powerEleTable .layui-table tr td,
+        .bottomTable .layui-table tr td {
+            text-align: center;
+            font-size: 14px;
+            color: #ddd;
+            line-height: 18px;
+        }
+
+        .powerEleTable .layui-table tr:hover,
+        .bottomTable .layui-table tr:hover {
+            background-color: transparent !important;
+        }
+
+        .bottomTable .layui-table thead tr {
+            background: transparent;
+            position: relative;
+        }
+
+        .bottomTable .layui-table thead tr::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, #399FE7 0%, #194389 75%, #133076 100%);
+        }
+
+        .bottomTable .layui-table tr td {
+            line-height: 26px;
+        }
+
+        .bottom-mid-center {
+            background: transparent url('images/nenghao-6.png') no-repeat center;
+            background-size: 100% 100%;
+            position: relative;
+        }
+
+        .bottom-mid-center-text {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            color: #fff;
+            font-weight: 600;
+            width: 100%;
+            text-align: center
+        }
+
+        .bottom-mid-center-text::before,
+        .bottom-mid-center-text::after {
+            content: '';
+            display: inline-block;
+            width: 110px;
+            height: 22px;
+        }
+
+        .bottom-mid-center-text::before,
+        .bottom-mid-center-text::after {
+            margin-right: 10px;
+            background: url('images/nenghao-3.png') no-repeat center;
+        }
+
+        .bottom-mid-center-text::after {
+            margin-left: 10px;
+            background: url('images/nenghao-4.png') no-repeat center;
+        }
+
+        .bottom-mid-center-box {
+            position: absolute;
+            background: url('images/nenghao-2.png') no-repeat center;
+            background-size: cover;
+            height: 51px;
+            width: 111px;
+            line-height: 1.7;
+            padding: 10px 15px 5px 20px;
+            font-size: 16px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .bottom-mid-center-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('images/nenghao-2-1.png');
+            background-size: cover;
+            background-position: center;
+            pointer-events: none;
+            animation: flicker 3s infinite;
+        }
+
+        @keyframes flicker {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            25% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+
+            75% {
+                opacity: 0.2;
+            }
+        }
+
+        .bottom-mid-center-box>div:nth-child(1) {
+            text-align: center;
+            border-bottom: 1px solid rgba(232, 198, 96, 0.5);
+        }
+
+        .bottom-mid-center-box>div:nth-child(2) {
+            float: left;
+            width: calc(100% - 46px);
+            padding-left: 8px;
+        }
+
+        .bottom-mid-center-box>div:nth-child(3) {
+            float: right;
+            width: 28px;
+            padding-right: 8px;
+        }
+
+        .bottom-mid-center-box::after {
+            content: '';
+            clear: both;
+        }
+
+        /* 气泡容器 —— 一个带圆角、溢出隐藏的“水缸” */
+        .bubble-pond {
+            position: relative;
+            width: 400px;
+            /* 使用视口最小单位，保持正方形 */
+            height: 350px;
+            /* max-width: 300px;
+            max-height: 200px; */
+            /* background: rgba(10, 40, 60, 0.5); */
+            /* backdrop-filter: blur(2px); */
+            border-radius: 40% 60% 40% 50% / 50% 40% 80% 50%;
+            /* 柔和的不规则池塘 */
+            /* box-shadow:
+                inset 0 0 40px rgba(255, 255, 255, 0.2),
+                0 20px 30px -10px rgba(0, 0, 0, 0.6); */
+            /* border: 2px solid rgba(255, 255, 255, 0.15); */
+            overflow: hidden;
+            /* 气泡游不出池塘 */
+            isolation: isolate;
+            left: calc(50% - 200px);
+        }
+
+        /* 所有气泡共享的基类 */
+        .bubble {
+            position: absolute;
+            bottom: -10%;
+            /* 从底部外开始出现，保证入场平滑 */
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 70% 30% 60% 40% / 50% 60% 40% 50%;
+            /* 不完美的圆形更像真实气泡 */
+            box-shadow:
+                inset -3px -3px 8px rgba(0, 0, 0, 0.2),
+                inset 3px 3px 15px rgba(255, 255, 255, 0.7),
+                0 0 8px rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(1px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transform: rotate(0deg);
+            /* 后续微调旋转 */
+            will-change: transform, opacity, bottom;
+            animation: bubble-rise linear infinite;
+            z-index: 2;
+            width: 0.2vmin;
+            height: 0.2vmin;
+        }
+
+        /* 定义上升动画 —— 位置、旋转、大小呼吸、透明度全都有 */
+        @keyframes bubble-rise {
+            0% {
+                bottom: -10%;
+                transform: translateX(0) scale(0.9) rotate(0deg);
+                opacity: 0.1;
+            }
+
+            20% {
+                opacity: 0.8;
+                /* 离开底部时变明显 */
+                transform: translateX(8px) scale(1.05) rotate(8deg);
+            }
+
+            50% {
+                transform: translateX(-10px) scale(1.1) rotate(-5deg);
+                opacity: 0.2;
+            }
+
+            80% {
+                opacity: 0.05;
+                transform: translateX(6px) scale(0.95) rotate(3deg);
+            }
+
+            100% {
+                bottom: 110%;
+                /* 完全超出顶部 */
+                transform: translateX(-15px) scale(0.7) rotate(-10deg);
+                opacity: 0;
+            }
+        }
+
+        /* ========= 生成16个独特的气泡 ========= */
+
+        /* 气泡1 — 小巧、左偏 */
+        .bubble-1 {
+            left: 12%;
+            /* width: 1.5vmin;
+            height: 1.5vmin; */
+            animation-duration: 6.2s;
+            animation-delay: 0s;
+        }
+
+        /* 气泡2 — 中等，偏右，慢速 */
+        .bubble-2 {
+            left: 78%;
+            /* width: 1.3vmin;
+            height: 1.3vmin; */
+            animation-duration: 8.5s;
+            animation-delay: 0.8s;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* 气泡3 — 较大，非常慢，有高光感 */
+        .bubble-3 {
+            left: 32%;
+            /* width: 1.8vmin;
+            height: 1.8vmin; */
+            animation-duration: 11s;
+            animation-delay: 1.5s;
+            background: rgba(255, 240, 220, 0.3);
+            box-shadow: inset -5px -5px 12px rgba(0, 0, 0, 0.2), inset 5px 5px 20px #fff9, 0 0 12px #aff;
+        }
+
+        /* 气泡4 — 迷你，快速 */
+        .bubble-4 {
+            left: 55%;
+            /* width: 0.2vmin;
+            height: 0.2vmin; */
+            animation-duration: 4s;
+            animation-delay: 0.2s;
+        }
+
+        /* 气泡5 — 靠左，稍有大小变化 */
+        .bubble-5 {
+            left: 20%;
+            /* width: 1.2vmin;
+            height: 1.2vmin; */
+            animation-duration: 7s;
+            animation-delay: 2.2s;
+            background: rgba(230, 250, 255, 0.35);
+        }
+
+        /* 气泡6 — 靠右中 */
+        .bubble-6 {
+            left: 68%;
+            /* width: 1.5vmin;
+            height: 1.5vmin; */
+            animation-duration: 9s;
+            animation-delay: 0.4s;
+        }
+
+        /* 气泡7 — 接近中央，但稍左，较透明 */
+        .bubble-7 {
+            left: 42%;
+            /* width: 1.5vmin;
+            height: 1.5vmin; */
+            animation-duration: 10.3s;
+            animation-delay: 1.8s;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.2), inset 4px 4px 15px #fff, 0 0 10px #cef;
+        }
+
+        /* 气泡8 — 小小只，右侧边缘 */
+        .bubble-8 {
+            left: 88%;
+            /* width: 0.8vmin;
+            height: 0.8vmin; */
+            animation-duration: 5.2s;
+            animation-delay: 2.5s;
+        }
+
+        /* 气泡9 — 偏左下 */
+        .bubble-9 {
+            left: 8%;
+            /* width: 1.6vmin;
+            height: 1.6vmin; */
+            animation-duration: 12s;
+            animation-delay: 0.1s;
+            background: rgba(255, 250, 240, 0.3);
+        }
+
+        /* 气泡10 — 右下区域 */
+        .bubble-10 {
+            left: 72%;
+            /* width: 1.0vmin;
+            height: 1.0vmin; */
+            animation-duration: 6.7s;
+            animation-delay: 3s;
+        }
+
+        /* 气泡11 — 较高中位置出现，左侧 */
+        .bubble-11 {
+            left: 18%;
+            /* width: 1vmin;
+            height: 1vmin; */
+            animation-duration: 7.5s;
+            animation-delay: 1.2s;
+            background: rgba(255, 255, 210, 0.3);
+        }
+
+        /* 气泡12 — 右上方区域（但还是从底部生成） */
+        .bubble-12 {
+            left: 93%;
+            /* width: 1vmin;
+            height: 1vmin; */
+            animation-duration: 5.8s;
+            animation-delay: 2.8s;
+        }
+
+        /* 气泡13 — 较大，偏中下 */
+        .bubble-13 {
+            left: 48%;
+            /* width: 1.8vmin;
+            height: 1.8vmin; */
+            animation-duration: 9.8s;
+            animation-delay: 0.6s;
+            background: rgba(255, 255, 245, 0.25);
+        }
+
+        /* 气泡14 — 左侧细长感觉（宽高略微不同） */
+        .bubble-14 {
+            left: 25%;
+            /* width: 2vmin;
+            height: 1.5vmin; */
+            animation-duration: 8.2s;
+            animation-delay: 3.4s;
+        }
+
+        /* 气泡15 — 极右 */
+        .bubble-15 {
+            left: 82%;
+            /* width: 1.2vmin;
+            height: 1.2vmin; */
+            animation-duration: 6s;
+            animation-delay: 1.1s;
+        }
+
+        /* 气泡16 — 最迷你，左侧出现，高频率 */
+        .bubble-16 {
+            left: 35%;
+            width: 0.1vmin;
+            height: 0.1vmin;
+            animation-duration: 3.5s;
+            animation-delay: 0.1s;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: inset -1px -1px 3px rgba(0, 0, 0, 0.1), inset 2px 2px 8px white, 0 0 6px #bff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="top-area">
+            <div>
+                <div class="top-box-title">用电量/今日
+                    <div>89355</div>
+                </div>
+                <div class="top-box-content">
+                    <div>本月：</div>
+                    <div>8935555</div>
+                    <div>Kwh</div>
+                </div>
+                <div class="top-box-content">
+                    <div>累计：</div>
+                    <div>8935555</div>
+                    <div>Kwh</div>
+                </div>
+            </div>
+            <div>
+                <div class="top-box-title">用电电费/今日
+                    <div>89355</div>
+                </div>
+                <div class="top-box-content">
+                    <div>本月：</div>
+                    <div>8935555</div>
+                    <div>元</div>
+                </div>
+                <div class="top-box-content">
+                    <div>累计：</div>
+                    <div>8935555</div>
+                    <div>元</div>
+                </div>
+            </div>
+            <div>
+                <div class="top-box-title">充电量/今日
+                    <div>89355</div>
+                </div>
+                <div class="top-box-content">
+                    <div>本月：</div>
+                    <div>8935555</div>
+                    <div>Kwh</div>
+                </div>
+                <div class="top-box-content">
+                    <div>累计：</div>
+                    <div>8935555</div>
+                    <div>Kwh</div>
+                </div>
+            </div>
+            <div>
+                <div class="top-box-title">充电电费/今日
+                    <div>89355</div>
+                </div>
+                <div class="top-box-content">
+                    <div>本月：</div>
+                    <div>8935555</div>
+                    <div>元</div>
+                </div>
+                <div class="top-box-content">
+                    <div>累计：</div>
+                    <div>8935555</div>
+                    <div>元</div>
+                </div>
+            </div>
+            <div>
+                <div class="top-box-title">功率需量/有功
+                    <div>89355</div>
+                </div>
+                <div class="top-box-content">
+                    <div>本月：</div>
+                    <div>8935555</div>
+                    <div>KVar</div>
+                </div>
+                <div class="top-box-content">
+                    <div>累计：</div>
+                    <div>8935555</div>
+                    <div>KVA</div>
+                </div>
+            </div>
+            <div>
+                <div class="top-box-title">系统/通信
+                    <div style="color: #65F2B3;">正常</div>
+                </div>
+                <div class="top-box-content">
+                    <div>仪表时间</div>
+                    <div id="curTime"></div>
+                </div>
+            </div>
+        </div>
+        <div class="bottom-area">
+            <div class="bottom-left">
+                <div class="bottom-box" style="height: 270px;">
+                    <div class="bottom-box-title">电流<span>Data Analysis</span></div>
+                    <div class="bottom-box-content" id="electricityChart"></div>
+                </div>
+                <div class="bottom-box" style="height: 290px;">
+                    <div class="bottom-box-title">有功功率分析<span>Data Analysis</span></div>
+                    <div class="bottom-box-content activePower">
+                        <div>
+                            <div style="margin-top: 20px;">A相有功功率</div>
+                            <div style="color:#E7C55F">5034</div>
+                        </div>
+                        <div>
+                            <div style="margin-top: 20px;">B相有功功率</div>
+                            <div style="color:#99ADF0">5034</div>
+                        </div>
+                        <div>
+                            <div>C相有功功率</div>
+                            <div style="color:#60C2EE">5034</div>
+                        </div>
+                        <div>
+                            <div>合计有功功率</div>
+                            <div style="color:#66F4BD">5034</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-box" style="height: 220px;">
+                    <div class="bottom-box-title">功率因数<span>Data Analysis</span></div>
+                    <div class="bottom-box-content powerFactor">
+                        <div style="background-image: url(images/nenghao-7.png);">
+                            <div>A相功率因数</div>
+                            <div style="color:#E8C660">0.9</div>
+                        </div>
+                        <div style="background-image: url(images/nenghao-8.png);">
+                            <div>B相功率因数</div>
+                            <div style="color:#99ADF0">0.9</div>
+                        </div>
+                        <div style="background-image: url(images/nenghao-9.png);">
+                            <div>C相功率因数</div>
+                            <div style="color:#60C2EE">0.9</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-mid">
+                <div style="height: 585px;" class="bottom-mid-center">
+                    <div class="bottom-mid-center-box" style="top:270px;left:50px">
+                        <div>A相有功功率</div>
+                        <div>23.3</div>
+                        <div>Kw</div>
+                    </div>
+                    <div class="bottom-mid-center-box" style="bottom:110px;left:115px">
+                        <div>C相有功功率</div>
+                        <div>23.3</div>
+                        <div>Kw</div>
+                    </div>
+                    <div class="bottom-mid-center-box" style="bottom:110px;right:115px">
+                        <div>B相有功功率</div>
+                        <div>23.3</div>
+                        <div>Kw</div>
+                    </div>
+                    <div class="bottom-mid-center-box" style="top:220px;right:50px">
+                        <div>合计有功功率</div>
+                        <div>23.3</div>
+                        <div>Kw</div>
+                    </div>
+                    <div class="bubble-pond">
+                        <div class="pond-glimmer"></div>
+                        <div class="bubble bubble-1"></div>
+                        <div class="bubble bubble-2"></div>
+                        <div class="bubble bubble-3"></div>
+                        <div class="bubble bubble-4"></div>
+                        <div class="bubble bubble-5"></div>
+                        <div class="bubble bubble-6"></div>
+                        <div class="bubble bubble-7"></div>
+                        <div class="bubble bubble-8"></div>
+                        <div class="bubble bubble-9"></div>
+                        <div class="bubble bubble-10"></div>
+                        <div class="bubble bubble-11"></div>
+                        <div class="bubble bubble-12"></div>
+                        <div class="bubble bubble-13"></div>
+                        <div class="bubble bubble-14"></div>
+                        <div class="bubble bubble-15"></div>
+                        <div class="bubble bubble-16"></div>
+                    </div>
+                    <div class="bottom-mid-center-text">能耗分析概览</div>
+                </div>
+
+                <div style="height: 220px;" class="bottom-box bottomTable">
+                    <table class="layui-table">
+                        <thead>
+                            <tr>
+                                <td>阶梯电能</td>
+                                <td>输入有功电能</td>
+                                <td>输出有功电能</td>
+                                <td>输入无功电能</td>
+                                <td>输出无功电能</td>
+                                <td>总电能</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>第一阶梯</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td style="font-weight: 600;color:#64F0BF">有功总电能</td>
+                            </tr>
+                            <tr>
+                                <td>第二阶梯</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td style="font-weight: 600;color:#E6C55F">2333.2</td>
+                            </tr>
+                            <tr>
+                                <td>第三阶梯</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td style="font-weight: 600;color:#5FC0EC">无功总电能</td>
+                            </tr>
+                            <tr>
+                                <td>第四阶梯</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td>233.2</td>
+                                <td style="font-weight: 600;color:#E6C55F">24523</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="bottom-right">
+                <div class="bottom-box" style="height: 270px;">
+                    <div class="bottom-box-title">电压<span>Data Analysis</span></div>
+                    <div class="bottom-box-content" id="voltageChart"></div>
+                </div>
+                <div class="bottom-box" style="height: 522px;">
+                    <div class="bottom-box-title">年度电能分析<span>Data Analysis</span></div>
+                    <div class="bottom-box-content powerEleTable">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <td>月份</td>
+                                    <td>有功电能</td>
+                                    <td>无功电能</td>
+                                    <td>视在电能</td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>2月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>3月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>4月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>5月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>6月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>7月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>8月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>9月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>10月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>11月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                                <tr>
+                                    <td>12月</td>
+                                    <td>Y5200</td>
+                                    <td>37</td>
+                                    <td>200,000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            $('#curTime').html(getDateTime('', 'cn'));
+            setInterval(function () {
+                $('#curTime').html(getDateTime('', 'cn'));
+            }, 1000);
+            const categories = ['类型一', '类型二', '类型三', '类型四', '类型五', '类型六', '类型七'];
+            const type1Data = [23000, 38000, 39000, 12000, 13000, 41000, 32000];
+            const type2Data = [20000, 7000, 8000, 18000, 22000, 48000, 45000];
+            renderCompareBarChart('electricityChart', {
+                categories: categories,
+                series1Data: type1Data,
+                series2Data: type2Data,
+                yAxisName: '单位：万'
+            });
+            renderCompareBarChart('voltageChart', {
+                categories: categories,
+                series1Data: type1Data,
+                series2Data: type2Data,
+                yAxisName: '单位：万'
+            });
+            function renderCompareBarChart(container, options = {}) {
+                // 1. 参数处理
+                const {
+                    categories = [],
+                    series1Data = [],
+                    series2Data = [],
+                    series1Name = '类型一',
+                    series2Name = '类型二',
+                    series1Color = '#399FE7',
+                    series2Color = '#194389',
+                    yAxisName = '',
+                    grid = null,
+                    maxY = null,
+                    intervalY = null,
+                    showLabel = false,
+                    labelPosition = 'top',
+                    borderRadius = [4, 4, 0, 0],
+                    showLegend = true,
+                    legendPosition = 'center',
+                    backgroundColor = 'transparent'
+                } = options;
+
+                // 2. 数据验证
+                if (!categories.length || !series1Data.length || !series2Data.length) {
+                    console.error('数据不能为空');
+                    return null;
+                }
+
+                if (categories.length !== series1Data.length || categories.length !== series2Data.length) {
+                    console.error('类别数组长度与数据数组长度不匹配');
+                    return null;
+                }
+
+                // 3. 获取容器
+                const containerEl = typeof container === 'string'
+                    ? document.getElementById(container)
+                    : container;
+
+                if (!containerEl) {
+                    console.error('容器元素不存在');
+                    return null;
+                }
+
+                // 4. 初始化图表
+                const chart = echarts.init(containerEl);
+
+                // 5. 计算Y轴配置
+                const allData = [...series1Data, ...series2Data];
+                const maxValue = maxY !== null ? maxY : Math.max(...allData) * 1.1; // 留10%余量
+
+                // 自动计算合适的间隔
+                let yInterval = intervalY;
+                if (yInterval === null) {
+                    const roughInterval = maxValue / 5;
+                    const power = Math.pow(10, Math.floor(Math.log10(roughInterval)));
+                    yInterval = Math.ceil(roughInterval / power) * power;
+                }
+
+                // 6. 默认网格配置
+                const defaultGrid = {
+                    left: '4%',
+                    right: '5%',
+                    bottom: '10px',
+                    top: '50px',
+                    containLabel: true,
+                    borderColor: '#eee'
+                };
+
+                // 7. 图表配置
+                const option = {
+                    // 提示框
+                    tooltip: {
+                        trigger: 'axis',
+                        // axisPointer: { type: 'cross' },
+                        formatter: function (params) {
+                            let res = params[0].name + '<br/>';
+                            for (let i = 0; i < params.length; i++) {
+                                res += params[i].marker + ' ' + params[i].seriesName + ': ' +
+                                    params[i].value.toLocaleString() + '<br/>';
+                            }
+                            return res;
+                        }
+                    },
+
+                    // 图例
+                    legend: showLegend ? {
+                        data: [series1Name, series2Name],
+                        orient: 'horizontal',
+                        right: '15px',
+                        top: '5px',
+                        icon: 'rect',
+                        itemWidth: 12,
+                        itemHeight: 4,
+                        itemGap: 15,
+                        textStyle: { fontSize: 11, fontWeight: 400, color: '#ddd' }
+                    } : { show: false },
+
+                    // 网格区域
+                    grid: grid || defaultGrid,
+
+                    // X轴
+                    xAxis: {
+                        type: 'category',
+                        data: categories,
+                        axisTick: { alignWithLabel: true, length: 5, interval: 0 },
+                        axisLine: { lineStyle: { color: '#1A468C', width: 1 } },
+                        axisLabel: { fontSize: 12, color: '#ddd', rotate: 0, margin: 8 },
+                        splitLine: { show: false },
+                        splitArea: {
+                            show: true,
+                            interval: 0,  // 强制每个刻度间都显示区域
+                            areaStyle: {
+                                color: ['rgba(26,43,108,0.6)', 'transparent']
+                            }
+                        },
+                        boundaryGap: false,  // 让区域从边界开始
+                    },
+
+                    // Y轴
+                    yAxis: {
+                        type: 'value',
+                        name: yAxisName,
+                        nameTextStyle: { fontSize: 12, color: '#ddd', fontWeight: 400, align: 'left', padding: [0, 0, 0, -48] },
+                        nameGap: 26,
+                        axisLine: { show: false },
+                        axisTick: { show: false },
+                        axisLabel: {
+                            fontSize: 12,
+                            color: '#ddd',
+                            align: 'left',
+                            padding: [0, 0, 0, -40],
+                            formatter: value => value.toLocaleString(),
+                        },
+                        splitLine: {
+                            show: true,
+                            lineStyle: { color: '#1A468C' }
+                        },
+                        min: 0,
+                        max: maxValue,
+                        interval: yInterval
+                    },
+
+                    // 数据系列
+                    series: [
+                        {
+                            name: series1Name,
+                            type: 'line',
+                            data: series1Data,
+                            label: showLabel ? {
+                                show: true,
+                                position: labelPosition,
+                                color: '#333',
+                                fontSize: 10,
+                                fontWeight: 500,
+                                formatter: params => params.value.toLocaleString(),
+                                offset: [0, 4]
+                            } : { show: false },
+                            smooth: true,
+                            symbol: 'circle',
+                            symbolSize: 0,
+                            lineStyle: {
+                                type: 'dashed',
+                                color: '#64E9B2',
+                                width: 2
+                            },
+                            itemStyle: {
+                                color: '#64E9B2'
+                            },
+                            // markArea: {
+                            //     silent: true,
+                            //     data: categories.map((_, index) => {
+                            //         // 为每个类别创建一个背景区域
+                            //         const colors = ['rgba(26,43,108,0.6)', 'rgba(26,70,140,0.4)'];
+                            //         return [{
+                            //             name: ``,
+                            //             xAxis: index - 0.5,  // 左边界
+                            //             itemStyle: {
+                            //                 color: colors[index % 2],  // 交替颜色
+                            //                 opacity: 0.8
+                            //             }
+                            //         }, {
+                            //             xAxis: index + 0.5  // 右边界
+                            //         }];
+                            //     })
+                            // }
+                        },
+                        {
+                            name: series2Name,
+                            type: 'line',
+                            data: series2Data,
+                            label: showLabel ? {
+                                show: true,
+                                position: labelPosition,
+                                color: '#ddd',
+                                fontSize: 10,
+                                fontWeight: 500,
+                                formatter: params => params.value.toLocaleString(),
+                                offset: [0, 4]
+                            } : { show: false },
+                            smooth: true,
+                            symbol: 'circle',
+                            symbolSize: 0,
+                            lineStyle: {
+                                type: 'dashed',
+                                color: '#57C1E9',
+                                width: 2
+                            },
+                            itemStyle: {
+                                color: '#57C1E9'
+                            }
+                        }
+                    ],
+
+                    // 背景色
+                    backgroundColor: backgroundColor,
+
+                    // 响应式
+                    color: [series1Color, series2Color]
+                };
+
+                // 8. 设置配置
+                chart.setOption(option);
+
+                // 9. 返回实例，方便外部控制
+                return chart;
+            }
+
+        })
+    </script>
+</body>
+
+</html>

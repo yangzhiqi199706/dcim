@@ -1,0 +1,295 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/public.dcimnew.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->配置->移动巡检->巡检签到</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入巡检名称" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" lay-filter="type" value="year" title="年" checked>
+                                <input type="radio" name="type" lay-filter="type" value="month" title="月">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="year" name="year" class="layui-input" placeholder="年">
+                                <input type="text" id="month" name="month" class="layui-input" placeholder="年月" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button" id="reportBtn">生成报表</button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right"
+                            onclick="xadmin.open('巡检签到','yunwei-xjtasksign-add.html')">巡检签到</button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>巡检签到表名</th>
+                                    <th>巡检名称</th>
+                                    <th>巡检设备种类</th>
+                                    <th>时间</th>
+                                    <th>巡检签到人员</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>{{list.TableName}}{{list.ReportTime}}</td>
+                                        <td>{{list.SignName}}</td>
+                                        <td>{{list.TypeListShow}}</td>
+                                        <td>{{list.create_time}}</td>
+                                        <td>{{list.SignPerson}}</td>
+                                        <td>
+                                            <a title="巡检详情" onclick="xadmin.open('巡检详情','yunwei-xjtasksign-view.html','','',
+                                                '{{list.id}}&reporttime={{list.ReportTime}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe63c;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var url = "/dcim-xjtasksign";
+        var filterType = 'year';
+
+        function parseTypeList(typeList) {
+            if (!typeList) return '-';
+            var txt = (typeList + '').trim();
+            if (!txt) return '-';
+            if (txt.indexOf('[') === 0) {
+                try {
+                    var arr = JSON.parse(txt);
+                    if (Object.prototype.toString.call(arr) === '[object Array]') {
+                        return arr.join(',');
+                    }
+                } catch (e) { }
+            }
+            return txt;
+        }
+
+        function buildDateRange() {
+            if (filterType === 'month') {
+                var monthVal = ($('input[name=month]').val() || '').trim();
+                if (!monthVal) return null;
+                return getOnemonth(monthVal);
+            }
+            var yearVal = ($('input[name=year]').val() || '').trim();
+            if (!yearVal) return null;
+            return [yearVal + '-01-01 00:00:00', yearVal + '-12-31 23:59:59'];
+        }
+
+        function applyFilterParam() {
+            var range = buildDateRange();
+            if (!range || !range[0] || !range[1]) {
+                delete param.startDateTime;
+                delete param.endDateTime;
+                return;
+            }
+            param.startDateTime = range[0];
+            param.endDateTime = range[1];
+        }
+
+        function buildFilterParams() {
+            var paramsObj = {};
+            if (param.startDateTime && param.endDateTime) {
+                paramsObj.create_time = {
+                    operator: "between",
+                    value: "('" + param.startDateTime + "','" + param.endDateTime + "')"
+                };
+            }
+            var signName = ($('input[name=search]').val() || '').trim();
+            if (signName) {
+                paramsObj.SignName = "%" + signName + "%";
+            }
+            return paramsObj;
+        }
+
+        function normalizeSignListRes(res) {
+            var rows = [];
+            var pageNo = param.pageNo || 1;
+            var pageSize = param.pageSize || 15;
+            var total = 0;
+
+            // 新接口主格式: {"total":0,"data":[]}
+            if (res && $.isArray(res.data)) {
+                rows = res.data;
+            } else if (res && res.data && $.isArray(res.data.info)) {
+                // 兼容旧格式
+                rows = res.data.info;
+            } else if (res && res.data && res.data.data && $.isArray(res.data.data.info)) {
+                rows = res.data.data.info;
+            } else if (res && res.data && res.data.data && $.isArray(res.data.data)) {
+                rows = res.data.data;
+            }
+
+            if (res && typeof res.total !== "undefined") {
+                total = Number(res.total || 0);
+            } else if (res && res.data && res.data.page) {
+                total = Number(res.data.page.total || 0);
+            } else if (res && res.data && res.data.data && res.data.data.page) {
+                total = Number(res.data.data.page.total || 0);
+            } else if (res && typeof res.count !== "undefined") {
+                total = Number(res.count || 0);
+            }
+            if (!total) total = rows.length;
+
+            var p_n = Math.max(1, Math.ceil(total / pageSize));
+            return {
+                data: rows,
+                page: {
+                    p: pageNo,
+                    p_n: p_n,
+                    total: total
+                }
+            };
+        }
+
+        function dealListData(r) {
+            if (!r || !$.isArray(r.data)) return;
+            $.each(r.data, function (n, row) {
+                row.TypeListShow = parseTypeList(row.TypeList);
+                if (!row.TableName) row.TableName = '巡检签到表';
+            });
+        }
+
+        function renderSignList(res) {
+            var r = normalizeSignListRes(res);
+            dealListData(r);
+            var lists = template("listtemplate", r);
+            $("tbody:not('.chooseTable')").html(lists);
+            if (r.page && Number(r.page.p || 1) === 1) {
+                x_admin_page(Number(r.page.total || 0), param.pageSize || 15, pagechange);
+            }
+        }
+
+        function getSignList() {
+            applyFilterParam();
+            var pageNo = param.pageNo || 1;
+            var pageSize = param.pageSize || 15;
+            dcimNewApi.filter(
+                url,
+                buildFilterParams(),
+                pageSize,
+                pageNo,
+                function (res) {
+                    renderSignList(res);
+                },
+                function (res) {
+                    // 兼容无 code 字段的新响应
+                    if (res && $.isArray(res.data) && typeof res.total !== "undefined") {
+                        renderSignList(res);
+                    }
+                }
+            );
+        }
+
+        function setReportBtn() {
+            $('#reportBtn').unbind('click').click(function () {
+                if (filterType === 'month') {
+                    var m = ($('input[name=month]').val() || '').trim();
+                    xadmin.open('报表', 'yunwei-xjtasksign-report.html?type=month&month=' + encodeURIComponent(m));
+                } else {
+                    var y = ($('input[name=year]').val() || '').trim();
+                    xadmin.open('报表', 'yunwei-xjtasksign-report.html?type=year&year=' + encodeURIComponent(y));
+                }
+            });
+        }
+
+        window.getSignList = getSignList;
+
+        $(function () {
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                var month = new Date().getMonth() + 1;
+                month = (month < 10 ? "0" + month : month);
+                var firstMonth = new Date().getFullYear() + '-' + month;
+
+                laydate.render({
+                    elem: '#month',
+                    type: 'month',
+                    value: firstMonth
+                });
+                laydate.render({
+                    elem: '#year',
+                    type: 'year',
+                    value: new Date().getFullYear()
+                });
+
+                form.render();
+                setReportBtn();
+                getSignList();
+
+                form.on("radio(type)", function (data) {
+                    filterType = data.value;
+                    if (filterType == 'year') {
+                        $('#year').show();
+                        $('#month').hide();
+                    } else {
+                        $('#year').hide();
+                        $('#month').show();
+                    }
+                    setReportBtn();
+                    return false;
+                });
+
+                form.on("submit(search)", function () {
+                    param.pageNo = 1;
+                    getSignList();
+                    return false;
+                });
+            });
+        });
+
+        function pagechange(curr) {
+            param.pageNo = curr;
+            getSignList();
+        }
+    </script>
+</body>
+
+</html>

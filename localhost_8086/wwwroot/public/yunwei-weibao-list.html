@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->维保管理->维保记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>维保时间</text>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="startDateTime" name="startDateTime"  class="layui-input" placeholder="开始日期" >
+                                </div>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="endDateTime" name="endDateTime" class="layui-input" placeholder="结束日期" >
+                                </div>
+                                <text>供应商</text>
+                                <select id="SupplierId" name="SupplierId" lay-filter="SupplierId">
+                                    <option value="">全部</option>
+                                </select>
+                                <text>关键词</text>
+                                <input type="text" name="search"  placeholder="请输入维保人" autocomplete="off" class="layui-input">
+                                <div class="two-search">
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">查询</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-right-big">
+                            <button class="layui-btn x-right"  style="margin-bottom:10px;" onclick="xadmin.open('添加记录','yunwei-weibao-add.html')">
+                                <i class="layui-icon"></i>添加记录
+                            </button>
+                            <table class="layui-table">
+                                <thead>
+                                    <tr>
+                                        <th>编号</th>
+                                        <th>维保人</th>
+                                        <th>联系电话</th>
+                                        <th>供应商</th>
+                                        <th>维保内容</th>
+                                        <th>处理情况</th>
+                                        <th>维保时间</th>
+                                        <th>响应速度评分</th>
+                                        <th>维保质量评分</th>
+                                        <th>经手人</th>
+                                        <th>备注</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                            <td>{{list.WBPerson}}</td>
+                                            <td>{{list.WBtel}}</td>
+                                            <td>{{list.SupplierName}}</td>
+                                            <td>{{list.WBContent}}</td>
+                                            <td>{{list.WBHandle}}</td>
+                                            <td>{{list.WBTime}}</td>
+                                            <td>{{list.WBResponseSpeed}}</td>
+                                            <td>{{list.WBQa}}</td>
+                                            <td>{{list.HandlerEmpName}}</td>
+                                            <td>{{list.remark}}</td>
+                                            <td>
+                                                <a title="编辑" onclick="xadmin.open('编辑','yunwei-weibao-edit.html','','','{{list.id}}')" href="javascript:;">
+                                                    <i class="layui-icon">&#xe642;</i>
+                                                </a>
+                                                {{if list.WBFile}}
+                                                <a title="浏览图片" class="fancybox-view" href="{{list.WBFile}}">
+                                                    <i class="layui-icon">&#xe64a;</i>
+                                                    <img src="{{list.WBFile}}" alt="" style="display:none;">
+                                                </a>
+                                                {{/if}}
+                                            </td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetWBListKey";
+        $(function(){
+            //初始化数据
+            param.startDateTime='';
+            param.endDateTime='';
+            list.get(url, param,dealdata);
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({ 
+                    elem: '#startDateTime'
+                });
+                laydate.render({ 
+                    elem: '#endDateTime'
+                });
+                //供应商
+                getSupplier(form);
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    delete(param['ComboBox']);
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.startDateTime=data.field.startDateTime;
+                    param.endDateTime=data.field.endDateTime;
+                    param.SupplierId=data.field.SupplierId;
+                    list.get(url, param,dealdata);
+                    return false;
+                });
+                //预览图片
+                fnFancyBox('.fancybox-view');
+            });
+        })
+        //数据处理
+        function dealdata(r){
+            $.each(r.data.info,function(n,val){
+                if(val.WBFile  && val.WBFile.indexOf('http')<0){
+                    val.WBFile=imgUrl+val.WBFile;
+                }
+            });
+        }
+        //分页回调
+        function pagechange(curr) {
+            delete(param['ComboBox']);
+            param.pageNo = curr;
+            list.get(url, param,dealdata);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .layui-form-checkbox{margin-top: 0!important;}
+        .thrbox+.layui-form-checkbox{margin:5px 0!important;}
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">部门名称</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="DeptName" value="" name="DeptName" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属服务器<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属区域<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-block">
+                        <!-- <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                            <option value="">请选择1</option>
+                        </select> -->
+                        <table class="layui-table" id="arealist">
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">上级部门<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="DeptParentId" name="DeptParentId" lay-verify="required" lay-filter="DeptParentId">
+                            <option value="0">顶级部门</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //服务器
+                getServer(form, function () {
+                    form.on("select(ServerCode)", function (data) {
+                        param.ServerCode = data.value;
+                        getTreeArea(data.value)
+                    });
+                });
+                getTreeArea('');
+                function getTreeArea(ServerCode) {
+                    //区域
+                    list.info('GetAreaListKey', {
+                        token: token,
+                        ComboBox: 'tree',
+                        ServerCode: ServerCode
+                    }, function (r) {
+                        var menu = '';
+                        var data = [];
+                        //按pid排序
+                        r.data.sort(function (a, b) {
+                            if (parseInt(a.AreaParentId) < parseInt(b.AreaParentId)) {
+                                return -1;
+                            } else if (parseInt(a.AreaParentId) == parseInt(b.AreaParentId)) {
+                                return 0;
+                            } else {
+                                return 1;
+                            }
+                        });
+                        $.each(r.data, function (n, val) {
+                            if (val.AreaParentId == 0 ) {
+                                var newdata = {
+                                    ...val,
+                                    children: []
+                                }
+                                data.push(newdata);
+                            } else {
+                                $.each(data, function (x, y) {
+                                    if (y.id == val.AreaParentId) {
+                                        y.children.push({
+                                            ...val,
+                                            children: []
+                                        })
+                                    } else {
+                                        if (y.children.length != 0) {
+                                            $.each(y.children, function (m, l) {
+                                                if (l.id == val.AreaParentId) {
+                                                    l.children.push({
+                                                        ...val
+                                                    })
+                                                }
+                                            })
+                                        }
+                                    }
+                                })
+                            }
+                        })
+                        if (data.length == 0) {
+                            menu = '<tr><td>请添加区域</td></tr>'
+                        } else {
+                            $.each(data, function (n, val) {
+                                var childrenlen = val.children ? (val.children.length == 0 ? 1 : val.children.length) : 1;
+                                menu += '<tr>';
+                                menu += '<td rowspan="' + childrenlen + '">';
+                                menu += '<input name="role_menu" type="checkbox" lay-skin="primary" lay-filter="parent" title="' + val.AreaName + '" value="' + val.id + '"  id="' + val.id + '">';
+                                menu += '</td>';
+                                if (val.children && val.children.length != 0) {
+                                    $.each(val.children, function (x, y) {
+                                        if (x == 0) {
+                                            setmenutpl(y, val);
+                                            return false;
+                                        }
+                                    });
+                                }
+                                menu += '</tr>';
+                                if (val.children && val.children.length != 0) {
+                                    $.each(val.children, function (x, y) {
+                                        if (x != 0) {
+                                            menu += '<tr>';
+                                            setmenutpl(y, val);
+                                            menu += '</tr>';
+                                        }
+                                    });
+                                }
+                            });
+                            function setmenutpl(y, val) {
+                                menu += '<td>';
+                                menu += '<input name="role_menu" lay-filter="father"  lay-skin="primary" data-parent="' + val.id + '" type="checkbox" title="' + y.AreaName + '" value="' + y.id + '" id="' + y.id + '">';
+                                menu += '</td>';
+                                if (y.children && y.children.length != 0) {
+                                    menu += '<td>';
+                                    $.each(y.children, function (a, b) {
+                                        var childrenlen = b.children ? (b.children.length == 0 ? 1 : b.children.length) : 1;
+                                        menu += '<input name="role_menu" class="thrbox" type="checkbox" lay-skin="primary" lay-filter="childone" data-parent="' + val.id + '" data-child-parent="' + y.id + '" title="' + b.AreaName + '" value="' + b.id + '"  id="' + b.id + '"><br/>';
+                                        if (b.children && b.children.length != 0) {
+                                            $.each(b.children, function (m, n) {
+                                                if (m == 0) {
+                                                    setmenutpl(n, b);
+                                                    return false;
+                                                }
+                                            });
+                                        }
+                                        if (b.children && b.children.length != 0) {
+                                            $.each(b.children, function (m, n) {
+                                                if (m != 0) {
+                                                    setmenutpl(n, b);
+                                                }
+                                            });
+                                        }
+                                    });
+                                    menu += '</td>';
+                                }
+                            }
+                        }
+                        $('tbody').html(menu);
+                        form.render();
+                        //全选二级菜单
+                        form.on('checkbox(parent)', function (data) {
+                            if (data.elem.checked) {
+                                $(data.elem).parent().siblings('td').find('input').prop("checked", true);
+                            } else {
+                                $(data.elem).parent().siblings('td').find('input').prop("checked", false);
+                            }
+                            if ($(data.elem).parent().attr('rowspan') > 1) {
+                                if (data.elem.checked) {
+                                    $(data.elem).parents('tr').siblings('tr').find('input[data-parent=' + data.value + ']').prop("checked", true).parent().next('td').find('input').prop("checked", true);
+                                } else {
+                                    $(data.elem).parents('tr').siblings('tr').find('input[data-parent=' + data.value + ']').prop("checked", false).parent().next('td').find('input').prop("checked", false);
+                                }
+                            }
+                            form.render();
+                        });
+                        //全选功能菜单 && 反选一级
+                        form.on('checkbox(father)', function (data) {
+                            $('#' + $(data.elem).attr('data-parent')).prop("checked", true);
+                            if (data.elem.checked) {
+                                $(data.elem).parent().next('td').find('input').prop("checked", true);
+                            } else {
+                                $(data.elem).parent().next('td').find('input').prop("checked", false);
+                            }
+                            form.render();
+                        });
+                        //反全选
+                        form.on('checkbox(childone)', function (data) {
+                            $(data.elem).parent().prev('td').find('input').prop("checked", true);
+                            $('#' + $(data.elem).attr('data-child-parent')+',#'+$(data.elem).attr('data-parent')).prop("checked", true);
+                            form.render('checkbox');
+                        });
+                    });
+                }
+
+                //部门
+                $("#DeptParentId").html('<option value="0">顶级部门</option>');
+                list.info("GetDeptListKey", {
+                    token: token,
+                    ComboBox: 'all'
+                }, function (res) {
+                    var dpthtml = "";
+                    $.each(res.data, function (n, val) {
+                        dpthtml += "<option value=\"" + val.id + "\">" + val.DeptName + "</option>";
+                    });
+                    $("#DeptParentId").append(dpthtml);
+                    form.render("select");
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    var role_menus = '';
+                    $.each(strformData.getAll('role_menu'), function (n, val) {
+                        role_menus += val + ',';
+                    });
+                    strformData.delete("role_menu");
+                    strformData.append("AreaId", role_menus.substring(0, role_menus.length - 1));
+                    list.form("CreateDeptKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

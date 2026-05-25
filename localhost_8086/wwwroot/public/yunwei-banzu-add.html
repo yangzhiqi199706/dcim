@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label">值班组名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="ZBZGround" value="" name="ZBZGround" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">值班组人员<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PersonName" value="" name="PersonName" lay-verify="required"
+                            autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="ZBZEmpId" value="" name="ZBZEmpId" lay-verify="required"
+                            autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=banzu')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确认</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateZBZKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        })
+    </script>
+</body>
+
+</html>

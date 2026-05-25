@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function(){
+            var type=GetString("type");
+            //请求地址
+            var url = "GetStoreLocationListKey";
+            //初始化数据
+            param.ComboBox = "all";
+            //类型树形列表
+            list.info(url, param,function(r){
+                var data=[];
+                 //树形数据
+                $.each(r.data,function(n,val){
+                    var newdata={
+                        title:val.StoreLocationName,
+                        id:val.id,
+                        spread:false,
+                        other:1,
+                        children:[]
+                    }
+                    data.push(newdata);
+                })
+                delete(param['ComboBox']);//去掉不分页参数
+                layui.use(["form","tree"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var tree = layui.tree;
+                    tree.render({
+                        elem:"#tree",
+                        data:data,
+                        id: 'treeId',
+                        click: function(obj){
+                            var index = parent.layer.getFrameIndex(window.name);
+                            parent.layer.close(index);
+                            var nameobj,idobj;
+                            switch(type){
+                                case 'range':nameobj='CheckRangeName';idobj='CheckRange';break;
+                            }
+                            var id=obj.data.id;
+                            var title=obj.data.title;
+                            $(window.parent.document).find('#'+nameobj).val(title);
+                            $(window.parent.document).find('#'+idobj).val(id);
+                        }
+                    });     
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-card-body">
+        <a class="layui-btn layui-btn-primary" href="javascript:;" onclick="location.href='yunwei-xjrecord-check.html?id='+GetString('id')">
+            巡检总览
+        </a>
+        <a class="layui-btn" href="javascript:;" onclick="location.href='yunwei-xjrecord-checkdetail.html?id='+GetString('id')">
+            巡检详情
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>任务编号</th>
+                                    <th>测点名称</th>
+                                    <th>服务器</th>
+                                    <th>参数</th>
+                                    <th>值</th>
+                                    <th>记录时间</th>
+                                    <th>状态</th>
+                                    <th>备注</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr> 
+                                        <td>{{list.XJTaskNumber}}</td>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.ServerName}}</td>
+                                        <td>{{list.ParamName}}</td>
+                                        <td>{{list.HisValue}}</td>
+                                        <td>{{list.HisDate}}</td>
+                                        <td>{{list.ParamStatus}}</td>
+                                        <td>{{list.remark}}</td>
+                                        <td>
+                                            {{if list.HisImg}}
+                                            <a title="浏览图片" class="fancybox-view" href="{{list.HisImg}}">
+                                                <i class="layui-icon">&#xe64a;</i>
+                                                <img src="{{list.HisImg}}" alt="" style="display:none;">
+                                            </a>
+                                            {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function(){
+            list.info("GetXJTaskDetailParaKey",{
+                token:token,
+                TaskId:GetString("id")
+            },function(r){
+                $.each(r.data,function(n,val){
+                    if(val.HisImg  && val.HisImg.indexOf('http')<0){
+                        val.HisImg=imgUrl+val.HisImg;
+                    }
+                });
+                var html = template("listtemplate", r);
+                $("tbody").html(html);
+                 //预览图片
+                 fnFancyBox('.fancybox-view');
+            });
+        })
+    </script>
+</body>
+</html>

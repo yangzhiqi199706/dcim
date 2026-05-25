@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">巡检任务名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="XJTaskName" value="{{data.XJTaskName}}" name="XJTaskName" lay-verify="required" autocomplete="off" class="layui-input" {{if data.system!=1}}readonly{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">巡检计划名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        {{if data.system!=1}}
+                        <input type="text" value="{{data.XJModelName}}" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        {{else}}
+                        <select id="XJModelId" name="XJModelId" lay-filter="XJModelId" >
+                            <option value="">请选择</option>
+                        </select>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">巡检人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PersonName" value="{{data.XJEmpName}}" name="XJEmpName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="EmpId" value="{{data.XJEmpId}}" name="XJEmpId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=person')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">计划完成时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text"  {{if data.system!=-1}} id="XJPlanComplateTime"{{/if}} value="{{data.XJPlanComplateTime}}" name="XJPlanComplateTime" lay-verify="required" autocomplete="off" class="layui-input" {{if data.system!=1}}readonly{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">描述</label>
+                    <div class="layui-input-block">
+                        <textarea name="XJDescribe" id="XJDescribe" class="layui-textarea" autocomplete="off" >{{data.XJDescribe}}</textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+                </script>
+            </form>
+        </div>
+        <script>
+            $(function () {
+                var id = GetString("id");
+                //获取详情
+                list.info("GetXJTaskDetailKey", {
+                    token: token,
+                    id: id
+                }, function (r) {
+                    var html = template("detail", r);
+                    $("#formNow").html(html);
+                    layui.use(["form", "laydate"], function () {
+                        $ = layui.jquery;
+                        var form = layui.form;
+                        
+                        var laydate = layui.laydate;
+                        laydate.render({
+                            elem: '#XJPlanComplateTime', //指定元素
+                            type:'datetime'
+                        });
+                    
+
+                        //计划
+                        list.info('GetXJModelListKey',{
+                            token:token,
+                            ComboBox:'all'
+                        },function(res){
+                            var html = "";
+                            $.each(res.data, function (n, val) {
+                                html += "<option value=\"" + val.id + "\">" + val.XJModelName + "</option>";
+                            });
+                            $("#XJModelId").append(html);
+                            form.render("select");
+                            layuiSelected("XJModelId",r.data.XJModelName);
+                            form.on("select(XJModelId)", function (data) {
+                                list.info('GetXJModelDetailKey',{
+                                    token:token,
+                                    id:data.value
+                                },function(r){
+                                    $('#PersonName').val(r.data.XJEmpName);
+                                    $('#EmpId').val(r.data.XJEmpId);
+                                })
+                            });
+                        })
+                        //监听提交
+                        form.on("submit(submit)", function (data) {
+                            var strformData = new FormData($("#formNow")[0]);
+                            strformData.append("token", token);
+                            strformData.append("id", id);
+                            list.form("ChangeXJTaskKey", strformData, function (r) {
+                                backToparent("修改成功");
+                            });
+                        });
+                    });
+                });
+            })
+            $(function () {
+                
+            })
+        </script>
+</body>
+
+</html>

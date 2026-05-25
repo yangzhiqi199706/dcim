@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jquery.qrcode.min.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>资产管理->查询及报表->资产查询</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left" id="tree"></div>
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>资产编号</text>
+                                <input type="text" name="search"  placeholder="输入资产编号" lay-filter="search" autocomplete="off" class="layui-input">
+                                <!-- <text>购置日期</text>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="startDate" class="layui-input" placeholder="开始日期" >
+                                </div>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="endDate" class="layui-input" placeholder="结束日期" >
+                                </div> -->
+                                <!-- <text>服务器</text>
+                                <select id="ServerCode" name="ServerCode"lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                                <text>区域</text>
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select> -->
+                                <text>管理部门</text>
+                                <select id="DeptId" name="DeptId" lay-filter="DeptId">
+                                    <option value="">请选择</option>
+                                </select>
+                                <text>管理人员</text>
+                                <select id="EmpId" name="EmpId" lay-filter="EmpId">
+                                    <option value="">请选择</option>
+                                </select>
+                                <text>仓库位置</text>
+                                <select id="StoreLocationId" name="StoreLocationId" lay-filter="StoreLocationId">
+                                    <option value="">请选择</option>
+                                </select>
+                                <text>资产状态</text>
+                                <select id="AssetStatus" name="AssetStatus" lay-filter="AssetStatus">
+                                    <option value="">全部</option>
+                                    <option value="I">在库</option>
+                                    <option value="W">待上架</option>
+                                    <option value="F">在架</option>
+                                    <option value="FR">在架维修</option>
+                                    <option value="IR">在库维修</option>
+                                    <option value="L">领用</option>
+                                    <option value="G">赠送</option>
+                                    <option value="Y">遗失</option>
+                                    <option value="R">报废</option>
+                                    <option value="DF">外送维修(在架)</option>
+                                    <option value="DI">外送维修(在库)</option>
+                                    <option value="O">待安装</option>
+                                    <option value="B">借用</option>
+                                </select>
+                                <text>租户</text>
+                                <select id="RentId" name="RentId" lay-filter="RentId">
+                                    <option value="">请选择</option>
+                                </select>
+                                <!-- <text>维保状态</text>
+                                <input type="radio" name="WBStatus" value="in" title="在保" checked>
+                                <input type="radio" name="WBStatus" value="out" title="过保"> -->
+                                <div class="two-search three-search">
+                                    <!-- <button class="layui-btn" lay-submit lay-filter="SubmitClear" type="button">清空条件</button> -->
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">搜索</button>
+                                    <button class="layui-btn" type="button" onclick="exportlist(this,'ExportAssetAllKey')">导出</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="three-right">
+                            <table class="layui-table" id="exportTable">
+                                <thead>
+                                    <tr>
+                                        <th>操作</th>
+                                        <th>资产ID</th>
+                                        <th>资产编号</th>
+                                        <th>资产类型</th>
+                                        <th>型号</th>
+                                        <th>资产描述</th>
+                                        <th>资产条ID</th>
+                                        <th>资产状态</th>
+                                        <th>所属服务器</th>
+                                        <th>所属区域</th>
+                                        <th>机柜列</th>
+                                        <th>机柜</th>
+                                        <th>租户</th>
+                                        <th>网关ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>
+                                                <a title="属性详情" onclick="xadmin.open('属性详情','asset-attr-detail.html','','','{{list.id}}')" href="javascript:;">
+                                                    <i class="layui-icon">&#xe716;</i>
+                                                </a>
+                                                <a title="生成二维码" id="img{{list.id}}" download="资产查询-{{list.AssetsTypeName}}-{{list.BrandModel}}" href="{{list.ewm}}" class="fancybox-view">
+                                                    <i class="layui-icon">&#xe857;</i>
+                                                    <div id="{{list.id}}" style="display:none"></div>
+                                                </a>
+                                            </td>
+                                            <td>{{list.id}}</td>
+                                            <td>{{list.AssetsNumber}}</td>
+                                            <td>{{list.AssetsTypeName}}</td>
+                                            <td>{{list.BrandModel}}</td>
+                                            <td>{{list.AssetsDescribe}}</td>
+                                            <td>{{list.UId}}</td>
+                                            <td>{{if list.AssetStatus=='I'}}入库
+                                                {{else if list.AssetStatus=='W'}}待上架
+                                                {{else if list.AssetStatus=='F'}}在架 
+                                                {{else if list.AssetStatus=='FR'}}在架维修
+                                                {{else if list.AssetStatus=='IR'}}在库维修
+                                                {{else if list.AssetStatus=='L'}}领用
+                                                {{else if list.AssetStatus=='G'}}赠送
+                                                {{else if list.AssetStatus=='Y'}}遗失
+                                                {{else if list.AssetStatus=='R'}}报废
+                                                {{else if list.AssetStatus=='DF'}}外送维修（在架）
+                                                {{else if list.AssetStatus=='DI'}}外送维修（在库）
+                                                {{else if list.AssetStatus=='O'}}待安装
+                                                {{else if list.AssetStatus=='T'}}安装
+                                                {{else if list.AssetStatus=='B'}}借用
+                                                {{else}}下架
+                                                {{/if}}
+                                            </td>
+                                            <td>{{list.ServerName}}</td>
+                                            <td>{{list.AreaName}}</td>
+                                            <td>{{list.column}}</td>
+                                            <td>{{list.position}}</td>
+                                            <td>{{list.TenantName}}</td>
+                                            <td>{{list.GatewayId}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetAssetsStoreListKey";
+        $(function(){
+            //初始化数据
+            list.get(url, param,'',function(r){
+                dealEwm(r)
+            });
+            //初始化数据
+            param.ComboBox = "all";
+            //类型树形列表
+            list.info('GetAssetsTypeListKey', param,function(r){
+                var data=[];
+                //按pid排序
+                r.data.sort(function (a, b) {
+                    if (parseInt(a.AssetsTypeParentId) < parseInt(b.AssetsTypeParentId)) {
+                        return -1;
+                    } else if (parseInt(a.AssetsTypeParentId) == parseInt(b.AssetsTypeParentId)) {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                });
+                 //树形数据
+                var firstthrchild=-1;
+                $.each(r.data,function(n,val){
+                    if(val.AssetsTypeParentId==0 && val.AssetsTypeName!='备品备件'){
+                        var newdata={
+                            title:val.AssetsTypeName,
+                            id:val.id,
+                            spread:false,
+                            other:1,
+                            children:[]
+                        }
+                        data.push(newdata);
+                    }else{
+                        $.each(data,function(x,y){
+                            if(y.id==val.AssetsTypeParentId && val.AssetsTypeName!='备品备件'){
+                                y.children.push({
+                                    title:val.AssetsTypeName,
+                                    id:val.id,
+                                    spread:false,
+                                    other:2,
+                                    children:[]
+                                })
+                            }else{
+                                if(y.children.length!=0){
+                                    $.each(y.children,function(m,l){
+                                        if(l.id==val.AssetsTypeParentId && val.AssetsTypeName!='备品备件'){
+                                            l.children.push({
+                                                title:val.AssetsTypeName,
+                                                id:val.id,
+                                                spread:false,
+                                                other:3
+                                            })  
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+                })
+                delete(param['ComboBox']);//去掉不分页参数
+                layui.use(["form","tree"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var tree = layui.tree;
+                    tree.render({
+                        elem:"#tree",
+                        data:data,
+                        id: 'treeId',
+                        click: function(obj){
+                            if(obj.data.other==3){
+                                $('.layui-tree-txt').removeAttr('style');
+                                $(obj.elem).find('.layui-tree-txt').css('color','#148cf1');
+                                //属性列表
+                                delete(param['ComboBox']);
+                                param.AssetsTypeId=obj.data.id;
+                                param.pageNo = 1;
+                                list.get(url, param,'',function(r){
+                                    dealEwm(r)
+                                });
+                            }
+                        }
+                    }); 
+                    //服务器
+                    param.ComboBox = 'all';
+                    getDept(form,data);
+                    form.on("select(DeptId)",function(data){
+                        param.ComboBox = 'all';
+                        getEmp(form,data);
+                    });
+                    //仓库
+                    getStoreLocation(form);
+                    //租户
+                    list.info('GetTenantListKey',param,function(res){
+                    var tenanthtml = "";
+                        $.each(res.data, function (n, val) {
+                            tenanthtml += "<option value=\"" + val.id + "\">" + val.TenantName + "</option>";
+                        });
+                        $("#RentId").append(tenanthtml);
+                        form.render("select");
+                    })
+                    //监听提交
+                    form.on("submit(search)", function (data) {
+                        delete(param['ComboBox']);
+                        param.pageNo = 1;
+                        param.search = data.field.search;
+                        param.DeptId = data.field.DeptId;
+                        param.EmpId = data.field.EmpId;
+                        param.StoreLocationId = data.field.StoreLocationId;
+                        param.RentId = data.field.RentId;
+                        param.AssetStatus = data.field.AssetStatus;
+                        list.get(url, param,'',function(r){
+                            dealEwm(r)
+                        });
+                        return false;
+                    });    
+                });
+            });
+        })
+        //导出数据模板
+        //obj 操作 a对象
+        function exportlist(obj,url){
+            var html='<a href='+ajaxUrl+url+'?token='+token;
+                if(param.search)html+='&search='+param.search;
+                if(param.DeptId)html+='&DeptId='+param.DeptId;
+                if(param.EmpId)html+='&EmpId='+param.EmpId;
+                if(param.StoreLocationId)html+='&StoreLocationId='+param.StoreLocationId;
+                if(param.AssetStatus)html+='&AssetStatus='+param.AssetStatus;
+                if(param.RentId)html+='&RentId='+param.RentId;
+                if(param.AssetsTypeId)html+='&AssetsTypeId='+param.AssetsTypeId;
+                html+=' id="exportlist"></a>';
+            $(obj).parent().append(html);
+            $('#exportlist')[0].click();
+            setTimeout(function(){
+                $('#exportlist').remove();
+            },3000);
+        }
+        //生成二维码
+        function dealEwm(r){
+            $.each(r.data.info,function(n,val){
+                var data='资产编号:'+val.AssetsNumber+',资产类型:'+val.AssetsTypeName+',型号:'+val.BrandModel+',资产描述:'+val.AssetsDescribe+',仓库位置:'+val.StoreLocationName+',管理部门:'+val.DeptName+',管理人员:'+val.PersonName+',供应商:'+val.SupplierName;
+                var qrcode = $('#'+val.id).qrcode({
+                    width: 128,
+                    height: 128,
+                    text: toUtf8(data)
+                });
+                var canvas=$('#'+val.id).find("canvas")[0];
+                $('#img'+val.id).attr("href",canvas.toDataURL('image/jpeg'));
+            })
+        }
+        //分页回调
+        function pagechange(curr) {
+            delete(param['ComboBox']);
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+</html>

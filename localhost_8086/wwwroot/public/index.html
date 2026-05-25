@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body class="body-bg">
+    <!--顶部开始 -->
+    <div class="container">
+        <div class="logo" onclick="location.href='./index.html'" id="logo"></div>
+    </div>
+    <!--顶部结束 -->
+    <!--中部开始 -->
+    <!--左侧菜单开始 -->
+    <div class="left-nav">
+        <div id="side-nav">
+            <ul id="nav">
+                <script type="text/html" id="menuList">
+                {{if data.length!=0}} {{each data as list i}}
+                    {{if list}}
+                    <li>
+                        <a href="javascript:;">
+                            <i class="iconfont">&#xe726;</i>
+                            <cite>{{list.menu_name}}</cite>
+                            {{if list.is_menu=='1'}}<i class="iconfont nav_right">&#xe697;</i>{{/if}}
+                            {{if list.menu_name =='消息中心'}}<span class="layui-badge GetNewsNum" id="">0</span>{{/if}}
+                        </a>
+                        {{if list.is_menu =='1'}}
+                        <ul class="sub-menu">
+                            {{each list.children as item i}}
+                            {{if item}}
+                            <li>
+                                <a href="javascript:;" {{if item.url}}onclick="xadmin.add_tab('{{item.menu_name}}','{{item.url}}',true)"{{/if}}>
+                                    <i class="iconfont">&#xe6a7;</i>
+                                    <cite>{{item.menu_name}}</cite>
+                                    {{if item.is_menu=='1'}} <i class="iconfont nav_right">&#xe697;</i>{{/if}}
+                                    {{if item.menu_name =='动环告警'}}<span class="layui-badge GetNewsNum" id="">0</span>{{/if}}
+                                </a>
+                                {{if item.is_menu =='1'}}
+                                {{if item.menu_name !='动环监控系统'}}
+                                <ul class="sub-menu thr-menu">
+                                    {{each item.children as x y}}
+                                    {{if x}}
+                                        <li>
+                                            <a href="javascript:;"{{if x.url}} onclick="xadmin.add_tab('{{x.menu_name}}','{{x.url}}',true)"{{/if}}>
+                                                <i class="iconfont">&#xe6a7;</i>
+                                                <cite>{{x.menu_name}}</cite>
+                                                {{if x.is_menu=='1'}} <i class="iconfont nav_right">&#xe697;</i>{{/if}}
+                                            </a>
+                                            {{if x.is_menu =='1'}}
+                                            <ul class="sub-menu four-menu">
+                                                {{each x.children as m n}}
+                                                {{if m }}
+                                                    <li>
+                                                        <a href="javascript:;" {{if m.url}}onclick="xadmin.add_tab('{{m.menu_name}}','{{m.url}}',true)"{{/if}}>
+                                                            <i class="iconfont">&#xe6a7;</i>
+                                                            <cite>{{m.menu_name}}</cite>
+                                                            {{if m.is_menu=='1'}} <i class="iconfont nav_right">&#xe697;</i>{{/if}}
+                                                        </a>
+                                                        {{if m.is_menu =='1'}}
+                                                        <ul class="sub-menu five-menu">
+                                                            {{each m.children as k v}}
+                                                            {{if k}}
+                                                            <li>
+                                                                <a href="javascript:;" {{if k.url}}onclick="xadmin.add_tab('{{k.menu_name}}','{{k.url}}',true)"{{/if}}>
+                                                                    <i class="iconfont">&#xe6a7;</i>
+                                                                    <cite>{{k.menu_name}}</cite>
+                                                                </a>
+                                                            </li>
+                                                            {{/if}}
+                                                            {{/each}}
+                                                        </ul>
+                                                        {{/if}}
+                                                    </li>
+                                                {{/if}}
+                                                {{/each}}
+                                            </ul>
+                                            {{/if}}
+                                        </li>
+                                    {{/if}}
+                                    {{/each}}
+                                </ul>
+                                {{else}}
+                                <ul class="sub-menu thr-menu" id="dmpage"></ul>
+                                {{/if}}
+                                {{/if}}
+                            </li>
+                            {{/if}}
+                            {{/each}}
+                        </ul>
+                        {{/if}}
+                    </li>
+                    {{/if}}
+                 {{/each}}{{/if}}
+            </script>
+            </ul>
+        </div>
+        <div class="person-box">
+            <img src="images/user.png" />
+            <span>欢迎您！</span>
+            <a href="javascript:;" id="userName">管理员</a>
+            <a onClick="changeBtn()"><i class="layui-icon" id="open">&#xe645;</i><i id="close"
+                    class="layui-icon">&#xe685;</i></a>
+            <a class="login-out" id="loginOut">
+                <img src="images/out.png">
+                退出系统
+            </a>
+        </div>
+    </div>
+    <!--左侧菜单结束 -->
+    <!--右侧主体开始 -->
+    <div class="page-content">
+        <div class="layui-tab tab" lay-filter="xbs_tab" lay-allowclose="false">
+            <ul class="layui-tab-title" id="tab-title">
+                <li class="home">
+                    <i class="layui-icon">&#xe68e;</i>首页
+                </li>
+            </ul>
+            <div class="layui-tab-content">
+                <div class="layui-tab-item layui-show">
+                    <iframe src='' frameborder="0" scrolling="yes" class="x-iframe" allowfullscreen="true"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="page-content-bg"></div>
+    <!--右侧主体结束 -->
+    <!--中部结束 -->
+    <script type="text/javascript">
+        var url = "GetRealAlarmsKey";
+        var GetRealAlarmsKeyNum = 0;
+        var firstValue = null;
+        var secondValue = null;
+        var firstMsgValue = null;
+        var secondMsgValue = null;
+        var voiceBtn = true;
+        var dcim = -1;
+        var alarmFixedTime = null;
+        let alramTipbox = 1;//告警弹框
+        let assetmsgTipbox = 1;//消息弹框
+        $(function () {
+            //判断许可证
+            let haveTicket = false;
+            $.ajaxSettings.async = false;
+            //获取告警语音播报方式
+            list.info('GetAlarmParamKey', {
+                token: token,
+                id: 1
+            }, function (r) {
+                localStorage.setItem('alramPlayWay', r.data.EventType == '1' ? 'event' : 'local');
+                alramTipbox = r.data.event;
+                assetmsgTipbox = r.data.massage;
+            })
+            list.info("GetLicenseKey", {}, function (r) {
+                var code = r.data.data;
+                list.info("VarLicenseKey", {
+                    code: code
+                }, function (r) {
+                    if (r.data.indexOf('不正确') > -1) {
+                        localStorage.clear();
+                        layer.confirm('许可证已到期！', {
+                            btn: ['确定'],
+                            closeBtn: false
+                        }, function () {
+                            window.location.href = 'welcome.html';
+                        });
+                    } else {
+                        var formattedDate = getDateTime().split(' ')[0];
+                        var stoptime = r.data;
+                        var date1 = new Date(stoptime).getTime();
+                        var date2 = new Date(formattedDate).getTime();
+                        var diff = date1 - date2;
+                        var days = diff / (1000 * 60 * 60 * 24);
+                        if (days <= 0) {
+                            localStorage.clear();
+                            layer.confirm('许可证已过期！', {
+                                btn: ['确定'],
+                                closeBtn: false
+                            }, function () {
+                                window.location.href = 'welcome.html';
+                            });
+                        } else {
+                            haveTicket = true;
+                        }
+                    }
+                })
+            })
+            $.ajaxSettings.async = true;
+            if (!haveTicket) return false;
+
+            $('#open').show();
+            $('#close').hide();
+            // list.info("DNCalcSend",{},function(){})
+            // list.info("ParamCalcDaySend",{},function(){})
+            list.info('myMenus', {
+                token: token
+            }, function (r) {
+                //版本判断
+                r.data = setdcim(r)
+                var html = template("menuList", r);
+                $("#nav").html(html);
+                getNum();
+
+                //获取动画页面
+                list.info('GetDmpageMyMenus', {
+                    token: token,
+                    ComboBox: '1'
+                }, function (res) {
+                    let dmhtml = '';
+                    if (res.data.length != 0) {
+                        $.each(res.data, function (n, val) {
+                            setDmTopnav(val);
+                            dmhtml += `<li>`;
+                            dmhtml += setDmnav(val);
+                            if (val.children.length != 0) {
+                                dmhtml += `<ul class="sub-menu four-menu">`;
+                                $.each(val.children, function (x, y) {
+                                    setDmTopnav(y);
+                                    dmhtml += `<li>`;
+                                    dmhtml += setDmnav(y);
+                                    if (y.children.length != 0) {
+                                        dmhtml += `<ul class="sub-menu five-menu">`;
+                                        $.each(y.children, function (m, n) {
+                                            setDmTopnav(n);
+                                            dmhtml += `<li>`;
+                                            dmhtml += setDmnav(n);
+                                            dmhtml += `</li>`;
+                                        })
+                                        dmhtml += `</ul>`;
+                                    }
+                                    dmhtml += `</li>`;
+                                })
+                                dmhtml += `</ul>`;
+                            }
+                            dmhtml += `</li>`;
+                        })
+                    }
+                    $('#dmpage').html(dmhtml);
+                    var index = GetString('nav');
+                    var childindex = GetString('child');
+                    var donghuanchild = GetString('donghuanIndex');
+                    //执行nvav 选中
+                    if (index) {
+                        $('.left-nav #nav>li').eq(index).click();
+                        var firstnav = '';
+                        var firstnav = $('.left-nav #nav>li').eq(index).children().eq(1).find('li').eq(childindex ? childindex : 0);
+                        if (firstnav.find('a').attr('onclick')) {
+                            firstnav.find('a').click();
+                        } else {
+                            firstnav.addClass('open').find('a').eq(0).addClass('active');
+                            firstnav.find('.nav_right').eq(0).html('&#xe6a6;');
+                            firstnav.find('ul').eq(0).show();
+                            if (donghuanchild) {
+                                $('#dmpage>li').eq(donghuanchild).find('a').first().click();
+                            } else {
+                                firstnav.find('li').eq(0).find('a').first().click();
+                            }
+                        }
+                    }
+                })
+            })
+            list.info('GetLogoKey', {
+                token: token
+            }, function (r) {
+                if (r.data[0].logo) {
+                    $('#logo').css('background-image', 'url(' + imgUrl + r.data[0].logo + ')');
+                } else {
+                    $('#logo').css('background-image', 'url(images/logo.png)');
+                }
+                dcim = r.data[0].dcim;
+                //执行定时任务
+                let time = r.data[0].version;
+                let nowday = getDateTime().split(' ')[0];
+                if (!time || nowday != time) {
+                    // list.info('SetTimeVersion', function (r) { })
+                    SetTimeVersion();
+                    function SetTimeVersion() {
+                        $.ajax({
+                            url: ajaxUrl + 'SetTimeVersion',
+                            type: 'post',
+                            success: function (data) { },
+                            error: function (xhr, status, error) {
+                                if (xhr.status === 0) {
+                                    SetTimeVersion();
+                                }
+                            }
+                        });
+                    }
+                }
+                if (r.data[0].IndexPage == '1') {
+                    $('.home').click(function () {
+                        location.href = 'welcome.html'
+                    });
+                }
+            })
+            $("#userName").html(userName);
+            if (localStorage.getItem("token") == null || localStorage.getItem("token") == undefined) {
+                layui.use("layer", function () {
+                    var layer = layui.layer;
+                    layer.msg("登录失效，请重新登录", {
+                        icon: 5,
+                        time: 1000
+                    }, function () {
+                        window.top.location = "welcome.html";
+                    });
+                });
+            }
+            $('#loginOut').click(function () {
+                list.info('LoginOutKey', {
+                    token: token
+                }, function () {
+                    window.top.location = "welcome.html";
+                    localStorage.removeItem('token');
+                })
+            })
+        })
+        //设置组态首页显示
+        function setDmTopnav(val) {
+            if (val.PageTop == 1) {
+                if (val.PageType == 1) {
+                    $('.x-iframe').attr('src', window.location.protocol + '//' + window.location.hostname + ':8081?type=preview&title=' + val.PageTxt);
+                } else if (val.PageType == 3) {
+                    $('.x-iframe').attr('src', val.PageTxt);
+                } else {
+                    $('.x-iframe').attr('src', '');
+                }
+            }
+        }
+        //设置组态页面显示
+        function setDmnav(val) {
+            let dmhtml = '';
+            if (val.PageType == 1) {//组态设计
+                dmhtml += `<a onclick="xadmin.add_tab('` + val.PageName + `',window.location.protocol +'//'+ window.location.hostname + ':8081?type=preview&title=` + val.PageTxt + `',true)">
+                            <i class="iconfont">&#xe6a7;</i>
+                            <cite>`+ val.PageName + `</cite>`;
+                if (val.children.length != 0) {
+                    dmhtml += `<i class="iconfont nav_right">&#xe697;</i>`;
+                }
+                dmhtml += `</a>`;
+            }
+            if (val.PageType == 2) {//空白页
+                dmhtml += `<a href="javascript:;">
+                            <i class="iconfont">&#xe6a7;</i>
+                            <cite>`+ val.PageName + `</cite>`;
+                if (val.children.length != 0) {
+                    dmhtml += `<i class="iconfont nav_right">&#xe697;</i>`;
+                }
+                dmhtml += `</a>`;
+            }
+            if (val.PageType == 3) {//链接跳转
+                dmhtml += `<a onclick="xadmin.add_tab('` + val.PageName + `','` + val.PageTxt + `',true)">
+                            <i class="iconfont">&#xe6a7;</i>
+                            <cite>`+ val.PageName + `</cite>`;
+                if (val.children.length != 0) {
+                    dmhtml += `<i class="iconfont nav_right">&#xe697;</i>`;
+                }
+                dmhtml += `</a>`;
+            }
+            return dmhtml;
+        }
+        function getNum() {
+            list.info(url, {
+                token: token,
+                type: "1"
+            }, function (r) {
+                GetRealAlarmsKeyNum = r.data.page.total;
+                if (GetRealAlarmsKeyNum > 0) {
+                    $('.GetNewsNum').show().html(GetRealAlarmsKeyNum);
+                } else {
+                    $('.GetNewsNum').hide().html('0');
+                }
+            });
+        }
+        function changeBtn() {
+            var flag = true;
+            if ($('#open').css('display') == 'none') {
+                $('#open').show();
+                $('#close').hide();
+                flag = true;
+            } else {
+                $('#open').hide();
+                $('#close').show();
+                flag = false;
+            }
+            voiceBtn = flag;
+        }
+        //RealeventAlarm();
+        // RealmassageAlarm();
+
+        var time = setInterval(function () {
+            delete (param['ComboBox']);
+            param.type = '1';
+            list.info('GetRealAlarmsKey', param, function (res) {
+                GetRealAlarmsKeyNum = res.data.page.total;
+                if (GetRealAlarmsKeyNum > 0) {
+                    $('.GetNewsNum').show().html(GetRealAlarmsKeyNum);
+                    let alramPlayWay = localStorage.getItem('alramPlayWay') || 'event';
+                    if (!alarmFixedTime && alramPlayWay != 'event') {
+                        console.log('注册固定语音报警！')
+                        setAlarmFixedTime();//注册固定语音播报
+                    }
+                } else {
+                    $('.GetNewsNum').hide().html('0');
+                    layer.closeAll('iframe');
+                    if (alarmFixedTime) {
+                        console.log('清空固定语音报警！')
+                        clearInterval(alarmFixedTime);//固定语音播报取消
+                        alarmFixedTime = null;
+                    }
+                }
+                if (JSON.stringify(firstValue) == 'null') {
+                    firstValue = res.data.page.total;
+                }
+                if (JSON.stringify(secondValue) == 'null' && JSON.stringify(firstValue) != 'null') {
+                    secondValue = res.data.page.total;
+                }
+                if (JSON.stringify(secondValue) != 'null' && JSON.stringify(firstValue) != 'null') {
+                    firstValue = secondValue;
+                    secondValue = res.data.page.total;
+                    if (secondValue > firstValue && alramTipbox == 1) {
+                        RealeventAlarm();
+                        if (voiceBtn) {
+                            $('.body-bg').append('<embed src="images/btn.mp3" autostart="true" hidden="true" loop="false" class = "btn-bgm">');
+                        }
+                    }
+                }
+
+            });
+            if (dcim == -1) {
+                param.MsgStatus = '未确认';
+                list.info('GetAssetMsgKey', param, function (res) {
+                    if (JSON.stringify(firstMsgValue) == 'null') {
+                        firstMsgValue = res.data.page.total;
+                    }
+                    if (JSON.stringify(secondMsgValue) == 'null' && JSON.stringify(firstMsgValue) != 'null') {
+                        secondMsgValue = res.data.page.total;
+                    }
+                    if (JSON.stringify(secondMsgValue) != 'null' && JSON.stringify(firstMsgValue) != 'null') {
+                        firstMsgValue = secondMsgValue;
+                        secondMsgValue = res.data.page.total;
+                        if (secondMsgValue > firstMsgValue && assetmsgTipbox == 1) {
+                            RealmassageAlarm();
+                        }
+                    }
+                });
+            }
+        }, 5000);
+        //20250221 如果是固定语音播放 每2分钟后再次播放
+        function setAlarmFixedTime() {
+            alarmFixedTime = setInterval(function () {
+                let alramPlayWay = localStorage.getItem('alramPlayWay') || 'event';
+                if (alramPlayWay == 'event') {
+                    console.log('清空固定语音报警！')
+                    clearInterval(alarmFixedTime);//固定语音播报取消
+                    alarmFixedTime = null;
+                    return false;
+                }
+                if (alramPlayWay != 'event' && voiceBtn) {//播报方式为 固定 开启语音声音
+                    $('.body-bg').append('<embed src="images/btn.mp3" autostart="true" hidden="true" loop="false" class = "btn-bgm">');
+                    setTimeout(function () {
+                        console.log('音频播放')
+                        $('embed').remove();
+                        $('.body-bg').append(`<embed src="images/alarm.mp3" autostart="true" hidden="true" loop="false" class = "btn-bgm">`);
+                        setTimeout(function () {
+                            $('embed').remove();
+                        }, 4000)
+                    }, 1100)
+                }
+            }, 120000)
+        }
+    </script>
+</body>
+
+</html>

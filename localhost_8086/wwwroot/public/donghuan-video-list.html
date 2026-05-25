@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jessibuca.js"></script>
+    <style>
+        .videoFull i {
+            color: #fff;
+            font-size: 26px;
+            position: relative;
+            top: 6px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>动环监控->监控管理</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <a class="layui-btn layui-btn-primary" href="donghuan-video-list.html">
+                            视频预览
+                        </a>
+                        <a class="layui-btn" href="donghuan-camera-list.html">
+                            监控设备
+                        </a>
+                        <a class="layui-btn" href="donghuan-camera-setting.html">
+                            国标28181服务器配置
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <div class="video-num layui-form">
+                            <span>分屏：</span>
+                            <img data-check="video-1-check" data-img="video-1" data-id="1"
+                                src="images/video-1-check.png" />
+                            <img data-check="video-2-check" data-img="video-2" data-id="4" src="images/video-2.png" />
+                            <img data-check="video-3-check" data-img="video-3" data-id="9" src="images/video-3.png" />
+                            <img data-check="video-4-check" data-img="video-4" data-id="16" src="images/video-4.png" />
+                            <span>预览模式：</span>
+                            <div style="width: 150px;display: inline-block;">
+                                <select id="SettingModel" name="SettingModel" lay-filter="SettingModel">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <a title="全屏" href="javascript:;" class="videoFull" id="videoFull">
+                                <i class="layui-icon">&#xe622;</i>
+                            </a>
+                            <button class="layui-btn x-right"
+                                onclick="xadmin.open('配置管理','donghuan-videoset-list.html')">
+                                配置管理
+                            </button>
+                            <button class="layui-btn x-right" style="margin-right: 10px;" onclick="saveVideoSetting()">
+                                保存当前配置
+                            </button>
+
+                        </div>
+                        <div class="video-list video-list-one">
+                            <div id="video1-1"></div>
+                            <!-- <video class="video-js" controls preload="auto" id="my-video">
+                                <source src="https://d2zihajmogu5jn.cloudfront.net/bipbop-advanced/bipbop_16x9_variant.m3u8" type="application/x-mpegURL">
+                            </video> -->
+                        </div>
+                        <div class="video-list video-list-four">
+                            <div id="video4-1"></div>
+                            <div id="video4-2"></div>
+                            <div id="video4-3"></div>
+                            <div id="video4-4"></div>
+                        </div>
+                        <div class="video-list video-list-nine">
+                            <div id="video9-1"></div>
+                            <div id="video9-2"></div>
+                            <div id="video9-3"></div>
+                            <div id="video9-4"></div>
+                            <div id="video9-5"></div>
+                            <div id="video9-6"></div>
+                            <div id="video9-7"></div>
+                            <div id="video9-8"></div>
+                            <div id="video9-9"></div>
+                        </div>
+                        <div class="video-list video-list-16">
+                            <div id="video16-1"></div>
+                            <div id="video16-2"></div>
+                            <div id="video16-3"></div>
+                            <div id="video16-4"></div>
+                            <div id="video16-5"></div>
+                            <div id="video16-6"></div>
+                            <div id="video16-7"></div>
+                            <div id="video16-8"></div>
+                            <div id="video16-9"></div>
+                            <div id="video16-10"></div>
+                            <div id="video16-11"></div>
+                            <div id="video16-12"></div>
+                            <div id="video16-13"></div>
+                            <div id="video16-14"></div>
+                            <div id="video16-15"></div>
+                            <div id="video16-16"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let setArr = [];//视频配置
+        var showOperateBtns = true; // 是否显示按钮
+        var forceNoOffscreen = true; //
+        var playList = [];
+        var videonum = 0;
+        var videoindex = 0;
+        let SettingModelName = '';
+        var form;
+
+        $(function () {
+
+            document.getElementById('videoFull').addEventListener('click', function () {
+                // 尝试全屏当前页面
+                let next = true;
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) { /* IE11 */
+                    document.documentElement.msRequestFullscreen();
+                } else {
+                    next = false;
+                    layer.msg('您的浏览器不支持全屏功能', {
+                        icon: 5,
+                        time: 2000
+                    });
+                }
+                if (next) {
+                    $('.video-list').css({
+                        position: "fixed",
+                        right: '0px',
+                        top: '0px',
+                        width: '100vw',
+                        height: 'calc(100vh - 6px)',
+                        zIndex: '9999'
+                    })
+                }
+            });
+
+            // 监听退出全屏事件
+            document.addEventListener('fullscreenchange', function () {
+                if (!document.fullscreenElement) {
+                    console.log('已退出全屏模式');
+                    $('.video-list').css({
+                        position: 'static',
+                        width: 'calc(100% - 224px)',
+                        height: '680px',
+                    })
+                }
+            });
+            //树形菜单
+            layui.use(["form", "tree"], function () {
+                $ = layui.jquery;
+                var tree = layui.tree;
+                form = layui.form;
+                let treedata = new Array();
+
+                $('.video-num img').click(function () {
+                    let index = $(this).index() - 1;
+                    setSplitScreen(index);
+                }).eq(0).click();
+
+                $('.video-list>div').click(function () {
+                    $(this).addClass('video-js-check').siblings().removeClass('video-js-check');
+                    videoindex = $(this).index();
+                });
+                //预览配置
+                getSetting();
+                loadTreeData();
+
+                function loadTreeData() {
+                    videolist.info('get', 'api/device/query/devices?page=1&count=100', '', function (r) {
+                        var deviceList = (r && r.data && r.data.list) ? r.data.list : [];
+                        if (deviceList.length === 0) {
+                            renderTree([]);
+                            return;
+                        }
+
+                        treedata = new Array(deviceList.length);
+                        var pending = deviceList.length;
+                        var finishOne = function () {
+                            pending--;
+                            if (pending <= 0) {
+                                renderTree(treedata.filter(function (v) { return !!v; }));
+                            }
+                        };
+
+                        $.each(deviceList, function (m, n) {
+                            var rdata = {
+                                title: n.name,
+                                id: n.deviceId,
+                                online: n.onLine,
+                                other: 1,
+                                children: []
+                            };
+                            treedata[m] = rdata;
+                            var channelurl = 'api/device/query/tree/' + n.deviceId + '?page=1&count=100&parentId=' + n.deviceId + '&onlyCatalog=false';
+                            var done = false;
+                            var timer = setTimeout(function () {
+                                if (done) return;
+                                done = true;
+                                finishOne();
+                            }, 10000);
+
+                            videolist.info('get', channelurl, '', function (re) {
+                                if (done) return;
+                                done = true;
+                                clearTimeout(timer);
+                                if (re && re.data && re.data.list && re.data.list.length != 0) {
+                                    $.each(re.data.list, function (x, y) {
+                                        var redata = {
+                                            title: y.name,
+                                            id: y.id,
+                                            online: n.onLine,
+                                            other: n.deviceId
+                                        };
+                                        rdata.children.push(redata);
+                                    });
+                                }
+                                finishOne();
+                            }, function () {
+                                if (done) return;
+                                done = true;
+                                clearTimeout(timer);
+                                finishOne();
+                            });
+                        });
+                    }, function () {
+                        renderTree([]);
+                    });
+                }
+
+                //监听提交
+                function renderTree(treeData) {
+                    tree.render({
+                        elem: "#tree",
+                        data: treeData,
+                        click: function (obj) {
+                            if (obj.data.url) {//如果是本地摄像头，将记录有推流地址
+                                let player = playList[videoindex];
+                                player && player.play(obj.data.url).then(() => {
+                                }).catch((e) => {
+                                    console.error(e);
+                                });
+                            } else {
+                                if (!obj.data.children) {
+                                    if (obj.data.online == 0) {
+                                        layer.msg("设备离线，不支持点播", {
+                                            icon: 5,
+                                            time: 2000
+                                        });
+                                        return false;
+                                    }
+                                    $('.layui-tree-txt').removeAttr('style');
+                                    $(obj.elem).find('.layui-tree-txt').css('color', '#148cf1');
+                                    var videourl = 'api/play/start/' + obj.data.other + '/' + obj.data.id;
+                                    videolist.info('get', videourl, '', function (res) {
+                                        if (res.code == 0) {
+                                            let player = playList[videoindex];
+                                            playList[videoindex]['VideoName'] = $(obj.elem).find('.layui-tree-txt').text();
+                                            var playUrl = (window.location.protocol === 'https:' ? res.data?.https_flv : res.data?.flv) || res.data?.ws_flv || res.data?.url || '';
+                                            if (playUrl) {
+                                                player && player.play(playUrl).then(() => {
+                                                }).catch((e) => {
+                                                    console.error(e);
+                                                });
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+        })
+
+        function saveVideoSetting() {
+            //如果当前存在已选择的模式，则执行修改，否则就是新增
+            let SettingModel = $('#SettingModel').val();
+            let SetDesc = [];
+            // console.log(playList)
+            $.each(playList, function (index, val) {
+                // const $videoList = $(this); // 当前 .video-list 元素
+                // console.log(`第 ${index + 1} 个可见 video-list:`, $videoList[0]);
+                let videoUrlArr = '';
+                let videoCode = '';
+                if (val._opt.url) {
+                    videoUrlArr = val._opt.url.split('/');
+                    videoCode = videoUrlArr[videoUrlArr.length - 1].split('.')[0];
+                }
+                SetDesc.push({
+                    index: index,
+                    url: videoCode, //"ws://192.168.1.100:80/rtp/34020000001110000001_11020000001320001001.live.flv"
+                    name: val.VideoName
+                })
+            });
+
+            if (SetDesc.length > 0) {
+                layer.prompt({ title: '配置名称', value: SettingModelName }, function (name, index) {
+                    if (!name) {
+                        layer.msg('请填写配置名称！', { icon: 5, time: 2000 });
+                        return false
+                    }
+                    layer.close(index);
+                    if (SettingModel) {
+                        list.info("ChangeCameraSettingKey", {
+                            token: token,
+                            SetDesc: JSON.stringify(SetDesc),
+                            SetName: name,
+                            id: SettingModel
+                        }, function (r) {
+                            if (r.code == '100') {
+                                layer.msg("保存成功！", {
+                                    icon: 1,
+                                    time: 1000
+                                });
+                            }
+                        });
+                    } else {
+                        list.info("CreateCameraSettingKey", {
+                            token: token,
+                            SetDesc: JSON.stringify(SetDesc),
+                            SetName: name,
+                        }, function (r) {
+                            if (r.code == '100') {
+                                layer.msg("保存成功！", {
+                                    icon: 1,
+                                    time: 1000
+                                });
+                            }
+                        });
+                    }
+                    //重新加载视频
+                    getSetting(SettingModel);
+                });
+            }
+
+        }
+
+        //获取视频配置  SettingModel 重新加载时，获取选中项
+        function getSetting(SettingModel) {
+            list.info('GetCameraSettingListKey', {
+                token: token,
+                ComboBox: 'all'
+            }, function (res) {
+                var html = '<option value="" data-desc="">请选择</option>';
+                if (res.data) {
+                    setArr = res.data;
+                    res.data.forEach(function (val) {
+                        html += `<option value="${val.id}" data-desc='${val.SetDesc}' ${SettingModel == val.id ? 'selected' : ''}>${val.SetName}</option>`;
+                    });
+                    $("#SettingModel").html(html);
+                    form.render('select');
+                    form.on("select(SettingModel)", function (data) {
+                        let setDesc = data.elem.options[data.elem.selectedIndex].getAttribute('data-desc');
+                        // console.log(setDesc);
+                        let setDescArr = setDesc ? JSON.parse(setDesc) : [];
+                        let setDescArrLen = setDescArr.length;
+                        SettingModelName = data.elem[data.elem.selectedIndex].text;
+                        if (setDescArrLen == 0) return false;
+                        switch (setDescArrLen) {
+                            case 1: setSplitScreen(0, false, setDescArr); break;
+                            case 4: setSplitScreen(1, false, setDescArr); break;
+                            case 9: setSplitScreen(2, false, setDescArr); break;
+                            case 16: setSplitScreen(3, false, setDescArr); break;
+                        }
+
+                        // $.each(setDescArr, function (n, val) {
+                        //     if (val.url) {
+                        //         let player = playList[val.index];
+                        //         playList[val.index]['VideoName'] = val.name;
+                        //         player && player.play('ws://' + window.location.hostname + ':80' + val.url).then(() => {
+                        //             console.log()
+                        //         }).catch((e) => {
+                        //             console.error(e);
+                        //         });
+                        //     }
+                        // })
+                    });
+                }
+            });
+        }
+
+        //设置分屏选中
+        function setSplitScreen(index, self = true, setDescArr = '') {
+            $this = $('.video-num img').eq(index);
+
+            $.each($('.video-num img'), function (n, val) {
+                $(val).attr('src', 'images/' + $(val).attr('data-img') + '.png');
+            })
+            $this.attr('src', 'images/' + $this.attr('data-check') + '.png');
+
+            if (videonum != 0) { destroyVideo(videonum); }
+
+            if (self) {
+                //清空预览模式
+                // 获取 select 元素
+                var selectElem = $('select[name="SettingModel"]')
+                // 重置选中项
+                selectElem.val(''); // 或设置为其他默认值
+                SettingModelName = '';
+                // 重新渲染
+                if (form) form.render('select');
+            }
+            videonum = $this.attr('data-id');
+            $('.video-list>div').removeClass('video-js-check')
+            switch ($this.attr('data-id')) {
+                case '1':
+                    $('.video-list-one').show().children('div').eq(0).addClass('video-js-check');
+                    $('.video-list-four,.video-list-nine,.video-list-16').hide();
+                    setVideoWin(1);
+                    break;
+                case '4':
+                    $('.video-list-four').show().children('div').eq(0).addClass('video-js-check');
+                    $('.video-list-one,.video-list-nine,.video-list-16').hide();
+                    setVideoWin(4);
+                    break;
+                case '9':
+                    $('.video-list-nine').show().children('div').eq(0).addClass('video-js-check');
+                    $('.video-list-four,.video-list-one,.video-list-16').hide();
+                    setVideoWin(9);
+                    break;
+                case '16':
+                    $('.video-list-16').show().children('div').eq(0).addClass('video-js-check');
+                    $('.video-list-four,.video-list-one,.video-list-nine').hide();
+                    setVideoWin(16);
+                    break;
+            }
+            if (!self) {
+                console.log('监控视频配置展示！')
+                console.log(setDescArr)
+                $.each(setDescArr, function (n, val) {
+                    if (val.url) {
+                        //根据视频码执行点播后再播放
+                        var videoplayurl = 'api/play/start/' + val.url.split('_')[0] + '/' + val.url.split('_')[1];
+                        // getDoorInfo('video', {
+                        //     addr: videoUrl,
+                        //     isapi: videourl,
+                        //     format: 'json'
+                        // }, function (res) {
+                        playVideo(val,videoplayurl,0)
+                    }
+                })
+            }
+        }
+
+        //播放视频流
+        function playVideo(val,videoplayurl,tryTime) {
+            videolist.info('get', videoplayurl, '', function (res) {
+                if (res.code == 0) {
+                    let player = playList[val.index];
+                    playList[val.index]['VideoName'] = val.name;
+                    if (res.data.ws_flv) {
+                        player && player.play(res.data.ws_flv).then(() => {
+                        }).catch((e) => {
+                            console.error(e);
+                        });
+
+                    }
+                } else if (res.code == -2) {
+                    if (tryTime < 3) {
+                        setTimeout(function () {
+                            playVideo(val, videoplayurl, tryTime + 1);
+                        }, 500);
+                    }
+                }
+            })
+        }
+
+        //创建播放器
+        function create(num, id) {
+            var $container = document.getElementById('video' + num + '-' + id);
+
+            var jessibuca = new Jessibuca({
+                container: $container,
+                videoBuffer: 0.2, // 缓存时长
+                isResize: false,
+                text: "",
+                loadingText: "加载中",
+                debug: true,
+                showBandwidth: showOperateBtns, // 显示网速
+                operateBtns: {
+                    fullscreen: showOperateBtns,
+                    screenshot: showOperateBtns,
+                    play: showOperateBtns,
+                    audio: showOperateBtns,
+                },
+                forceNoOffscreen: forceNoOffscreen,
+                isNotMute: false,
+            },);
+
+            jessibuca.onLog = msg => console.error(msg);
+            jessibuca.onRecord = (status) => console.log('onRecord', status);
+            jessibuca.onPause = () => console.log('onPause');
+            jessibuca.onPlay = () => console.log('onPlay');
+            jessibuca.onFullscreen = msg => console.log('onFullscreen', msg);
+            jessibuca.onMute = msg => console.log('onMute', msg);
+            playList.push(jessibuca);
+        }
+        //根据需求创建多个播放器
+        function setVideoWin(len) {
+            for (let i = 0; i < len; i++) {
+                create(videonum, i + 1);
+            }
+        }
+        //摧毁所有播放器
+        function destroyVideo(len) {
+            for (let i = 0; i < len; i++) {
+                let player = playList[i];
+                player && player.destroy()
+            }
+            playList = [];
+        }
+
+    </script>
+</body>
+
+</html>
+

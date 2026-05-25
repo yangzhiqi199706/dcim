@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+  <div class="layui-fluid">
+    <div class="layui-row">
+      <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+        <div class="layui-form-item">
+          <label class="layui-form-label">名称<span class="x-red">*</span></label>
+          <div class="layui-input-inline">
+            <input type="text" id="ParamName" value="" name="ParamName" lay-verify="required" autocomplete="off"
+              class="layui-input">
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">计算方式<span class="x-red">*</span></label>
+          <div class="layui-input-inline">
+            <select id="Calc" name="Calc" lay-verify="required" lay-filter="Calc">
+              <option value="">请选择</option>
+              <option value="1+2">参数组1和参数组2求和</option>
+              <option value="1-2">参数组1和参数组2差值</option>
+              <option value="1:2">参数组1和参数组2比值</option>
+              <option value="1*2">参数组1和参数组2相乘</option>
+              <option value="avg1">参数组1平均值</option>
+              <option value="sum1">参数组1求和</option>
+              <option value="dayavg">当天均值</option>
+              <option value="max">当前最大值</option>
+              <option value="min">当前最小值</option>
+              <option value="daymax">当天最大值</option>
+              <option value="daymin">当天最小值</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">门楣屏序号</label>
+          <div class="layui-input-inline">
+            <input type="number" id="DoorPushOrder" value="" name="DoorPushOrder" autocomplete="off"
+              class="layui-input">
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">参数组1<span class="x-red">*</span></label>
+          <div class="layui-input-inline">
+            <textarea id="ParamIdOne" name="ParamIdOne" lay-verify="required" class="layui-textarea"
+              readonly></textarea>
+          </div>
+          <div class="layui-form-mid layui-word-aux">
+            <a class="layui-btn" id="chooseOne">选择参数</a>
+          </div>
+          <div class="layui-form-mid layui-word-aux">
+            <a class="layui-btn"
+              onclick="xadmin.open('选择自定义参数','report-tableparam-chooseparam.html?inputid=ParamIdOne&value='+encodeURI(encodeURI($('#ParamIdOne').val())))">选择自定义参数</a>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">参数组2</label>
+          <div class="layui-input-inline">
+            <textarea id="ParamIdTwo" name="ParamIdTwo" class="layui-textarea" readonly></textarea>
+          </div>
+          <div class="layui-form-mid layui-word-aux">
+            <a class="layui-btn" id="chooseTwo">选择参数</a>
+          </div>
+          <div class="layui-form-mid layui-word-aux">
+            <a class="layui-btn"
+              onclick="xadmin.open('选择自定义参数','report-tableparam-chooseparam.html?inputid=ParamIdTwo&value='+encodeURI(encodeURI($('#ParamIdTwo').val())))">选择自定义参数</a>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label"></label>
+          <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="wait">
+    <img src="images/time.gif" alt="">
+  </div>
+  <script>
+    $(function () {
+      layui.use(["form"], function () {
+        $ = layui.jquery;
+        var form = layui.form;
+        form.on("select(Calc)", function (data) {
+          $('#ParamIdOne').val('');
+          $('#ParamIdTwo').val('');
+          if (data.value == 'avg1' || data.value == 'sum1') {
+            $('#chooseOne').unbind('click').click(function () {
+              xadmin.open('选择参数', 'report-tableparam-choose.html?inputid=ParamIdOne&value=' + encodeURI(encodeURI($('#ParamIdOne').val())));
+            })
+            $('#chooseTwo').unbind('click').click(function () {
+              xadmin.open('选择参数', 'report-tableparam-choose.html?inputid=ParamIdTwo&value=' + encodeURI(encodeURI($('#ParamIdTwo').val())));
+            })
+          } else {
+            $('#chooseOne').unbind('click').click(function () {
+              xadmin.open('选择参数', 'report-tableparam-choose.html?inputid=ParamIdOne&one=true&value=' + encodeURI(encodeURI($('#ParamIdOne').val())));
+            })
+            $('#chooseTwo').unbind('click').click(function () {
+              xadmin.open('选择参数', 'report-tableparam-choose.html?inputid=ParamIdTwo&one=true&value=' + encodeURI(encodeURI($('#ParamIdTwo').val())));
+            })
+          }
+        });
+
+        //监听提交
+        form.on("submit(submit)", function (data) {
+          var doorPushOrder = $('#DoorPushOrder').val();
+          if (doorPushOrder && (doorPushOrder <= 0 || !Number.isInteger(Number(doorPushOrder)))) {
+            layer.msg("门楣屏序号必须是大于0的整数", {
+              icon: 5,
+              time: 1000
+            });
+            return false;
+          }
+          var strformData = new FormData($("#formNow")[0]);
+          strformData.append("token", token);
+          list.form("CreateParamKey", strformData, function (r) {
+            backToparent("添加成功");
+          });
+        })
+      });
+    })
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->报警记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <a class="layui-btn" href="report-donghuan-alart1.html" >
+                            报警消息
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="report-donghuan-alart2.html">
+                            通知记录
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>服务器</text>
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                                <text>区域</text>
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId" lay-search>
+                                    <option value="">区域</option>
+                                </select>
+                                <text>设备</text>
+                                <select id="DevId" name="DevId" lay-filter="DevId" lay-search>
+                                    <option value="">全部设备</option>
+                                </select>
+                                <text>设备分类</text>
+                                <select id="DeviceClass" name="DeviceClass" lay-filter="DeviceClass" lay-search>
+                                    <option value="">设备分类</option>
+                                </select>
+                                <text>告警等级</text>
+                                <select id="AlarmLevel" name="AlarmLevel" lay-filter="AlarmLevel" lay-search>
+                                    <option value="">告警等级</option>
+                                    <option value="1">一般告警</option>
+                                    <option value="2">次要告警</option>
+                                    <option value="3">主要告警</option>
+                                    <option value="4">严重告警</option>
+                                    <option value="5">紧急告警</option>
+                                </select>
+                                <text>日期范围</text>
+                                <input type="text" id="startDateTime" name="startDateTime" class="layui-input" placeholder="开始日期" >
+                                <input type="text" id="endDateTime" name="endDateTime" class="layui-input" placeholder="结束日期">
+                                <!-- <text>搜索字段</text>
+                                <select id="DeviceClass" name="DeviceClass">
+                                    <option value="0">全部</option>
+                                    <option value="1">设备</option>
+                                    <option value="2">分类</option>
+                                    <option value="3">级别</option>
+                                    <option value="4">区域</option>
+                                </select> -->
+                                <text>关键字</text>
+                                <input  type="text" name="search"  placeholder="请输入报警事件" autocomplete="off" class="layui-input">
+                                <div class="two-search">
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">搜索</button>
+                                    <button class="layui-btn" type="button" onclick="exportlist(this,'ExportAlarmParamKey')">导出</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-right-big">
+                            <table class="layui-table" id="alarmtable">
+                                <thead>
+                                    <tr>
+                                        <th>编号</th>
+                                        <th>事件来源</th>
+                                        <th>事件名称</th>
+                                        <th>值</th>
+                                        <th>产生时间</th>
+                                        <th>解除时间</th>
+                                        <th>解除描述</th>
+                                        <th>确认人</th>
+                                        <th>确认时间</th>
+                                        <th>处理办法</th>
+                                        <!-- <th>设备</th> -->
+                                        <th>分类</th>
+                                        <th>报警等级</th>
+                                        <th>区域</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                            <td>{{list.DeviceName}}</td>
+                                            <td>{{if list.TextMessage}}{{list.TextMessage.split(',')[2]}}{{else}}{{list.TypeName}}{{/if}}</td>
+                                            <td>{{list.ParamValue}}</td>
+                                            <!-- <td>{{list.update_time}}</td> -->
+                                            <td>{{if list.TextMessage}}
+                                                {{list.create_time.split('-')[0]}}-{{(list.TextMessage.split(',')[4]).replace('月','-').replace('日',' ')}}
+                                                {{else}}
+                                                {{list.update_time}}
+                                                {{/if}}
+                                            </td>
+                                            <td>{{list.CancelTime}}</td>
+                                            <td>{{list.CancelDesc}}</td>
+                                            <td>{{list.ConfirmUserName}}</td>
+                                            <td>{{list.ConfirmTime}}</td>
+                                            <td>{{list.Solution}}</td>
+                                            <!-- <td>{{list.DeviceName}}</td> -->
+                                            <td>{{list.ClassName}}</td>
+                                            <td>{{list.LevelName}}</td>
+                                            <td>{{list.AreaName}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetRealAlarmsKey";
+        $(function(){
+            //初始化数据
+            list.get(url, param);
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({ 
+                    elem: '#startDateTime',
+                    type:'datetime'
+                });
+                laydate.render({ 
+                    elem: '#endDateTime',
+                    type:'datetime'
+                });
+                param.ComboBox = "all";
+                //服务器
+                getServer(form, function () {
+                    form.on("select(ServerCode)", function (data) {
+                        getDev();
+                        param.ServerCode = data.value;
+                        param.ComboBox = "all";
+                        getArea(form, data,function(){
+                            form.on("select(AreaId)", function (val) {
+                                getDev();
+                            })
+                        });
+                    });
+                });
+                // 设备分类
+                list.info("GetClassListKey", {
+                    token: token,
+                    ComboBox: 'all'
+                }, function (res) {
+                    var classhtml = '<option value="">全部分类</option>';
+                    $.each(res.data, function (n, val) {
+                        classhtml += "<option value=\"" + val.id + "\">" + val.ClassName + "</option>";
+                    });
+                    $("#DeviceClass").html(classhtml);
+                    form.render("select");
+                });
+                getDev();
+                // 设备
+                function getDev() {
+                    list.info("GetDeviceListKey", {
+                        token: token,
+                        ComboBox: 'all',
+                        ServerCode: $("#ServerCode").val(),
+                        AreaId: $("#AreaId").val()
+                    }, function (res) {
+                        var devhtml = '<option value="">全部设备</option>';
+                        $.each(res.data, function (n, val) {
+                            devhtml += "<option value=\"" + val.id + "\">" + val.DeviceName + "</option>";
+                        });
+                        $("#DevId").html(devhtml);
+                        form.render("select");
+                    });
+                }
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.AlarmLevel = data.field.AlarmLevel;
+                    param.search = data.field.search;
+                    param.ServerCode = data.field.ServerCode;
+                    param.AreaId = data.field.AreaId;
+                    param.DevClass = data.field.DeviceClass;
+                    param.DevId = data.field.DevId;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    delete(param['ComboBox']);
+                    list.get(url, param);
+                    return false;
+                });  
+            });
+        })
+        //导出数据模板
+        //obj 操作 a对象
+        function exportlist(obj,url){
+            // event.stopPropagation();
+            var html='<a href='+ajaxUrl+url+'?token='+token;
+                if(param.AlarmLevel)html+='&AlarmLevel='+param.AlarmLevel;
+                if(param.search)html+='&search='+param.search;
+                if(param.ServerCode)html+='&ServerCode='+param.ServerCode;
+                if(param.AreaId)html+='&AlarmLevel='+param.AreaId;
+                if(param.DevClass)html+='&AlarmLevel='+param.DevClass;
+                if(param.DevId)html+='&AlarmLevel='+param.DevId;
+                if(param.startDateTime)html+='&startDateTime='+ (Date.parse(param.startDateTime)/1000)
+                if(param.endDateTime)html+='&endDateTime='+ (Date.parse(param.endDateTime)/1000);
+                html+=' id="exportlist"></a>';
+            $(obj).parent().append(html);
+
+            $('#exportlist')[0].click();
+            setTimeout(function(){
+                $('#exportlist').remove();
+            },3000);
+        }
+        //分页回调
+        function pagechange(curr) {
+            delete(param['ComboBox']);
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+</html>

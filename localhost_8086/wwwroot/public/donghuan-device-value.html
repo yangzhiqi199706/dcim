@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .layui-card-body>table td{vertical-align: top;}
+    </style>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>数据说明</th>
+                                    <th>当前值</th>
+                                    <th>最近变更时间</th>
+                                    <th width="120px">存储频率（秒）</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td rowspan="2">{{list.DeviceName}}</td>
+                                        <td>{{list.CommandDesc}}</td>
+                                        {{if list.LastReceiveData}}
+                                        <td>
+                                            <table class="layui-table" border="1px" style="text-align: center;width: 85%;">
+                                                <tbody class="chooseTable">
+                                                {{each list.info as x y}}
+                                                    {{if y%2==0}}
+                                                        <tr>
+                                                            <td style="border-right: 1px solid #666;">{{x.paramKey}}</td>
+                                                            <td style="border-right: 1px solid #666;">{{x.paramVal}}</td>
+                                                    {{else}}
+                                                            <td style="border-right: 1px solid #666;">{{x.paramKey}}</td>
+                                                            <td>{{x.paramVal}}</td>
+                                                        </tr>
+                                                    {{/if}}
+                                                {{/each}}
+                                                <tbody>
+                                            </table>
+                                        </td>
+                                        {{else}}
+                                        <td>-</td>
+                                        {{/if}}
+                                        <td>{{list.LastCommandTime}}</td>
+                                        <td><input class="layui-input" name="ValueSaveRate" value="{{list.ValueSaveRate}}" id="{{list.id}}" onblur="setVal(this)"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td>采集值</td>
+                                        <td colspan="3">{{list.RawData}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetDeviceCommandListKey";
+        $(function () {
+            var id = GetString("id");
+            var LinkMode = GetString("LinkMode");
+            param.DevID=id;
+            //初始化数据
+            list.get(url, param,dealdata);
+            let colecttime = 5000;
+            if(LinkMode==3){
+                colecttime = 3000;
+            }
+            var time=setInterval(function(){
+                list.get(url, param,dealdata);
+            },colecttime);
+            //搜索
+            // layui.use("form", function () {
+            //     $ = layui.jquery;
+            //     var form = layui.form;
+            // })
+        })
+        //数据处理
+        function dealdata(r) {
+            if(r.data.info.length!=0){
+                $.each(r.data.info,function(n,val){
+                    if(val.LastReceiveData){
+                        val.LastReceiveData = val.LastReceiveData.replace(/'/g, '"');
+                        val.info = [];
+                        var jsonarr = JSON.parse(val.LastReceiveData);
+                        for (var key in jsonarr) {
+                            val.info.push({
+                                'paramKey': key,
+                                'paramVal': jsonarr[key]
+                            });
+                        }
+                    }
+                })
+            }
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param,dealdata);
+        }
+        //设置频率
+        function setVal(obj){
+            list.info("ChangeDeviceCommandKey", {
+                id:$(obj).attr('id'),
+                token:token,
+                ValueSaveRate:$(obj).val()
+            }, function (r) {
+
+            });
+        }
+    </script>
+</body>
+</html>

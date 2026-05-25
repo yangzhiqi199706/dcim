@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+  <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+  <style>
+    .massage-box {
+      min-height: 297px;
+    }
+
+    .massage-chart {
+      height: 297px
+    }
+
+    .massage-box-md6 {
+      width: calc(50% - 30px)
+    }
+  </style>
+</head>
+
+<body>
+  <div class="x-nav">
+    <span class="layui-breadcrumb">
+      <a>
+        <cite>系统配置->系统信息</cite>
+      </a>
+    </span>
+    <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+      <i class="layui-icon">&#xe666;</i>
+    </a>
+  </div>
+  <div class="layui-fluid">
+    <div class="layui-col-md12">
+      <div class="layui-card">
+        <div class="layui-card-body">
+          <a class="layui-btn layui-btn-primary" href="system-parameter-platform.html">
+            平台设置
+          </a>
+          <a class="layui-btn layui-btn-primary" href="system-pushset-list.html">
+            推送配置
+          </a>
+          <a class="layui-btn" href="system-information-list.html">
+            系统信息
+          </a>
+          <a class="layui-btn layui-btn-primary" href="system-about-list.html">
+            关于我们
+          </a>
+        </div>
+        <div class="layui-card-body">
+          <div class="two-left massage-box massage-box-md6">
+            <div id="cpu" class="massage-chart"></div>
+          </div>
+          <div class="two-left massage-box massage-box-md6">
+            <div id="memory" class="massage-chart"></div>
+          </div>
+          <div class="two-left massage-box">
+            <div id="disk0" class="massage-chart"></div>
+          </div>
+          <div class="two-left massage-box">
+            <div id="disk1" class="massage-chart"></div>
+          </div>
+          <div class="two-left massage-box">
+            <div id="disk2" class="massage-chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    $(function () {
+      setData();
+      // var time=setInterval(function(){
+      //   setData()
+      // },5000)
+    })
+    function setData() {
+      list.info('GetMemoryKey', {
+        token: token
+      }, function (r) {
+        setPue('cpu', r.data.cpu, 100, 'CPU使用率[' + r.data.cpu_num + '核]');
+        setPue('memory', r.data.memoryRate, 100, '内存占用率[' + r.data.memory + 'MB/' + r.data.memoryTotal + 'MB]');
+        if (r.data.disk.length != 0) {
+          $.each(r.data.disk, function (n, val) {
+            // var use,total;
+            // if(val.use.indexOf('M')>0){
+            //   use=parseFloat(val.use)/1024;
+            // }else{
+            //   use=parseFloat(val.use)
+            // }
+            // if(val.total.indexOf('M')>0){
+            //   total=parseFloat(val.total)/1024;
+            // }else{
+            //   total=parseFloat(val.total)
+            // }
+            // var rate=(100*use/total).toFixed(2);
+            setPue('disk' + n, val.rate.slice(0, -1), 100, val.title + '[' + val.use + '/' + val.total + ']');
+          })
+        }
+      })
+    }
+    //pue
+    function setPue(id, puedata, maxdata, title) {
+      var pueChartDom = document.getElementById(id);
+      var pueChart = echarts.init(pueChartDom);
+      var itemcolor = '';
+      if (puedata <= 50) {
+        itemcolor = '#00FF00';
+      } else if (puedata <= 75 && puedata > 50) {
+        itemcolor = '#FFFF00';
+      } else if (puedata <= 90 && puedata > 75) {
+        itemcolor = '#FF9600';
+      } else {
+        itemcolor = '#FF0A0A';
+      }
+      var pueChartoption = {
+        series: [{
+          type: 'gauge',
+          min: 0,
+          max: maxdata,
+          splitNumber: 10,
+          startAngle: 180,
+          endAngle: 0,
+          radius: '132%',
+          center: ['50%', '75%'],
+          axisLine: {
+            lineStyle: {
+              color: [
+                [1, '#F4F8FB']
+              ],
+              width: 10
+            }
+          },
+          splitLine: {
+            show: false
+          },
+          axisTick: {
+            show: false
+          },
+          pointer: {
+            show: true,
+            itemStyle: {
+              color: itemcolor
+            }
+          },
+          axisLabel: {
+            distance: -43,
+            color: '#A2CAE1',
+            fontSize: 12,
+          },
+          progress: {
+            show: true,
+            overlap: true,
+            roundCap: true,
+            itemStyle: {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [{
+                  offset: 0, color: itemcolor
+                }, {
+                  offset: 1, color: itemcolor
+                }],
+                global: false
+              }
+            }
+          },
+          title: {
+            offsetCenter: [0, 50],
+            fontSize: 20,
+            color: '#FFF',
+          },
+          detail: {
+            color: '#FFF',
+            offsetCenter: ["0", "-60"],
+            formatter: '{value}%',
+          },
+          data: [{
+            value: puedata,
+            name: title
+          }]
+        },
+        {
+          type: 'gauge',
+          min: 1,
+          max: 3,
+          splitNumber: 6,
+          startAngle: 180,
+          endAngle: 0,
+          radius: '116%',
+          center: ['50%', '75%'],
+          axisLine: {
+            lineStyle: {
+              color: [
+                [1, '#68B9FF']
+              ],
+              width: 3
+            }
+          },
+          splitLine: {
+            distance: -3,
+            length: 10,
+            lineStyle: {
+              color: '#979797'
+            }
+          },
+          axisTick: {
+            show: false
+          },
+          axisLabel: {
+            show: false
+          },
+          pointer: {
+            show: false
+          },
+          title: {
+            show: false
+          },
+          data: [{
+            value: null,
+          }],
+          detail: {
+            color: 'transparent',
+          }
+        }
+        ]
+      };
+      pueChartoption && pueChart.setOption(pueChartoption);
+    }
+  </script>
+</body>
+
+</html>

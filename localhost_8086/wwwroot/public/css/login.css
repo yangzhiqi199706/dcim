@@ -1,0 +1,121 @@
+/*
+* @Author: xuebingsi
+* @Date:   2019-04-01 13:37:17
+* @Last Modified by:   zhibinm
+* @Last Modified time: 2019-04-01 13:37:19
+*/
+body{
+    color: #000;
+}
+.loginbox{
+    background-color: rgba(0,0,0,0.69);
+    z-index: 2;
+    position: fixed;
+    left:0;
+    top:0;
+    right:0;
+    bottom:0;
+    display:none
+}
+.login{
+    width:658px;
+    margin: calc(50vh - 246px) auto;
+    box-sizing: border-box;
+    height: 492px;
+    background: url(../images/login.png) no-repeat center;
+}
+
+.login .layui-form{
+    margin:0 113px;
+}
+.login .message {
+    width:152px;
+    position:relative ;
+    font-size: 24px;
+    font-weight: bold;
+    color: #F8C472;
+    line-height: 36px;
+    text-align: center;
+    margin: 0 auto 24px;
+    padding-top: 26px;
+}
+.login .message::before,.login .message::after{
+    content:'';
+    position: absolute;
+    width:140px;
+    height:1px;
+    background-color: #F8C472;
+    top:44px
+}
+.login .message::before{
+    left:-140px
+}
+.login .message::after{
+    left:152px;
+}
+.login input[type=text],.login input[type=password] {
+    border: 1px solid rgba(133, 159, 255, 0.69);
+    vertical-align: middle;
+    height: 54px;
+    padding: 0 10px 0 52px;
+    font-size: 16px;
+    color: white;
+    outline:none;
+    width:100%;
+    margin-bottom: 21px;
+    background: rgba(14,26,82,0.36);
+    border-radius: 2px;
+}
+.login input[type=text]{
+    background: url(../images/yhid.png) no-repeat 21px;
+}
+.login input[type=password] {
+    background: url(../images/password.png) no-repeat 21px;
+}
+
+.login input[type=text]:focus,
+.login input[type=password]:focus,.layui-form-checked[lay-skin=primary] i{
+    border-color:#859FFF!important;
+}
+
+.login .layui-form-checkbox[lay-skin=primary] i{
+    background-color: transparent;
+    border-color:#859FFF;
+}
+.login .layui-form-checkbox[lay-skin=primary] span{
+    color:#7196FF;
+    font-size: 16px;
+}
+.login .layui-icon-ok:before{
+    color:transparent;
+}
+.login .layui-form-checked .layui-icon-ok:before{
+    color:#859FFF
+}
+
+.login input[type=submit],
+.login input[type=reset]{
+    display: inline-block;
+    vertical-align: middle;
+    padding: 12px 24px;
+    margin-top:20px;
+    font-size: 18px;
+    line-height: 24px;
+    text-align: center;
+    background: #0845F4;
+    border-radius: 2px;
+    border: none;
+    color: #fff;
+    width:48%;
+}
+.login input[type=reset]{
+    float: right;
+    background: rgba(8,69,244,0.5);
+    border: 1px solid #0845F4;
+}
+.login img{
+    cursor: pointer;
+    position: absolute;
+    right:30px;
+    top:-34px
+}

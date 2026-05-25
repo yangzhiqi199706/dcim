@@ -1,0 +1,7 @@
+{
+    "require": {
+        "mikecao/flight": "^3.9",
+        "phpoffice/phpexcel": "^1.8",
+        "phpoffice/phpspreadsheet": "^1.29"
+    }
+}

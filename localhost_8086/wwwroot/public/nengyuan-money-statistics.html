@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>能源管理->费用统计</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" lay-filter="type" value="year" title="年" checked>
+                                <input type="radio" name="type" lay-filter="type" value="month" title="月" >
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="year" class="layui-input" placeholder="年">
+                                <input type="text" id="month" class="layui-input" placeholder="年月" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                                <button class="layui-btn" lay-submit lay-filter="import" type="button" onclick="displayexport('down','moneytable','每月总电费')" id="down">导出</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="two-left1  massage-chart-big">
+                            <table class="layui-table" id="moneytable">
+                                <thead>
+                                    <tr>
+                                        <th>月份</th>
+                                        <th>总耗能（Kw.h）</th>
+                                        <th>总电费（元）</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr> 
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="massage-box massage-box-md9">
+                            <div class="capacity-statistics-title">每月总能耗</div>
+                            <div id="monthnenghaoChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md9">
+                            <div class="capacity-statistics-title">每月总电费</div>
+                            <div id="moneyChart" class="massage-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "";
+        $(function(){
+
+            var monthnenghaoChartDom = document.getElementById('monthnenghaoChart');
+            var monthnenghaoChart = echarts.init(monthnenghaoChartDom);
+            var monthnenghaotitle = ['21','22','23','24','25','26','27','28','29','30','31'];
+            var monthnenghaodata = ['45','85','75','89','24','78','42','77','89','34','102']
+            var monthnenghaoChartoption={
+                xAxis: {
+                    type: 'category',
+                    data: monthnenghaotitle,
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'solid',
+                            color: '#1898ED',
+                            width: '1'
+                        }
+                    },
+                    axisLabel: {
+                        interval: 0,
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+                        
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+                        formatter:'{value} Kw.h',
+                    },
+                    splitLine: {
+                            lineStyle: {
+                                color: 'rgba(24, 152, 237, 0.17)',
+                                type: 'dashed'
+                            }
+                        },
+                },
+                grid: {
+                    top: '30',
+                    bottom: '50',
+                    left: '80',
+                    right: '20'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                series: [{
+                    data:monthnenghaodata,
+                    label:{
+                        show:true,
+                        position: 'top',
+                        color: '#fff',
+                        formatter: function (val) {
+                            if (val.value !== 0) {
+                                return val.value;
+                            } else {
+                                return '';
+                            }
+                        },
+                    },
+                    type: 'bar',
+                    barWidth:20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: 'rgba(180, 180, 180, 0.2)'
+                    },
+                }]
+            };
+            monthnenghaoChartoption && monthnenghaoChart.setOption(monthnenghaoChartoption);
+
+            var moneyChartDom = document.getElementById('moneyChart');
+            var moneyChart = echarts.init(moneyChartDom);
+            var moneytitle = ['21','22','23','24','25','26','27','28','29','30','31'];
+            var moneydata = ['45','85','75','89','24','78','42','77','89','34','102']
+            var moneyChartoption={
+                xAxis: {
+                    type: 'category',
+                    data: moneytitle,
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'solid',
+                            color: '#1898ED',
+                            width: '1'
+                        }
+                    },
+                    axisLabel: {
+                        interval: 0,
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+                        formatter:'{value} 元',
+                    },
+                    splitLine: {
+                            lineStyle: {
+                                color: 'rgba(24, 152, 237, 0.17)',
+                                type: 'dashed'
+                            }
+                        },
+                },
+                grid: {
+                    top: '30',
+                    bottom: '50',
+                    left: '80',
+                    right: '20'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                series: [{
+                    data:moneydata,
+                    label:{
+                        show:true,
+                        position: 'top',
+                        color: '#fff',
+                        formatter: function (val) {
+                            if (val.value !== 0) {
+                                return val.value;
+                            } else {
+                                return '';
+                            }
+                        },
+                    },
+                    type: 'bar',
+                    barWidth:20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: 'rgba(180, 180, 180, 0.2)'
+                    },
+                }]
+            };
+            moneyChartoption && moneyChart.setOption(moneyChartoption);
+
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#month',
+                    type: 'month'
+                });
+                laydate.render({
+                    elem: '#year',
+                    type: 'year'
+                });
+                form.render();
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    console.log(data.value)
+                    if(data.value=='year'){
+                        $('#year').show();
+                        $('#month').hide();
+                    }else{
+                        $('#year').hide();
+                        $('#month').show();
+                    }
+                    return false;
+                }); 
+                //服务器
+                getServer(form,function(r){
+                    form.on("select(ServerCode)", function (data) {
+                        getArea(form,data);
+                    });
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    list.get(url,param);
+                    return false;
+                });    
+            });
+        })
+        
+    </script>
+</body>
+</html>

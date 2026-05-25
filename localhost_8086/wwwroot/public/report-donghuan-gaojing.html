@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        #changeChart {
+            height: 280px
+        }
+
+        .two-left {
+            max-height: 238px;
+            overflow-y: auto;
+            padding-bottom: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->告警统计</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-body">
+                    <a class="layui-btn" href="report-donghuan-gaojing.html">
+                        总表
+                    </a>
+                    <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing2.html">
+                        等级统计表
+                    </a>
+                    <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing3.html">
+                        区域统计表
+                    </a>
+                    <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing4.html">
+                        设备统计表
+                    </a>
+                    <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing5.html">
+                        日期统计表
+                    </a>
+                </div>
+                <div class="layui-card-body">
+                    <form class="layui-form layui-col-space5">
+                        <div class="layui-inline layui-show-xs-block">
+                            <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline layui-show-xs-block">
+                            <input type="text" id="year" name="year" class="layui-input" placeholder="年">
+                        </div>
+                        <div class="layui-inline layui-show-xs-block">
+                            <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                <i class="layui-icon">&#xe615;</i>
+                            </button>
+                        </div>
+                    </form>
+                    <button class="layui-btn search x-right" type="button"
+                        onclick="displayexport('down','numTable','等级告警数量');displayexport('down','monthTable','每月告警数量')"
+                        id="down">导出</button>
+                </div>
+                <div class="layui-card-body">
+                    <div class="massage-box massage-box-md6">
+                        <div class="capacity-statistics-title"><span class="thisyear"></span>年等级告警数量占比</div>
+                        <div id="alarmChart" class="massage-chart"></div>
+                    </div>
+                    <div class="massage-box massage-box-md6">
+                        <div class="capacity-statistics-title"><span class="thisyear"></span>年每月告警数量</div>
+                        <div id="changeChart" class="massage-chart"></div>
+                    </div>
+                    <div class="two-left massage-box-md6">
+                        <table class="layui-table" id="numTable">
+                            <thead>
+                                <tr>
+                                    <th>等级</th>
+                                    <th><span class="thisyear"></span>年</th>
+                                    <th><span class="lastyear"></span>年</th>
+                                    <th>同比增长</th>
+                                </tr>
+                            </thead>
+                            <tbody id="level">
+                                <script type="text/html" id="leveltemplate">
+                                        {{if data.length!=0}} {{each data as list i}}
+                                        <tr>
+                                            <td>{{list.name}}</td>
+                                            <td>{{list.thisyear}}</td>
+                                            <td>{{list.lastyear}}</td>
+                                            <td>{{ if list.lastyear == '0'}}{{list.thisyear}}{{else}}{{((list.thisyear-list.lastyear)/list.lastyear)*100}}%{{/if}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="two-left massage-box-md6">
+                        <table class="layui-table " id="monthTable">
+                            <thead>
+                                <tr>
+                                    <th>年月</th>
+                                    <th>告警数量</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list">
+                                <script type="text/html" id="listtemplate">
+                                        {{if data.thisMonth.length!=0}} {{each data.thisMonth as list i}}
+                                        <tr>
+                                            <td>{{list.time}}</td>
+                                            <td>{{list.number}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            //参数
+            var dataparam = {
+                token: token,
+                ServerCode: '',
+                startDateTime: new Date().getFullYear() + '-01-01 00:00:00',
+                endDateTime: new Date().getFullYear() + '-12-31 23:59:59'
+            }
+            var year = new Date().getFullYear();
+            $('.thisyear').html(year);
+            $('.lastyear').html(year - 1);
+            //统计
+            GetData(dataparam);
+            function GetData(dataparam) {
+                list.info('GetAlarmStatisticKey', dataparam, function (r) {
+
+                    var html = template("listtemplate", r);
+                    $("#list").html(html);
+
+                    var leveldata = {
+                        data: []
+                    };
+                    var alarmtitle = [];
+                    var alarmdata = [];
+                    $.each(r.data.thisYearNumber, function (n, val) {
+                        alarmtitle.push({ 'name': val['LevelName'], 'icon': 'circle' });
+                        alarmdata.push({ 'value': val['LevelNumber'], 'name': val['LevelName'] });
+                        $.each(r.data.lastYearNumber, function (x, y) {
+                            if (val['LevelName'] == y['LevelName']) {
+                                leveldata.data.push({ 'name': y['LevelName'], 'thisyear': val['LevelNumber'], 'lastyear': y['LevelNumber'] });
+                                // leveldata.data.push({ 'name': '1', 'thisyear': 200, 'lastyear': 10});
+                                return;
+                            }
+                        });
+                    });
+                    var level = template("leveltemplate", leveldata);
+                    $("#level").html(level);
+
+                    var alarmChartDom = document.getElementById('alarmChart');
+                    var alarmChart = echarts.init(alarmChartDom);
+                    var alarmChartoption = {
+                        legend: {
+                            orient: 'vertical',
+                            data: alarmtitle,
+                            right: 0,
+                            top: 55,
+                            itemWidth: 6,
+                            itemHeight: 6,
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '11',
+                                lineHeight: 15,
+                            },
+                            formatter: function (name) {
+                                var total = 0;
+                                var tarValue = 0;
+                                for (var i = 0, l = alarmdata.length; i < l; i++) {
+                                    total += parseInt(alarmdata[i].value);
+                                    if (alarmdata[i].name == name) {
+                                        tarValue = alarmdata[i].value;
+                                    }
+                                }
+                                total = total == 0 ? 1 : total;
+                                var p = (tarValue / total * 100).toFixed(2);
+                                return name + ' ' + p + '%';
+                            }
+                        },
+                        color: ['#35DFFC', '#3783FF', '#FFCC37', '#FF9000', '#F96055'],
+                        series: [
+                            {
+                                name: '2022年等级告警数量占比',
+                                type: 'pie',
+                                radius: ['65%', '90%'],
+                                top: 25,
+                                left: -80,
+                                bottom: 0,
+                                itemStyle: {
+                                    shadowColor: 'rgba(225, 229, 255, 0.69)',
+                                    shadowBlur: 16
+                                }, label: {
+                                    show: false,
+                                    position: 'center',
+                                    textStyle: {
+                                        color: '#ffffff',
+                                        fontSize: '14',
+                                        lineHeight: 15
+                                    },
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true,
+                                        fontSize: '14.3',
+                                        fontWeight: 'bold',
+                                        formatter: '{b}：{c}'
+                                    }
+                                },
+                                data: alarmdata
+                            }
+                        ]
+                    };
+                    alarmChartoption && alarmChart.setOption(alarmChartoption);
+
+                    var changeChartDom = document.getElementById('changeChart');
+                    var changeChart = echarts.init(changeChartDom);
+                    var changetitle = [];
+                    var changedata = []
+                    $.each(r.data.thisMonth, function (n, val) {
+                        changetitle.push(val['time']);
+                        changedata.push(val['number']);
+                    });
+                    var changeChartoption = {
+                        xAxis: {
+                            type: 'category',
+                            data: changetitle,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    type: 'solid',
+                                    color: '#1898ED',
+                                    width: '1'
+                                }
+                            },
+                            axisLabel: {
+                                interval: 0,
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: 'rgba(24, 152, 237, 0.17）',
+                                    type: 'dashed'
+                                }
+                            },
+                        },
+                        grid: {
+                            x: 40,
+                            y: 20,
+                            x2: 25,
+                            y2: 30
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            }
+                        },
+                        series: [{
+                            data: changedata,
+                            label: {
+                                show: true,
+                                position: 'top'
+                            },
+                            type: 'bar',
+                            barWidth: 20,
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: '#F4F8FB'
+                            },
+                        }]
+                    };
+                    changeChartoption && changeChart.setOption(changeChartoption);
+                })
+            };
+
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({
+                    elem: '#year',
+                    type: 'year',
+                    value: new Date().getFullYear()
+                });
+                //服务器
+                getServer(form);
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    dataparam.ServerCode = data.field.ServerCode;
+                    dataparam.startDateTime = data.field.year + '-01-01 00:00:00';
+                    dataparam.endDateTime = data.field.year + '-12-31 23:59:59';
+                    GetData(dataparam);
+                    var year = data.field.year;
+                    $('.thisyear').html(year);
+                    $('.lastyear').html(year - 1);
+                    return false;
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入事件描述" name="searchDesc">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入事件类型" name="searchType">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="开始时间" name="startTime" id="startTime">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="结束时间" name="endTime" id="endTime">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table layui-form">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>事件描述</th>
+                                    <th>事件类型</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>{{list.ts}}</td>
+                                        <td>{{list.params.code_desc}}</td>
+                                        <td>{{list.type_desc}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //主机通用接口配置。
+        let getDataUrl = 'http://' + window.location.hostname + ':8000';
+        //全部设备数据
+        let resData = {
+            data: []
+        };
+        //选择设备
+        let selectedDevices = [];
+        var id = GetString("id");
+        $(function () {
+
+            // 初始化Layui模块
+            layui.use(["form", "upload", "laydate"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                laydate = layui.laydate;
+                laydate.render({
+                    elem: '#startTime',
+                    type: 'datetime'
+                });
+                laydate.render({
+                    elem: '#endTime',
+                    type: 'datetime'
+                });
+
+                // 获取设备数据
+                getDeviceData(form);
+
+                // 搜索提交
+                form.on("submit(search)", function (data) {
+                    let searchDesc = data.field.searchDesc;
+                    let searchType = data.field.searchType;
+                    let startTime = parseInt(data.field.startTime.replace(/[- :]/g, '').slice(2, 14));
+                    let endTime = parseInt(data.field.endTime.replace(/[- :]/g, '').slice(2, 14));
+                    if (searchDesc || searchType || startTime || endTime) {
+                        let filterData = [];
+                        if (searchDesc) {
+                            filterData = resData.data.filter(v => (searchDesc && v.params.code_desc.indexOf(searchDesc) > -1));
+                        } else {
+                            filterData = resData.data;
+                        }
+                        if (searchType) {
+                            filterData = filterData.filter(v => (searchType && v.type_desc.indexOf(searchType) > -1));
+                        }
+                        if (startTime && !endTime) {
+                            filterData = filterData.filter(v => parseInt(v.ts) >= startTime);
+                        } else if (startTime && endTime) {
+                            filterData = filterData.filter(v => parseInt(v.ts) >= startTime && parseInt(v.ts) <= endTime);
+                        } else if (!startTime && endTime) {
+                            filterData = filterData.filter(v => parseInt(v.ts) <= endTime);
+                        }
+                        getHostDevList(filterData);
+                    } else {
+                        getHostDevList(resData.data);
+                    }
+                    return false;
+                });
+            });
+        })
+
+        //获取设备列表
+        //data [{}]
+        function getHostDevList(data) {
+            if (data) {//如果data存在，即为本地查询
+                let newData = {
+                    data: data
+                }
+                let lists = template("listtemplate", newData);
+                $("tbody").html(lists);
+            } else {
+                $.get(getDataUrl + '/devices/' + id + '/events', {}, function (res) {
+                    if (res.length > 0) {
+                        resData.data = res;
+                    }
+                    let lists = template("listtemplate", resData);
+                    $("tbody").html(lists);
+                })
+            }
+        }
+
+        //异步获取设备数据
+        async function getDeviceData(form) {
+            try {
+                await getHostDevList();
+                form.render();
+            } catch (error) {
+                console.error('获取设备数据失败:', error);
+                layer.msg('设备数据加载失败', { icon: 5, time: 2000 });
+            }
+            return true;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jessibuca.js"></script>
+    <style>
+        .record-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 0px
+        }
+
+        .record-list-section {
+            width: 230px;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 15px
+        }
+
+        .record-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e6e6e6
+        }
+
+        .record-list-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: normal;
+            color: #333
+        }
+
+        .date-selector {
+            margin-bottom: 15px
+        }
+
+        .record-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: calc(100vh - 165px);
+            overflow-y: auto
+        }
+
+        .record-item {
+            padding: 3px 12px;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center
+        }
+
+        .record-item:hover {
+            border-color: #1E9FFF;
+            background-color: #f8f8f8
+        }
+
+        .record-item.active {
+            border-color: #1E9FFF;
+            background-color: #f0f7ff
+        }
+
+        .record-time {
+            font-size: 14px;
+            color: #333 !important
+        }
+
+        .record-size {
+            font-size: 12px;
+            color: #999
+        }
+
+        .record-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px
+        }
+
+        .status-normal {
+            background-color: #5FB878
+        }
+
+        .status-warning {
+            background-color: #FFB800
+        }
+
+        .status-danger {
+            background-color: #FF5722
+        }
+
+        .download-btn {
+            color: #1E9FFF !important;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 2px
+        }
+
+        .download-btn:hover {
+            background-color: #e6e6e6
+        }
+
+        .player-section {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 15px
+        }
+
+        .player-container {
+            width: 100%;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 15px
+        }
+
+        #playerCanvas {
+            width: 100%;
+            height: 350px;
+            display: block;
+            background-color: #000
+        }
+
+        .playback-controls {
+            background: #f8f8f8;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 15px 15px 10px 15px
+        }
+
+        .control-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap
+        }
+
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 4px 8px
+        }
+
+        .time-input {
+            width: 70px;
+            padding: 5px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            text-align: center;
+            background: transparent;
+            color: #333
+        }
+
+        .time-separator {
+            color: #999
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            padding: 2px
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            color: #333
+        }
+
+        .btn:hover {
+            background: #e6e6e6
+        }
+
+        .btn.active {
+            background: #1E9FFF;
+            color: #fff
+        }
+
+        .btn.primary {
+            background: #1E9FFF;
+            color: #fff
+        }
+
+        .btn.primary:hover {
+            background: #0b7ac9
+        }
+
+        .speed-selector {
+            position: relative;
+            display: inline-block
+        }
+
+        .speed-btn {
+            padding: 6px 12px;
+            border: 1px solid #e6e6e6;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 80px;
+            justify-content: space-between;
+            line-height: 1.5
+        }
+
+        .speed-btn:hover {
+            background: #f5f5f5;
+            border-color: #d2d2d2
+        }
+
+        .speed-btn span {
+            color: #333 !important
+        }
+
+        .arrow-down {
+            font-size: 12px;
+            color: #666
+        }
+
+        .speed-menu {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, .15);
+            display: none;
+            z-index: 1000;
+            margin-bottom: 5px;
+            min-width: 100px
+        }
+
+        .speed-menu.show {
+            display: block
+        }
+
+        .speed-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.3s
+        }
+
+        .speed-item:hover {
+            background: #f5f5f5;
+            color: #1E9FFF
+        }
+
+        .speed-item.active {
+            background: #1E9FFF;
+            color: #fff
+        }
+
+        /* 优化的时间轴样式 */
+        .timeline-container {
+            position: relative;
+            /* margin-top: 20px;
+            padding: 30px 0 10px 0; */
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        /* 时间刻度 */
+        .timeline-scale {
+            position: relative;
+            height: 25px;
+            margin: 0 10px 5px 10px;
+            border-bottom: 1px solid #e6e6e6;
+        }
+
+        .scale-mark {
+            position: absolute;
+            bottom: 0;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #999;
+            white-space: nowrap;
+        }
+
+        .scale-mark::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            width: 1px;
+            height: 8px;
+            background: #ddd;
+        }
+
+        /* 录像片段区域 */
+        .record-segments {
+            position: relative;
+            height: 40px;
+            margin: 0 10px 5px 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .record-segment {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(30, 159, 255, 0.4) 0%, rgba(30, 159, 255, 0.6) 100%);
+            border-left: 2px solid #1E9FFF;
+            border-right: 2px solid #1E9FFF;
+            box-sizing: border-box;
+            transition: all 0.2s;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        .record-segment:hover {
+            background: linear-gradient(135deg, rgba(30, 159, 255, 0.6) 0%, rgba(30, 159, 255, 0.8) 100%);
+            box-shadow: 0 0 8px rgba(30, 159, 255, 0.5);
+        }
+
+        .record-segment.normal {
+            background: linear-gradient(135deg, rgba(95, 184, 120, 0.4) 0%, rgba(95, 184, 120, 0.6) 100%);
+            border-color: #5FB878;
+        }
+
+        .record-segment.normal:hover {
+            background: linear-gradient(135deg, rgba(95, 184, 120, 0.6) 0%, rgba(95, 184, 120, 0.8) 100%);
+        }
+
+        /* 时间轴轨道 */
+        .timeline-track {
+            position: relative;
+            height: 30px;
+            margin: 0 10px;
+        }
+
+        .timeline-slider-bg {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .timeline-selection {
+            position: absolute;
+            top: 50%;
+            height: 6px;
+            background: #1E9FFF;
+            border-radius: 3px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        .timeline-range-left,
+        .timeline-range-right {
+            position: absolute;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border: 2px solid #ff9800;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: ew-resize;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            z-index: 31;
+        }
+
+        .timeline-range-left:hover,
+        .timeline-range-right:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            border-color: #ff5722;
+        }
+
+        /* 时间提示 */
+        .timeline-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            margin-bottom: 12px;
+            pointer-events: none;
+            z-index: 40;
+            display: none;
+        }
+
+        .timeline-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+        }
+
+        /* 倍速提示 */
+        .speed-tip {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 30;
+            display: none;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .speed-tip.show {
+            display: block;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            10% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            90% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        /* 隐藏layui默认滑块 */
+        .layui-slider-tips {
+            display: none !important;
+        }
+
+        #timelineSlider {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body" style="padding-bottom: 0;">
+                        <!-- 录像列表和播放器容器 -->
+                        <div class="record-container">
+                            <!-- 录像列表区域 -->
+                            <div class="record-list-section">
+                                <div class="record-list-header">
+                                    <h3>历史录像</h3>
+                                </div>
+
+                                <!-- 日期选择 -->
+                                <div class="date-selector">
+                                    <input type="text" class="layui-input" id="datePicker" placeholder="请选择日期">
+                                </div>
+
+                                <!-- 录像列表 -->
+                                <ul class="record-list" id="recordList"></ul>
+                            </div>
+
+                            <!-- 播放器区域 -->
+                            <div class="player-section">
+                                <div id="videoplay">
+                                    <!-- 播放器容器 -->
+                                    <div class="player-container">
+                                        <div id="playerCanvas" style="width: 100%; height: 350px;"></div>
+                                        <div class="speed-tip" id="speedTip"></div>
+                                    </div>
+
+                                    <!-- 播放控制栏 -->
+                                    <div class="playback-controls">
+                                        <div class="control-bar">
+                                            <!-- 24小时时间输入 -->
+                                            <div class="time-range">
+                                                <input type="text" class="time-input" id="startTime" value="00:00:00"
+                                                    placeholder="开始" maxlength="8">
+                                                <span class="time-separator">-</span>
+                                                <input type="text" class="time-input" id="endTime" value="23:59:59"
+                                                    placeholder="结束" maxlength="8">
+                                            </div>
+
+                                            <!-- 播放控制按钮组 -->
+                                            <div class="btn-group">
+                                                <button class="btn" id="playRangeBtn">播放</button>
+                                                <button class="btn" id="pauseControlBtn">暂停</button>
+                                                <button class="btn" id="stopControlBtn">停止</button>
+                                            </div>
+
+                                            <!-- 倍速选择 -->
+                                            <div class="speed-selector" id="speedSelector">
+                                                <button class="speed-btn" id="speedBtn">
+                                                    <span id="currentSpeed">1.0x</span>
+                                                    <span class="arrow-down">▼</span>
+                                                </button>
+                                                <div class="speed-menu" id="speedMenu">
+                                                    <div class="speed-item" data-speed="0.25">0.25倍速</div>
+                                                    <div class="speed-item" data-speed="0.5">0.5倍速</div>
+                                                    <div class="speed-item active" data-speed="1.0">1.0倍速</div>
+                                                    <div class="speed-item" data-speed="2.0">2.0倍速</div>
+                                                    <div class="speed-item" data-speed="4.0">4.0倍速</div>
+                                                    <!-- <div class="speed-item" data-speed="8.0">8.0倍速</div>
+                                                    <div class="speed-item" data-speed="16.0">16.0倍速</div> -->
+                                                </div>
+                                            </div>
+
+                                            <!-- 下载按钮 -->
+                                            <!-- <button class="btn primary" id="downloadRangeBtn">下载选定录像</button> -->
+                                        </div>
+
+                                        <!-- 优化的时间轴区域 -->
+                                        <div class="timeline-container">
+                                            <!-- 时间刻度 -->
+                                            <div class="timeline-scale" id="timelineScale"></div>
+
+                                            <!-- 录像片段标记 -->
+                                            <div class="record-segments" id="recordSegments"></div>
+
+                                            <!-- 自定义时间轴 -->
+                                            <div class="timeline-track" id="customTimeline">
+                                                <div class="timeline-slider-bg"></div>
+                                                <div class="timeline-selection" id="timelineSelection"></div>
+                                                <div class="timeline-range-left" id="rangeLeftHandle"></div>
+                                                <div class="timeline-range-right" id="rangeRightHandle"></div>
+                                                <div class="timeline-tooltip" id="timelineTooltip"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(function () {
+            // ==================== 全局变量 ====================
+            let player = null;
+            let currentDate = getDateTime().split(' ')[0];
+            let currentPlaybackRate = 1.0;
+            let isPlaying = false;
+            let isPaused = false;
+            let currentRecord = null;
+            let deviceId = GetString('deviceId');
+            let channelId = GetString('channelId');
+            let playbackInterval = null;
+            let currentPlayUrl = null;
+            let videoElement = null; // 存储video元素引用
+
+            // 录像数据
+            let mockRecords = [];
+
+            // 时间轴相关变量
+            let isDraggingLeftRange = false;
+            let isDraggingRightRange = false;
+            let timelineWidth = 0;
+            let timelineLeft = 0;
+
+            // ==================== Jessibuca播放器初始化 ====================
+
+            function checkPlayerLibrary() {
+                if (typeof Jessibuca !== 'undefined') {
+                    console.log('Jessibuca loaded successfully');
+                    return true;
+                } else {
+                    console.error('Jessibuca not loaded');
+                    return false;
+                }
+            }
+
+            function initJessibucaPlayer() {
+                if (!checkPlayerLibrary()) {
+                    layer.msg('Jessibuca播放器加载失败，请刷新页面重试', {
+                        icon: 5,
+                        time: 2000
+                    });
+                    return;
+                }
+
+                const container = document.getElementById('playerCanvas');
+
+                try {
+                    player = new Jessibuca({
+                        container: container,
+                        videoBuffer: 0.2,
+                        isResize: true,
+                        loadingText: '正在加载中...',
+                        debug: false,
+                        hasAudio: true,
+                        hasVideo: true,
+                        supportDblclickFullscreen: true,
+                        showBandwidth: true,
+                        operateBtns: {
+                            fullscreen: true,
+                            screenshot: true,
+                            play: true,
+                            pause: true,
+                            mute: true,
+                            record: false
+                        },
+                        supportWASM: true,
+                        useMSE: true,
+                    });
+
+                    // 获取video元素
+                    setTimeout(function () {
+                        videoElement = document.querySelector('#playerCanvas video');
+                        if (videoElement) {
+                            console.log('获取到video元素');
+                            // 设置初始倍速
+                            videoElement.playbackRate = currentPlaybackRate;
+                        }
+                    }, 1000);
+
+                    // 播放器事件监听
+                    player.on('play', function () {
+                        console.log('Jessibuca播放开始');
+                        isPlaying = true;
+                        isPaused = false;
+
+                        // 播放开始后获取video元素并设置倍速
+                        setTimeout(function () {
+                            if (!videoElement) {
+                                videoElement = document.querySelector('#playerCanvas video');
+                            }
+                            if (videoElement) {
+                                videoElement.playbackRate = currentPlaybackRate;
+                                console.log('设置初始倍速:', currentPlaybackRate);
+                            }
+                        }, 500);
+                    });
+
+                    player.on('pause', function () {
+                        console.log('Jessibuca播放暂停');
+                        isPlaying = false;
+                        isPaused = true;
+                    });
+
+                    player.on('resume', function () {
+                        console.log('Jessibuca播放恢复');
+                        isPlaying = true;
+                        isPaused = false;
+
+                        // 恢复时重新设置倍速
+                        setTimeout(function () {
+                            if (videoElement) {
+                                videoElement.playbackRate = currentPlaybackRate;
+                            }
+                        }, 100);
+                    });
+
+                    player.on('stop', function () {
+                        console.log('Jessibuca播放停止');
+                        isPlaying = false;
+                        isPaused = false;
+                    });
+
+                    player.on('error', function (error) {
+                        console.error('Jessibuca播放错误:', error);
+                        isPlaying = false;
+                        isPaused = false;
+                    });
+
+                    console.log('Jessibuca播放器初始化成功');
+
+                } catch (error) {
+                    console.error('Jessibuca初始化失败:', error);
+                    alert('播放器初始化失败: ' + error.message);
+                }
+            }
+
+            // 设置播放速度 - 修复版本
+            function setPlaybackRate(speed) {
+                if (!player) {
+                    console.warn('播放器未初始化');
+                    return;
+                }
+
+                currentPlaybackRate = speed;
+                console.log('尝试设置播放速度:', speed);
+
+                // 方法1: 通过Jessibuca API
+                try {
+                    if (typeof player.setPlaybackRate === 'function') {
+                        player.setPlaybackRate(speed);
+                        console.log('通过setPlaybackRate设置成功');
+                    } else if (typeof player.setSpeed === 'function') {
+                        player.setSpeed(speed);
+                        console.log('通过setSpeed设置成功');
+                    }
+                } catch (e) {
+                    console.error('通过API设置失败:', e);
+                }
+
+                // 方法2: 直接操作video元素
+                setTimeout(function () {
+                    if (!videoElement) {
+                        videoElement = document.querySelector('#playerCanvas video');
+                    }
+
+                    if (videoElement) {
+                        try {
+                            videoElement.playbackRate = speed;
+                            console.log('通过video元素设置成功:', speed, '当前实际播放速率:', videoElement.playbackRate);
+
+                            // 验证是否设置成功
+                            if (Math.abs(videoElement.playbackRate - speed) > 0.01) {
+                                console.warn('设置可能失败，重试中...');
+                                setTimeout(function () {
+                                    videoElement.playbackRate = speed;
+                                }, 200);
+                            }
+                        } catch (e) {
+                            console.error('通过video元素设置失败:', e);
+                        }
+                    } else {
+                        console.warn('未找到video元素，1秒后重试');
+                        setTimeout(function () {
+                            videoElement = document.querySelector('#playerCanvas video');
+                            if (videoElement) {
+                                videoElement.playbackRate = speed;
+                                console.log('延迟设置成功:', speed);
+                            }
+                        }, 1000);
+                    }
+                }, 100);
+
+                // 更新UI
+                $('#currentSpeed').text(speed.toFixed(1) + 'x');
+
+                // 显示倍速提示
+                const $speedTip = $('#speedTip');
+                $speedTip.text(speed.toFixed(1) + '倍速播放').addClass('show');
+
+                setTimeout(function () {
+                    $speedTip.removeClass('show');
+                }, 2000);
+            }
+
+            // 安全停止播放器
+            function safeStopPlayer() {
+                if (!player) return;
+
+                try {
+                    if (typeof player.pause === 'function') {
+                        player.pause();
+                    }
+                    if (typeof player.close === 'function') {
+                        player.close();
+                    } else if (typeof player.destroy === 'function') {
+                        player.destroy();
+                    } else if (typeof player.stop === 'function') {
+                        player.stop();
+                    }
+
+                    isPlaying = false;
+                    isPaused = false;
+                    videoElement = null;
+
+                    console.log('播放器已停止');
+                } catch (e) {
+                    console.error('停止播放器失败:', e);
+                }
+            }
+
+            // 安全播放
+            function safePlay(url) {
+                if (!player || !url) return;
+
+                currentPlayUrl = url;
+                videoElement = null; // 重置video元素引用
+
+                try {
+                    safeStopPlayer();
+
+                    setTimeout(function () {
+                        if (typeof player.play === 'function') {
+                            player.play(url);
+                            console.log('开始播放:', url);
+                        } else {
+                            console.error('player.play 不是函数');
+                        }
+                    }, 500);
+                } catch (e) {
+                    console.error('播放失败:', e);
+                }
+            }
+
+            // ==================== 自定义时间轴 ====================
+
+            // 初始化时间轴
+            function initTimeline() {
+                createTimelineScale();
+                bindTimelineEvents();
+                updateTimelineDimensions();
+            }
+
+            // 创建时间刻度
+            function createTimelineScale() {
+                const $scale = $('#timelineScale');
+                $scale.empty();
+
+                // 每2小时显示一个刻度
+                for (let i = 0; i <= 24; i += 2) {
+                    const hour = i.toString().padStart(2, '0') + ':00';
+                    const left = (i / 24) * 100;
+                    $scale.append(`<div class="scale-mark" style="left: ${left}%;">${hour}</div>`);
+                }
+            }
+
+            // 绑定时间轴事件
+            function bindTimelineEvents() {
+                const $track = $('#customTimeline');
+                const $leftRange = $('#rangeLeftHandle');
+                const $rightRange = $('#rangeRightHandle');
+                const $tooltip = $('#timelineTooltip');
+                const $selection = $('#timelineSelection');
+
+                function updateDimensions() {
+                    const trackOffset = $track.offset();
+                    timelineWidth = $track.width();
+                    timelineLeft = trackOffset ? trackOffset.left : 0;
+                }
+
+                $(window).on('resize', function () {
+                    updateDimensions();
+                });
+
+                $leftRange.on('mousedown', function (e) {
+                    e.preventDefault();
+                    isDraggingLeftRange = true;
+                    updateDimensions();
+                });
+
+                $rightRange.on('mousedown', function (e) {
+                    e.preventDefault();
+                    isDraggingRightRange = true;
+                    updateDimensions();
+                });
+
+                $track.on('click', function (e) {
+                    if ($(e.target).hasClass('timeline-range-left') || $(e.target).hasClass('timeline-range-right')) {
+                        return;
+                    }
+
+                    updateDimensions();
+                    const clickX = e.pageX - timelineLeft;
+                    const percent = Math.max(0, Math.min(100, (clickX / timelineWidth) * 100));
+
+                    const leftPercent = parseFloat($leftRange.css('left')) / timelineWidth * 100;
+                    const rightPercent = parseFloat($rightRange.css('left')) / timelineWidth * 100;
+
+                    const distToLeft = Math.abs(percent - leftPercent);
+                    const distToRight = Math.abs(percent - rightPercent);
+
+                    if (distToLeft < distToRight) {
+                        updateRangePosition(percent, 'left');
+                    } else {
+                        updateRangePosition(percent, 'right');
+                    }
+                });
+
+                $(document).on('mousemove', function (e) {
+                    if (!isDraggingLeftRange && !isDraggingRightRange) return;
+
+                    e.preventDefault();
+                    updateDimensions();
+
+                    const mouseX = e.pageX - timelineLeft;
+                    let percent = (mouseX / timelineWidth) * 100;
+                    percent = Math.max(0, Math.min(100, percent));
+
+                    const timeStr = secondsToTimeStr((percent / 100) * 86400);
+                    $tooltip.text(timeStr).css({
+                        left: percent + '%',
+                        display: 'block'
+                    });
+
+                    if (isDraggingLeftRange) {
+                        updateRangePosition(percent, 'left');
+                    } else if (isDraggingRightRange) {
+                        updateRangePosition(percent, 'right');
+                    }
+                }).on('mouseup', function () {
+                    if (isDraggingLeftRange || isDraggingRightRange) {
+                        isDraggingLeftRange = false;
+                        isDraggingRightRange = false;
+                        $('#timelineTooltip').hide();
+                    }
+                });
+
+                $leftRange.add($rightRange).on('mouseenter', function () {
+                    const $this = $(this);
+                    updateDimensions();
+                    const left = parseFloat($this.css('left'));
+                    const percent = (left / timelineWidth) * 100;
+                    const timeStr = secondsToTimeStr((percent / 100) * 86400);
+                    $tooltip.text(timeStr).css({
+                        left: percent + '%',
+                        display: 'block'
+                    });
+                }).on('mouseleave', function () {
+                    if (!isDraggingLeftRange && !isDraggingRightRange) {
+                        $('#timelineTooltip').hide();
+                    }
+                });
+            }
+
+            function updateTimelineDimensions() {
+                const $track = $('#customTimeline');
+                if ($track.length) {
+                    const trackOffset = $track.offset();
+                    timelineWidth = $track.width();
+                    timelineLeft = trackOffset ? trackOffset.left : 0;
+                }
+            }
+
+            function updateRangePosition(percent, type) {
+                const $leftRange = $('#rangeLeftHandle');
+                const $rightRange = $('#rangeRightHandle');
+                const $selection = $('#timelineSelection');
+                const $track = $('#customTimeline');
+
+                if (!$track.length) return;
+
+                const trackWidth = $track.width();
+
+                let leftPercent = parseFloat($leftRange.css('left')) / trackWidth * 100;
+                let rightPercent = parseFloat($rightRange.css('left')) / trackWidth * 100;
+
+                if (isNaN(leftPercent)) leftPercent = 0;
+                if (isNaN(rightPercent)) rightPercent = 100;
+
+                if (type === 'left') {
+                    leftPercent = Math.min(percent, rightPercent - 1);
+                } else if (type === 'right') {
+                    rightPercent = Math.max(percent, leftPercent + 1);
+                }
+
+                $leftRange.css('left', leftPercent + '%');
+                $rightRange.css('left', rightPercent + '%');
+                $selection.css({
+                    left: leftPercent + '%',
+                    width: (rightPercent - leftPercent) + '%'
+                });
+
+                const startTime = secondsToTimeStr((leftPercent / 100) * 86400);
+                const endTime = secondsToTimeStr((rightPercent / 100) * 86400);
+
+                $('#startTime').val(startTime);
+                $('#endTime').val(endTime);
+            }
+
+            // ==================== layui组件初始化 ====================
+
+            function initLayui() {
+                layui.use(['laydate', 'layer'], function () {
+                    var laydate = layui.laydate;
+                    var layer = layui.layer;
+
+                    window.layer = layer;
+
+                    laydate.render({
+                        elem: '#datePicker',
+                        value: currentDate,
+                        format: 'yyyy-MM-dd',
+                        done: function (value) {
+                            currentDate = value;
+                            loadRecordList(currentDate);
+                        }
+                    });
+                });
+            }
+
+            // ==================== 核心功能函数 ====================
+
+            function loadRecordList(date) {
+                var $list = $('#recordList');
+                $list.empty();
+
+                $list.html('<li style="padding: 20px; text-align: center; color: #999;">加载中...</li>');
+
+                videolist.info('get', 'api/gb_record/query/' + deviceId + '/' + channelId, {
+                    startTime: date + ' 00:00:00',
+                    endTime: date + ' 23:59:59'
+                }, function (re) {
+                    mockRecords = re.data?.recordList || [];
+
+                    if (!mockRecords || mockRecords.length === 0) {
+                        $list.html('<li style="padding: 20px; text-align: center; color: #999;">无记录</li>');
+                    } else {
+                        $list.empty();
+                        renderRecordSegments(mockRecords);
+                        mockRecords.forEach(function (record) {
+                            var $item = createRecordItem(record);
+                            $list.append($item);
+                        });
+                    }
+
+                    resetTimeline();
+                });
+            }
+
+            function createRecordItem(record) {
+                var statusClass = 'status-normal';
+
+                var $item = $('<li>').addClass('record-item').attr('data-id', record.id);
+
+                var $info = $('<div>').css('flex', '1');
+                $info.append('<span class="record-status ' + statusClass + '"></span>');
+                $info.append('<span class="record-time">' + (record.startTime.split(' ')[1] || record.startTime) + ' - ' + (record.endTime.split(' ')[1] || record.endTime) + '</span>');
+
+                //var $download = $('<span>').addClass('download-btn').html('⬇');
+
+                // $item.append($info, $download);
+                $item.append($info);
+
+                $item.on('click', function (e) {
+                    if ($(e.target).hasClass('download-btn')) return;
+                    $('.record-item').removeClass('active');
+                    $(this).addClass('active');
+                    playRecord(record);
+                });
+
+                // $download.on('click', function (e) {
+                //     e.stopPropagation();
+                //     downloadRecord(record);
+                // });
+
+                return $item;
+            }
+
+            function renderRecordSegments(records) {
+                var $segments = $('#recordSegments');
+                $segments.empty();
+
+                records.forEach(function (record) {
+                    var timeStr = record.startTime.split(' ')[1] || record.startTime;
+                    var endTimeStr = record.endTime.split(' ')[1] || record.endTime;
+
+                    var startPercent = timeToPercent(timeStr);
+                    var endPercent = timeToPercent(endTimeStr);
+                    var width = endPercent - startPercent;
+
+                    $('<div>')
+                        .addClass('record-segment normal')
+                        .css({ left: startPercent + '%', width: width + '%' })
+                        .attr('title', timeStr + ' - ' + endTimeStr)
+                        .appendTo($segments);
+                });
+            }
+
+            function resetTimeline() {
+                $('#rangeLeftHandle').css('left', '0%');
+                $('#rangeRightHandle').css('left', '100%');
+                $('#timelineSelection').css({
+                    left: '0%',
+                    width: '100%'
+                });
+                $('#startTime').val('00:00:00');
+                $('#endTime').val('23:59:59');
+            }
+
+            function playRecord(record) {
+                currentRecord = record;
+                let startArr = record.startTime.split(' ');
+                let endArr = record.endTime.split(' ');
+
+                var startTime = startArr[1];
+                var endTime = endArr[1];
+
+                $('#startTime').val(startTime);
+                $('#endTime').val(endTime);
+
+                const startPercent = timeToPercent(startTime);
+                const endPercent = timeToPercent(endTime);
+
+                $('#rangeLeftHandle').css('left', startPercent + '%');
+                $('#rangeRightHandle').css('left', endPercent + '%');
+                $('#timelineSelection').css({
+                    left: startPercent + '%',
+                    width: (endPercent - startPercent) + '%'
+                });
+
+                videolist.info('get', 'api/playback/start/' + deviceId + '/' + channelId, {
+                    startTime: record.startTime,
+                    endTime: record.endTime
+                }, function (re) {
+                    var playUrl = (window.location.protocol === 'https:' ? re.data?.https_flv : re.data?.flv) || re.data?.url || '';
+                    if (playUrl) {
+                        safePlay(playUrl);
+                    } else {
+                        if (typeof layer !== 'undefined') {
+                            layer.msg('获取播放地址失败', {
+                                icon: 5,
+                                time: 2000
+                            });
+                        }
+                    }
+                });
+            }
+
+            // ==================== 工具函数 ====================
+
+            function timeToPercent(timeStr) {
+                return (timeToSeconds(timeStr) / 86400 * 100);
+            }
+
+            function timeToSeconds(timeStr) {
+                if (!timeStr) return 0;
+                var parts = timeStr.split(':');
+                while (parts.length < 3) {
+                    parts.push('0');
+                }
+                return (parseInt(parts[0]) || 0) * 3600 +
+                    (parseInt(parts[1]) || 0) * 60 +
+                    (parseInt(parts[2]) || 0);
+            }
+
+            function secondsToTimeStr(totalSeconds) {
+                if (isNaN(totalSeconds) || totalSeconds < 0) totalSeconds = 0;
+                var hours = Math.floor(totalSeconds / 3600);
+                var minutes = Math.floor((totalSeconds % 3600) / 60);
+                var seconds = Math.floor(totalSeconds % 60);
+                return [hours.toString().padStart(2, '0'),
+                minutes.toString().padStart(2, '0'),
+                seconds.toString().padStart(2, '0')].join(':');
+            }
+
+            function isValidTime(timeStr) {
+                return /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(timeStr);
+            }
+
+            // ==================== 事件绑定 ====================
+
+            $('#playRangeBtn').on('click', function () {
+                var start = $('#startTime').val();
+                var end = $('#endTime').val();
+
+                if (isValidTime(start) && isValidTime(end)) {
+                    var records = mockRecords;
+                    var matched = null;
+
+                    for (var i = 0; i < records.length; i++) {
+                        var recordStart = records[i].startTime.split(' ')[1] || records[i].startTime;
+                        var recordEnd = records[i].endTime.split(' ')[1] || records[i].endTime;
+
+                        if (recordStart === start && recordEnd === end) {
+                            matched = records[i];
+                            break;
+                        }
+                    }
+
+                    if (matched) {
+                        playRecord(matched);
+                    } else {
+                        playRecord({
+                            startTime: currentDate + ' ' + start,
+                            endTime: currentDate + ' ' + end,
+                        })
+                    }
+                } else {
+                    layer.msg('请输入正确的时间格式 HH:MM:SS', {
+                        icon: 5,
+                        time: 2000
+                    });
+                }
+            });
+
+            $('#pauseControlBtn').on('click', function () {
+                if (player) {
+                    try {
+                        if (typeof player.pause === 'function') {
+                            player.pause();
+                            console.log('暂停播放');
+                        }
+                    } catch (e) {
+                        console.error('暂停失败:', e);
+                    }
+                }
+            });
+
+            $('#stopControlBtn').on('click', function () {
+                safeStopPlayer();
+                currentPlayUrl = null;
+                currentRecord = null;
+            });
+
+            // 倍速菜单 - 修复版
+            $('#speedBtn').on('click', function (e) {
+                e.stopPropagation();
+                $('#speedMenu').toggleClass('show');
+            });
+
+            $('.speed-item').on('click', function () {
+                var speed = parseFloat($(this).data('speed'));
+                console.log('选择倍速:', speed);
+
+                $('.speed-item').removeClass('active');
+                $(this).addClass('active');
+
+                setPlaybackRate(speed);
+                $('#speedMenu').removeClass('show');
+            });
+
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#speedSelector').length) {
+                    $('#speedMenu').removeClass('show');
+                }
+            });
+
+            // 下载
+            $('#downloadRangeBtn').on('click', function () {
+                var start = $('#startTime').val();
+                var end = $('#endTime').val();
+                if (isValidTime(start) && isValidTime(end)) {
+                    var msg = '确定下载 ' + start + ' - ' + end + ' 的录像吗？';
+                    layer.confirm(msg, {
+                        title: '下载确认'
+                    }, function (index) {
+                        layer.msg('开始下载...', {
+                            icon: 1,
+                            time: 0,
+                        });
+                        downloadRecordVideo(start, end);
+                        layer.close(index);
+                    });
+                }
+            });
+
+            function downloadRecord(record) {
+                var start = record.startTime.split(' ')[1] || record.startTime;
+                var end = record.endTime.split(' ')[1] || record.endTime;
+                var msg = '确定下载录像 ' + start + ' - ' + end + ' 吗？';
+                layer.confirm(msg, {
+                    title: '下载确认'
+                }, function (index) {
+                    layer.msg('开始下载...', {
+                        icon: 1,
+                        time: 0,
+                    });
+                    downloadRecordVideo(start, end);
+                    layer.close(index);
+                });
+            }
+
+            function downloadRecordVideo(start, end) {
+                $.ajaxSettings.async = false;
+                $.ajaxSettings.async = true;
+            }
+
+            $('#startTime, #endTime').on('change', function () {
+                var start = $('#startTime').val();
+                var end = $('#endTime').val();
+
+                if (isValidTime(start) && isValidTime(end)) {
+                    const startPercent = timeToPercent(start);
+                    const endPercent = timeToPercent(end);
+
+                    $('#rangeLeftHandle').css('left', startPercent + '%');
+                    $('#rangeRightHandle').css('left', endPercent + '%');
+                    $('#timelineSelection').css({
+                        left: startPercent + '%',
+                        width: (endPercent - startPercent) + '%'
+                    });
+                }
+            });
+
+            $(window).on('resize', function () {
+                updateTimelineDimensions();
+            });
+
+            // 初始化
+            setTimeout(function () {
+                initJessibucaPlayer();
+                initLayui();
+                initTimeline();
+                loadRecordList(currentDate);
+            }, 500);
+        });
+    </script>
+</body>
+
+</html>
+

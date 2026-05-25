@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/public.dcimnew.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">事件名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="AlarmName" value="{{data.AlarmName}}" name="AlarmName" autocomplete="off"
+                            class="layui-input" lay-verify="required">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">告警上限</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="AlarmUpLimit" value="{{data.AlarmUpLimit}}" name="AlarmUpLimit"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">告警下限</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="AlarmDownLimit" value="{{data.AlarmDownLimit}}" name="AlarmDownLimit"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">告警特征值</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="AlarmValue" value="{{data.AlarmValue}}" name="AlarmValue"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <!-- <div class="layui-form-item">
+                        <label class="layui-form-label">告警联动</label>
+                        <div class="layui-input-inline">
+                          <textarea id="AlarmLinkage" name="AlarmLinkage" class="layui-textarea" readonly>{{data.AlarmLinkage}}</textarea>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                          <a class="layui-btn"
+                          onclick="xadmin.open('选择参数','choose-devicecontrol.html?inputid=AlarmLinkage&value='+
+                          encodeURI(encodeURI($('#AlarmLinkage').val())))"
+                          >选择</a>
+                        </div>
+                    </div> -->
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用电话通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="PhoneNotify" lay-skin="switch" lay-text="ON|OFF" 
+                        {{if data.PhoneNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用短信通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="SMSNotify" lay-skin="switch" lay-text="ON|OFF" 
+                        {{if data.SMSNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用邮件通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="EmailNotify" lay-skin="switch" lay-text="ON|OFF" 
+                        {{if data.EmailNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用声光通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="NoiseNotify" lay-skin="switch" lay-text="ON|OFF" 
+                        {{if data.NoiseNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用微信通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="WeixinNotify" lay-skin="switch" lay-text="ON|OFF" 
+                        {{if data.WeixinNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用企业微信通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="WeComNotify" lay-skin="switch" lay-text="ON|OFF"
+                         {{if data.WeComNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">启用钉钉通知</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="DingdingNotify" lay-skin="switch" lay-text="ON|OFF" 
+                        {{if data.DingdingNotify==1}}checked{{/if}}>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">告警用户组</label>
+                    <div class="layui-input-block" id="ulist"></div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">容错次数</label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="ConfirmNum" value="{{data.ConfirmNum}}" name="ConfirmNum"
+                            autocomplete="off" class="layui-input" onchange="$('#ConfirmNumTime').val($(this).val()*3)">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">延时告警时间(秒)</label>
+                    <div class="layui-input-inline">
+                        <input type="number" value="{{data.ConfirmNum*3}}" id="ConfirmNumTime" autocomplete="off"
+                            class="layui-input" onchange="$('#ConfirmNum').val(Math.ceil($(this).val()/3))">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">通知次数</label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="NotifyNum" value="{{data.NotifyNum}}" name="NotifyNum"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">通知间隔(秒)</label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="IntervalTime" value="{{data.IntervalTime}}" name="IntervalTime"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">告警级别<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="AlarmLevel" name="AlarmLevel" lay-filter="AlarmLevel">
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">告警模式</label>
+                    <div class="layui-input-inline">
+                        <select id="NotifyWindowID" name="NotifyWindowID" lay-filter="NotifyWindowID">
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">升级条件(秒)</label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="UpgradeTime" value="{{data.UpgradeTime}}" name="UpgradeTime"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">升级用户组</label>
+                    <div class="layui-input-block" id="uplist"></div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">控制联动</label>
+                    <div class="layui-input-inline">
+                        <textarea id="Linkage" name="Linkage" class="layui-textarea">{{data.Linkage}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn"
+                            onclick="xadmin.open('选择控制命令','donghuan-event-controlchoose.html?inputid=Linkage&value='
+                            +encodeURI(encodeURI($('#Linkage').val())))">
+                            选择命令
+                        </a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">控制联动取消</label>
+                    <div class="layui-input-inline">
+                        <textarea id="CancelLinkage" name="CancelLinkage"
+                            class="layui-textarea">{{data.CancelLinkage}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn"
+                            onclick="xadmin.open('选择控制命令','donghuan-event-controlchoose.html?inputid=CancelLinkage&value='
+                            +encodeURI(encodeURI($('#CancelLinkage').val())))">
+                            选择命令
+                        </a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">监控联动</label>
+                    <div class="layui-input-inline">
+                        <textarea id="LinkVideoChannel" name="LinkVideoChannel"
+                            class="layui-textarea">{{data.LinkVideoChannel}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn"
+                            onclick="xadmin.open('选择通道','donghuan-event-videochancelchoose.html?inputid=LinkVideoChannel&value='
+                            +encodeURI(encodeURI($('#LinkVideoChannel').val())))">
+                            选择通道</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+                </script>
+            </form>
+            <script type="text/html" id="usertemplate">
+                {{each data as list i}}
+                    <input type="checkbox" name="UserID" value="{{list.id}}" title="{{list.GroupName}}" 
+                    lay-skin="primary" {{if list.checkstatus=='true'}}checked{{/if}}>
+                {{/each}}
+            </script>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+            // getDoorInfo('video', {
+            //     addr: videoUrl,
+            //     isapi: 'api/play/snap?deviceId=34070000001320000001&channelId=34020000001320000001',
+            //     format: 'json'
+            // }, function (x) {
+            // })
+            // return false;
+            //获取详情
+            list.info("GetAlarmTypeDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                let LinkVideoChannel = r.data.LinkVideoChannel;
+                var html = template("detail", r);
+                $("#formNow").html(html);
+
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var detailNotifyWindowID = "";
+                    if (r.data.NotifyWindowID !== undefined && r.data.NotifyWindowID !== null) {
+                        detailNotifyWindowID = (r.data.NotifyWindowID + "");
+                    }
+                    //告警级别
+                    list.info('GetAlarmLevelListKey', {
+                        token: token,
+                        ComboBox: 'all'
+                    }, function (res) {
+                        var level = '<option value="">请选择</option>';
+                        if (res.data.length != 0) {
+                            $.each(res.data, function (n, val) {
+                                level += `<option value="` + val.id + `">` + val.LevelName + `</option>`;
+                            })
+                        }
+                        $("#AlarmLevel").html(level);
+                        form.render();
+                        if (r.data.LevelName) layuiSelected("AlarmLevel", r.data.LevelName);
+                    })
+                    //告警模式
+                    dcimNewApi.filter('/dcim-alarmnotifywindow', {}, 500, 1, function (res) {
+                        var notifyWindow = '<option value="0">全时段告警</option>';
+                        var notifyRows = [];
+                        if (res && $.isArray(res.data)) {
+                            notifyRows = res.data;
+                        } else if (res && res.data && $.isArray(res.data.info)) {
+                            notifyRows = res.data.info;
+                        }
+                        if (notifyRows.length != 0) {
+                            $.each(notifyRows, function (n, val) {
+                                notifyWindow += `<option value="` + val.id + `">` + val.WindowName + `</option>`;
+                            })
+                        }
+                        $("#NotifyWindowID").html(notifyWindow);
+                        if (detailNotifyWindowID !== "") {
+                            $("#NotifyWindowID").val(detailNotifyWindowID);
+                        }
+                        form.render("select");
+                    })
+                    //用户
+                    // list.info("GetEmpListKey", {
+                    //用户组
+                    list.info("GetPersonGroupListKey", {
+                        token: token,
+                        ComboBox: 'all'
+                    }, function (res) {
+
+                        if (r.data.UserID) {
+                            let newPerson = {
+                                // data:res.data.filter(v=>v.role_name!='门禁权限组')
+                                data: JSON.parse(JSON.stringify(res.data))
+                            }
+                            var UserIDarr = r.data.UserID.split(',');
+                            $.each(newPerson.data, function (n, val) {
+                                val.checkstatus = 'false';
+                                $.each(UserIDarr, function (x, y) {
+                                    if (y == val.id) {
+                                        val.checkstatus = 'true';
+                                        return;
+                                    }
+                                });
+                                if (n == newPerson.data.length - 1) {
+                                    var user = template("usertemplate", newPerson);
+                                    $("#ulist").html(user);
+                                    form.render();
+                                }
+                            });
+                        } else {
+                            $("#ulist").html(template("usertemplate", res));
+                            form.render();
+                        };
+                        if (r.data.UpgradeUser) {
+                            let newPerson = {
+                                // data:res.data.filter(v=>v.role_name!='门禁权限组')
+                                data: JSON.parse(JSON.stringify(res.data))
+                            }
+                            var UpgradeUserarr = r.data.UpgradeUser.split(',');
+                            $.each(newPerson.data, function (n, val) {
+                                val.checkstatus = 'false';
+                                $.each(UpgradeUserarr, function (x, y) {
+                                    if (y == val.id) {
+                                        val.checkstatus = 'true';
+                                        return;
+                                    }
+                                });
+                                if (n == newPerson.data.length - 1) {
+                                    var user = template("usertemplate", newPerson);
+                                    $("#uplist").html(user);
+                                    form.render();
+                                }
+                            });
+                        } else {
+                            $("#uplist").html(template("usertemplate", res));
+                            form.render();
+                        };
+
+                    });
+
+                    //监听提交
+                    form.on("submit(submit)", function (data) {
+                        if (!data.field.AlarmLevel) {
+                            layer.msg("请选择告警级别", {
+                                icon: 5,
+                                time: 1200
+                            });
+                            return false;
+                        }
+                        var UserID = [];
+                        var UpgradeUser = [];
+                        var videochannel = [], Linkage = [], CancelLinkage = [];
+                        $.each($("#ulist input[name=UserID]"), function (n, val) {
+                            if (val.checked == true) {
+                                UserID.push($(val).val());
+                            };
+                        })
+                        $.each($("#uplist input[name=UserID]"), function (n, val) {
+                            if (val.checked == true) {
+                                UpgradeUser.push($(val).val());
+                            };
+                        })
+                        var strformData = {
+                            token: token,
+                            id: id,
+                            AlarmName: data.field.AlarmName,
+                            PhoneNotify: data.field.PhoneNotify == 'on' ? 1 : 0,
+                            SMSNotify: data.field.SMSNotify == 'on' ? 1 : 0,
+                            EmailNotify: data.field.EmailNotify == 'on' ? 1 : 0,
+                            NoiseNotify: data.field.NoiseNotify == 'on' ? 1 : 0,
+                            WeixinNotify: data.field.WeixinNotify == 'on' ? 1 : 0,
+                            WeComNotify: data.field.WeComNotify == 'on' ? 1 : 0,
+                            DingdingNotify: data.field.DingdingNotify == 'on' ? 1 : 0,
+                            UserID: UserID.toString(),
+                            ConfirmNum: data.field.ConfirmNum,
+                            NotifyNum: data.field.NotifyNum,
+                            IntervalTime: data.field.IntervalTime,
+                            AlarmLevel: data.field.AlarmLevel,
+                            NotifyWindowID: data.field.NotifyWindowID || "",
+                            UpgradeTime: data.field.UpgradeTime,
+                            UpgradeUser: UpgradeUser.toString(),
+                            AlarmUpLimit: data.field.AlarmUpLimit,
+                            AlarmDownLimit: data.field.AlarmDownLimit,
+                            AlarmValue: data.field.AlarmValue,
+                            LinkVideoChannel: data.field.LinkVideoChannel,
+                            Linkage: data.field.Linkage,
+                            CancelLinkage: data.field.CancelLinkage,
+                        }
+                        list.info("ChangeAlarmTypeKey", strformData, function (r) {
+                            backToparent("已修改！");
+                        });
+                    })
+                });
+            })
+        })
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表管理->动环监控->自定义报表</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" name="startDateTime" id="startDateTime" class="layui-input"
+                                    placeholder="开始日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" name="endDateTime" id="endDateTime" class="layui-input"
+                                    placeholder="结束日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="FileName" value="" name="FileName" lay-verify="required"
+                                    autocomplete="off" class="layui-input" placeholder="请输入文件前缀">
+                            </div>
+                            <!-- <div class="layui-inline layui-show-xs-block">
+                                <select id="type" name="type" lay-filter="type">
+                                    <option value="">请选择报表类型</option>
+                                    <option value="all">参数总表</option>
+                                    <option value="wsd">温湿度报表</option>
+                                    <option value="air">空调报表</option>
+                                    <option value="power">配电报表</option>
+                                    <option value="ups">UPS报表</option>
+                                </select>
+                            </div> -->
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="reporttpl" name="reporttpl" lay-filter="reporttpl" lay-verify="required">
+                                    <option value="">请选择报表模板</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search"
+                                    type="button">生成</button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" type="button" onclick="xadmin.open('参数报表配置','report-tablegeneral-list.html')">参数报表配置</button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table" id="exportTable">
+                            <thead>
+                                <tr>
+                                    <th>设备</th>
+                                    <th>参数</th>
+                                    <th>值</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="20" style="text-align: center">请选择报表条件</td>
+                                </tr>
+                            </tbody>
+                            <tbody>
+                            </tbody>
+                            <script type="text/html" id="listtemplate">
+                                {{if data.length!=0}} {{each data as list i}}
+                                <tr>
+                                    <td>{{list.DeviceName}}</td>
+                                    <td>{{list.ParamKey}}</td>
+                                    <td>{{list.ParamVal}}</td>
+                                    <td>{{list.create_time}}</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </table>
+                        <table class="layui-table" id="otherTable">
+                            <thead>
+                                <tr>
+                                    <th>设备</th>
+                                    <th>参数</th>
+                                    <th>值</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            <script type="text/html" id="listothertemplate">
+                                {{if data.length!=0}} {{each data as list i}}  
+                                    {{if list.data.length!=0}}
+                                        {{each list.data as item i}}  
+                                        <tr>
+                                            <td>{{item.DeviceName}}</td>
+                                            <td>{{item.ParamKey}}</td>
+                                            <td>{{item.ParamVal}}</td>
+                                            <td>{{item.create_time}}</td>
+                                        </tr>
+                                        {{/each}}
+                                    {{/if}}
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </table>
+                        <table class="layui-table" id="wsdTable">
+                            <thead>
+                                <tr>
+                                    <th colspan="9" style="text-align:center;">温湿度</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="9" style="text-align:center;"><span id="startTime"></span>至<span
+                                            id="endTime"></span>（根据查询时间的不同，生成平均值时间不同，日-周-月为单位）</th>
+                                </tr>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>参数名称</th>
+                                    <th>峰值</th>
+                                    <th>峰值时间</th>
+                                    <th>谷值</th>
+                                    <th>谷值时间</th>
+                                    <th>日平均值</th>
+                                    <th>周平均值</th>
+                                    <th>月平均值</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                            <script type="text/html" id="listwsdtemplate">
+                                {{if data.length!=0}} {{each data as list i}}
+                                <tr>
+                                    <td>{{list.DeviceName}}</td>
+                                    <td>{{list.paramKey}}</td>
+                                    <td>{{list.HighNumber}}</td>
+                                    <td>{{list.HighTime}}</td>
+                                    <td>{{list.LowNumber}}</td>
+                                    <td>{{list.LowTime}}</td>
+                                    <td>{{list.averageDay}}</td>
+                                    <td>{{list.averageWeek}}</td>
+                                    <td>{{list.averageMonth}}</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </table>
+                        <table class="layui-table" id="powerTable">
+                            <thead>
+                                <tr>
+                                    <th colspan="15" style="text-align:center;">能耗报表</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="15" style="text-align:center;">统计方式（小时、天、月、年）</th>
+                                </tr>
+                                <tr>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th colspan="3" style="text-align:center;">A相有功功率（对应ID）</th>
+                                    <th colspan="3" style="text-align:center;">B相有功功率（对应ID）</th>
+                                    <th colspan="3" style="text-align:center;">C相有功功率（对应ID）</th>
+                                    <th colspan="3" style="text-align:center;">总有功功率（对应ID）</th>
+                                </tr>
+                                <tr style="background:linear-gradient(180deg, #566EFA 0%, #0922B0 100%)">
+                                    <th>日期</th>
+                                    <th>设备名称</th>
+                                    <th>用电量（对应ID）</th>
+                                    <th>最小值</th>
+                                    <th>最大值</th>
+                                    <th>平均值</th>
+                                    <th>最小值</th>
+                                    <th>最大值</th>
+                                    <th>平均值</th>
+                                    <th>最小值</th>
+                                    <th>最大值</th>
+                                    <th>平均值</th>
+                                    <th>最小值</th>
+                                    <th>最大值</th>
+                                    <th>平均值</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                            </tbody>
+                            <script type="text/html" id="listpowertemplate">
+                                {{if data.length!=0}} {{each data as list i}}
+                                <tr>
+                                    <td>{{list.DeviceName}}</td>
+                                    <td>{{list.paramKey}}</td>
+                                    <td>{{list.HighNumber}}</td>
+                                    <td>{{list.HighTime}}</td>
+                                    <td>{{list.LowNumber}}</td>
+                                    <td>{{list.LowTime}}</td>
+                                    <td>{{list.averageDay}}</td>
+                                    <td>{{list.averageWeek}}</td>
+                                    <td>{{list.averageMonth}}</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            $('#wsdTable').hide();
+            $('#powerTable').hide();
+            $('#otherTable').hide();
+            //初始化数据
+            layui.use(["form", 'laydate'], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#startDateTime',
+                    format: 'yyyy-MM-dd',
+                    value: new Date(new Date() - 1000 * 60 * 60 * 24), // 指定值
+                });
+                laydate.render({
+                    elem: '#endDateTime',
+                    format: 'yyyy-MM-dd',
+                    value: new Date(), // 指定值
+                });
+                //监听选择
+                param.ComboBox = "all";
+                list.info('GetGeneralTableListKey', param, function (r) {
+                    var html = `<option value="">请选择参数报表</option>`;
+                    if (r.data.length != 0) {
+                        $.each(r.data, function (n, val) {
+                            html += `<option value="` + val.id + `">` + val.GeneralTableName + `</option>`;
+                        })
+                    }
+                    $("#reporttpl").html(html);
+                    form.render();
+                })
+                // form.on("select(type)", function (data) {
+                //     var url = '';
+                //     switch (data.value) {
+                //         case 'all': url = 'GetGeneralTableListKey'; break;
+                //         case 'wsd': url = 'GetWSDTableListKey'; break;
+                //         case 'air': url = 'GetAirTableListKey'; break;
+                //         case 'power': url = 'GetPowerTableListKey'; break;
+                //         case 'ups': url = 'GetUPSTableListKey'; break;
+                //     }
+                //     list.info(url, param, function (r) {
+                //         var html = `<option value="">请选择参数报表</option>`;
+                //         if (r.data.length != 0) {
+                //             $.each(r.data, function (n, val) {
+                //                 switch (data.value) {
+                //                     case 'all': html += `<option value="` + val.id + `">` + val.GeneralTableName + `</option>`; break;
+                //                     case 'wsd': html += `<option value="` + val.id + `">` + val.WSDTableName + `</option>`; break;
+                //                     case 'air': html += `<option value="` + val.id + `">` + val.AirTableName + `</option>`; break;
+                //                     case 'power': html += `<option value="` + val.id + `">` + val.PowerTableName + `</option>`; break;
+                //                     case 'ups': html += `<option value="` + val.id + `">` + val.UPSTableName + `</option>`; break;
+                //                 }
+                //             })
+                //         }
+                //         $("#reporttpl").html(html);
+                //         form.render();
+                //     })
+                // })
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    list.info('GetParamTableKey', {
+                        token: token,
+                        // type: data.field.type,
+                        type: 'all',
+                        tplid: data.field.reporttpl,
+                        startDateTime: data.field.startDateTime + ' 00:00:00',
+                        endDateTime: data.field.endDateTime + ' 23:59:59'
+                    }, function (r) {
+                        $('#exportTable').hide();
+                        $.each(r.data, function (n, val) {
+                            val.DeviceName = val.DeviceName.replace(/#/g, '');
+                        })
+                        // switch (data.field.type) {
+                        //     case 'wsd':
+                        //         $('#wsdTable').show();
+                        //         $('#powerTable').hide();
+                        //         $('#otherTable').hide();
+                        //         $('#startTime').text(`${data.field.startDateTime}`);
+                        //         $('#endTime').text(`${data.field.endDateTime}`)
+                        //         var startDateTime = new Date(data.field.startDateTime);
+                        //         var endDateTime = new Date(data.field.endDateTime);
+                        //         var date = endDateTime.getTime() - startDateTime.getTime();
+                        //         var days = Math.floor(date / (24 * 3600 * 1000));
+                        //         $.each(r.data, function (n, val) {
+                        //             val.averageDay = (val.Total / (days + 1)).toFixed(2);
+                        //             val.averageWeek = (val.Total / (days + 1) * 7).toFixed(2);
+                        //             val.averageMonth = (val.Total / (days + 1) * 30).toFixed(2);
+                        //         })
+                        //         var lists = template("listwsdtemplate", r);
+                        //         $("tbody").html(lists);
+                        //         $('#down').remove();
+                        //         $('form').after(`<button class="layui-btn" type="button" style="margin-left: 10px;" onclick="displayexport('down','wsdTable','` + data.field.FileName + `')" id="down">导出</button>`);
+                        //         break;
+                        //     case 'power':
+                        //         $('#powerTable').show();
+                        //         $('#otherTable').hide();
+                        //         $('#wsdTable').hide();
+                        //         var lists = template("listpowertemplate", r);
+                        //         $("tbody").html(lists);
+                        //         $('#down').remove();
+                        //         $('form').after(`<button class="layui-btn" type="button" style="margin-left: 10px;" onclick="displayexport('down','powerTable','` + data.field.FileName + `')" id="down">导出</button>`);
+                        //         break;
+                        //     default:
+                                $('#otherTable').show();
+                                $('#powerTable').hide();
+                                $('#wsdTable').hide();
+                                var lists = template("listothertemplate", r);
+                                $("tbody").html(lists);
+                                $('#down').remove();
+                                $('form').after(`<button class="layui-btn" type="button" style="margin-left: 10px;" onclick="displayexport('down','otherTable','` + data.field.FileName + `')" id="down">导出</button>`);
+                        //         break;
+                        // }
+
+
+                    })
+                    return false;
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

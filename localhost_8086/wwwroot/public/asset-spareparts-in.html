@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">入库来源<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="source" name="source" lay-verify="required">
+                            <option value="采集入库">采集入库</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">入库数量<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="number" value="" name="number" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">采购日期<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="BuyTime" value="" name="BuyTime" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">单价(元)<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="price" value="" name="price" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">供应商</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="supplier" value="" name="supplier" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">联系人</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="person" value="" name="person" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">联系电话</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="tel" value="" name="tel" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label">备注</label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入内容" id="remark" name="remark" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            var id = GetString("id");
+            layui.use(["form",'laydate'], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem:'#BuyTime',
+                    type:'datetime'
+                })
+                //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    strformData.append("id", id);
+                    list.form("EnterSparePartsKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        });
+    </script>
+</body>
+</html>

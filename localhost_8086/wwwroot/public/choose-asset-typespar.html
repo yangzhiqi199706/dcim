@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function(){
+            //请求地址
+            var url = "GetAssetsTypeListKey";
+            //初始化数据
+            param.ComboBox = "all";
+            //类型树形列表
+            list.info(url, param,function(r){
+                var data=[];
+                //按pid排序
+                r.data.sort(function (a, b) {
+                    if (parseInt(a.AssetsTypeParentId) < parseInt(b.AssetsTypeParentId)) {
+                        return -1;
+                    } else if (parseInt(a.AssetsTypeParentId) == parseInt(b.AssetsTypeParentId)) {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                });
+                 //树形数据
+                $.each(r.data,function(n,val){
+                    if(val.AssetsTypeParentId==0){
+                        if(val.AssetsTypeName.indexOf('备品备件')>=0){
+                            var newdata={
+                                title:val.AssetsTypeName,
+                                id:val.id,
+                                spread:false,
+                                other:1,
+                                children:[]
+                            }
+                            data.push(newdata);
+                        }
+                    }else{
+                        $.each(data,function(x,y){
+                            if(y.id==val.AssetsTypeParentId){
+                                // if(val.AssetsTypeName.indexOf('备品备件')>=0){
+                                    y.children.push({
+                                        title:val.AssetsTypeName,
+                                        id:val.id,
+                                        spread:false,
+                                        other:2,
+                                        children:[]
+                                    })
+                                // }
+                            }else{
+                                if(y.children.length!=0){
+                                    $.each(y.children,function(m,l){
+                                        if(l.id==val.AssetsTypeParentId){
+                                            // if(val.AssetsTypeName.indexOf('备品备件')>=0){
+                                                l.children.push({
+                                                    title:val.AssetsTypeName,
+                                                    id:val.id,
+                                                    spread:false,
+                                                    other:3
+                                                })
+                                            // }
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+                })
+                console.log(data)
+                layui.use(["form","tree"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var tree = layui.tree;
+                    tree.render({
+                        elem:"#tree",
+                        data:data,
+                        id: 'treeId',
+                        click: function(obj){
+                            if(obj.data.other==3){
+                                var index = parent.layer.getFrameIndex(window.name);
+                                parent.layer.close(index);
+                                var id=obj.data.id;
+                                var title=obj.data.title;
+                                $(window.parent.document).find('#AssetsTypeName').val(title);
+                                $(window.parent.document).find('#AssetsTypeId').val(id);
+                            }
+                        }
+                    });     
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

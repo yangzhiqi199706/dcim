@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">模型名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="CapacityModelName" value="" name="CapacityModelName"
+                            lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">空间使用率峰值<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SpaceHigh" value="" name="SpaceHigh" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">功率使用率峰值<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PowerHigh" value="" name="PowerHigh" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">承重使用率峰值<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="WeightHigh" value="" name="WeightHigh" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">电源插口使用率峰值<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="JackHigh" value="" name="JackHigh" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">网口使用率峰值<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PortHigh" value="" name="PortHigh" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">光口使用率峰值<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SmoothHigh" value="" name="SmoothHigh" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateCapacityModelKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        })
+    </script>
+</body>
+
+</html>

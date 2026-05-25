@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .layui-btn-danger{display: none;}
+    </style>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>机柜列</th>
+                                    <th>机柜</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr> 
+                                        <td>{{list.column}}</td>
+                                        <td>{{list.position}}</td>
+                                        <td>
+                                            <div class="layui-input-inline">
+                                                <input type="text" id="AssetsTypeName{{list.id}}" value="" autocomplete="off" class="layui-input" readonly>
+                                                <input type="hidden" id="AssetsId{{list.id}}" value="" name="AssetsId" autocomplete="off" class="layui-input" readonly>
+                                            </div>
+                                            <div class="layui-form-mid layui-word-aux">
+                                                <a class="layui-btn" onclick="xadmin.open('选择安装资产','asset-cabinet-install.html?id={{list.id}}&index={{list.id}}&areaid='+GetString('areaid'))">选择</a>
+                                            </div>
+                                            <div class="layui-form-mid layui-word-aux">
+                                                <a class="layui-btn layui-btn-danger remove" data-id="{{list.id}}">解除绑定</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {{/each}}
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var id=GetString("id");
+        var AreaId=GetString("areaid");
+        $(function(){
+            var htmlarr={
+                'data':JSON.parse(localStorage.getItem('cabinetcheckall'))
+            };
+            var html=template('listtemplate',htmlarr);
+            $('tbody').html(html);
+            $('.remove').click(function(){
+                var id=$(this).attr('data-id');
+                layer.confirm('解除绑定U位将全部清除，确认解绑？', function (index) {
+                    list.info('RemoveCabinetU',{
+                        token:token,
+                        id:id,
+                    },function(r){
+                        layer.close(index);
+                        $('#AssetsTypeName'+id).val('');
+                        $('#AssetsId'+id).val('');
+                        $(this).hide()
+                    })
+                });
+            })
+        })
+    </script>
+</body>
+
+</html>

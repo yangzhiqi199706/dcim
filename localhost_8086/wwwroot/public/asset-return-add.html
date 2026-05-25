@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">回库位置<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <input type="radio" name="pos" value="old" title="回原位置" lay-filter="pos" checked>
+                        <input type="radio" name="pos" value="new" title="回指定位置" lay-filter="pos">
+                    </div>
+                </div>
+                <div id="old">
+                </div>
+                <div id="new">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">仓库位置<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <select id="StoreLocationId" name="StoreLocationId">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">管理部门<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="DeptName" value="" name="DeptName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                            <input type="hidden" id="DeptId" value="" name="DeptId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择部门','choose-department.html?type=dept')">选择</a>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">管理人员<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="PersonName" value="" name="PersonName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                            <input type="hidden" id="EmpId" value="" name="EmpId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=person&DeptId='+$('#DeptId').val())">选择</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <a class="layui-btn" id="submit" >确定</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script src="js/dealUIdStatus.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        var id=GetString("id");
+        var AssetsId=GetString("AssetsId");
+        var submittype=GetString("type");
+        var UId=GetString("UId");
+        var GatewayId=GetString("GatewayId");
+        var devAddress=GetString("devAddress");
+        var CabinetId=GetString("CabinetId");
+        var ULocation=GetString("ULocation");
+        var uhigh=GetString("uhigh");
+        var form;
+        if(GatewayId && !devAddress){
+            searchDevAddress()
+        }
+        //查询设备的串联地址
+        function searchDevAddress(){
+            list.info("GetUDevStatus", {
+                token: token,
+                GatewayId: GatewayId
+            }, function (r) {
+                devAddress = r.data.DeviceAddress;
+                CabinetId = r.data.CabinetId;
+            })
+        }
+
+        $(function(){
+            if(!AssetsId){
+                layer.msg('缺少必要条件资产ID！', {
+                    icon: 5,
+                    time: 2000
+                });
+                return false;
+            }
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                $('#old').show();
+                $('#new').hide();
+                var type='old';
+                form.on('radio(pos)', function(data){
+                    type=data.value;
+                    if(data.value=='old'){
+                        $('#old').show();
+                        $('#new').hide();
+                    }else{
+                        $('#old').hide();
+                        $('#new').show();
+                    }
+                });
+                //获取原位置
+                list.info('GetAssetsLocationKey',{
+                    token:token,
+                    id:AssetsId,
+                },function(r){
+                     //仓库
+                     getStoreLocation(form,'',function(){
+                        //继成上个接口
+                        layuiSelected("StoreLocationId", r.data.StoreLocationName);
+                     });
+                     $('#DeptName').val(r.data.DeptName);
+                     $('#DeptId').val(r.data.DeptId);
+                     $('#PersonName').val(r.data.PersonName);
+                     $('#EmpId').val(r.data.EmpId);
+                      //监听提交
+                    // form.on("submit(submit)", function (data) {
+                    $('#submit').click(function(){
+                        var strformData={
+                            'token':token,
+                            'id':id,
+                            'AssetsId':AssetsId,
+                            'type':submittype
+                        };
+                        if(type=='old'){
+                            strformData.StoreLocationId=r.data.StoreLocationId;
+                            strformData.EmpId=r.data.EmpId;
+                        }else{
+                            strformData.StoreLocationId=$('#StoreLocationId').val();
+                            strformData.EmpId=$('#EmpId').val();
+                        }
+                        list.info("SubmitReturnAssetKey", strformData, function (r) {
+                            if (UId || GatewayId) {
+                                let ustart = ULocation - uhigh + 1;
+                                let uend = ULocation;
+                                for (i = ustart; i <= uend; i++) {
+                                    if(UId){
+                                        setUStatus(UId, i, '4',true);
+                                    }else if(GatewayId){
+                                        setUposStatus(GatewayId, i, '0', devAddress, CabinetId,true);//控制变更
+                                    }
+                                }
+                            }
+                            backToparent("回库成功");
+                        });
+                    })
+                })
+            });
+        });
+        function render(){
+            form.render();
+        }
+    </script>
+</body>
+</html>

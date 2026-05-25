@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        #opendoor,#closedoor{display: none;}
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <!-- <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="startDateTime" name="startDateTime" class="layui-input" placeholder="开始日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="endDateTime" name="endDateTime" class="layui-input" placeholder="结束日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form> -->
+                        <form style="width: 82%;float: left;">
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button" data-type="all">全部记录</button>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button" data-type="16">人脸开门事件记录</button>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button" data-type="1">密码开门事件记录</button>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button" data-type="2">刷卡事件记录</button>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button" data-type="6">按钮开门事件记录</button>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn" type="button">其他记录</button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" id="opendoor">开门</button>
+                        <button class="layui-btn x-right" id="closedoor" style="margin-right: 15px;">关门</button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>卡号</th>
+                                    <th>门状态</th>
+                                    <th>开门方式</th>
+                                    <th>门号</th>
+                                    <th>用户ID</th>
+                                    <th>用户名</th>
+                                    <th>角色</th>
+                                    <th>卡类型</th>
+                                    <th>失败原因</th>
+                                    <th>操作时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>{{i+1}}</td>
+                                        <td>{{list.szCardNo}}</td>
+                                        <td>{{if list.bStatus==0}}开门失败{{else}}开门成功{{/if}}</td>
+                                        <td>
+                                            {{if list.emMethod == 2}}刷卡
+                                            {{ else if list.emMethod == 16}}人脸
+                                            {{ else if list.emMethod == 1}}密码
+                                            {{ else if list.emMethod == 6}}按钮
+                                            {{ else if list.emMethod == 6}}按钮
+                                            {{else}}其他{{/if}}
+                                        </td>
+                                        <!-- <td>
+                                            {{ if list.emMethod == 1}}密码开锁
+                                            {{ else if list.emMethod == 2}}刷卡开锁
+                                            {{ else if list.emMethod == 3}}先刷卡后密码开锁
+                                            {{ else if list.emMethod == 4}}先密码后刷卡开锁
+                                            {{ else if list.emMethod == 5}}远程开锁,如通过室内机或者平台对门口机开锁
+                                            {{ else if list.emMethod == 6}}开锁按钮进行开锁
+                                            {{ else if list.emMethod == 7}}开锁
+                                            {{ else if list.emMethod == 8}}密码+刷卡+组合开锁
+                                            {{ else if list.emMethod == 10}}密码+组合开锁
+                                            {{ else if list.emMethod == 11}}刷卡+组合开
+                                            {{ else if list.emMethod == 12}}多人开锁
+                                            {{ else if list.emMethod == 13}}钥匙开门
+                                            {{ else if list.emMethod == 14}}胁迫密码开门
+                                            {{ else if list.emMethod == 15}}二维码开门
+                                            {{ else if list.emMethod == 16}}目标识别开门
+                                            {{ else if list.emMethod == 18}}人证对比
+                                            {{ else if list.emMethod == 19}}证件+人证比对
+                                            {{ else if list.emMethod == 20}}蓝牙开门
+                                            {{ else if list.emMethod == 21}}个性化密码开门
+                                            {{ else if list.emMethod == 22}}UserID+密码
+                                            {{ else if list.emMethod == 23}}人脸+密码开锁
+                                            {{ else if list.emMethod == 24}}+密码开锁
+                                            {{ else if list.emMethod == 25}}+人脸开锁
+                                            {{ else if list.emMethod == 26}}刷卡+人脸开锁
+                                            {{ else if list.emMethod == 27}}人脸或密码开锁
+                                            {{ else if list.emMethod == 28}}或密码开锁
+                                            {{ else if list.emMethod == 29}}或人脸开锁
+                                            {{ else if list.emMethod == 30}}刷卡或人脸开锁
+                                            {{ else if list.emMethod == 31}}刷卡或开锁
+                                            {{ else if list.emMethod == 32}}+人脸+密码开锁
+                                            {{ else if list.emMethod == 33}}刷卡+人脸+密码开锁
+                                            {{ else if list.emMethod == 34}}刷卡++密码开锁
+                                            {{ else if list.emMethod == 35}}卡++人脸组合开锁
+                                            {{ else if list.emMethod == 36}}或人脸或密码
+                                            {{ else if list.emMethod == 37}}卡或人脸或密码开锁
+                                            {{ else if list.emMethod == 38}}卡或人脸开锁
+                                            {{ else if list.emMethod == 39}}卡++人脸+密码组合开锁
+                                            {{ else if list.emMethod == 40}}卡或人脸或密码开锁
+                                            {{ else if list.emMethod == 41}}(证件+人证比对)或刷卡或人脸
+                                            {{ else if list.emMethod == 42}}人证比对或刷卡(二维码)或人脸
+                                            {{ else if list.emMethod == 43}}DTMF开锁（包括SIPINFO,RFC2833,INBAND）
+                                            {{ else if list.emMethod == 44}}远程二维码开门
+                                            {{ else if list.emMethod == 45}}远程人脸开
+                                            {{ else if list.emMethod == 46}}人证比对开门
+                                            {{ else if list.emMethod == 47}}临时密码开门
+                                            {{ else if list.emMethod == 48}}健康码开门
+                                            {{ else if list.emMethod == 49}}目标识别开锁
+                                            {{ else if list.emMethod == 50}}目标+密码组合开锁
+                                            {{ else if list.emMethod == 51}}人脸+目标组合开锁
+                                            {{ else if list.emMethod == 52}}卡+目标组合开锁
+                                            {{ else if list.emMethod == 53}}目标或密码开锁
+                                            {{ else if list.emMethod == 54}}人脸或目标开锁
+                                            {{ else if list.emMethod == 55}}卡或目标开锁
+                                            {{ else if list.emMethod == 56}}人脸+目标+密码组合开锁
+                                            {{ else if list.emMethod == 57}}卡+人脸+目标组合开锁
+                                            {{ else if list.emMethod == 58}}卡+目标+密码组合开锁
+                                            {{ else if list.emMethod == 59}}人脸或目标或密码开锁
+                                            {{ else if list.emMethod == 60}}卡或人脸或目标开锁
+                                            {{ else if list.emMethod == 61}}卡或目标或密码开锁
+                                            {{ else if list.emMethod == 62}}卡+人脸+目标+密码组合开锁
+                                            {{ else if list.emMethod == 63}}卡或人脸或目标或密码开锁
+                                            {{else}}其他{{/if}}
+                                        </td> -->
+                                        <td>{{list.nDoor}}</td>
+                                        <td>{{list.szUserID}}</td>
+                                        <td>{{list.szCitizenIDName}}</td>
+                                        <td>{{list.szRole}}</td>
+                                        <td>{{list.emCardType}}</td>
+                                        <td>{{if list.bStatus==0}}
+                                            {{if list.nErrorCode == '0'}}没有错误
+                                            {{else if list.nErrorCode == '10'}}未授权
+                                            {{else if list.nErrorCode == '11'}}卡挂失或注销
+                                            {{else if list.nErrorCode == '12'}}没有该门权
+                                            {{else if list.nErrorCode == '13'}}开门模式错误
+                                            {{else if list.nErrorCode == '14'}}有效期错误
+                                            {{else if list.nErrorCode == '15'}}防反潜模式
+                                            {{else if list.nErrorCode == '16'}}胁迫报警未打开
+                                            {{else if list.nErrorCode == '17'}}门常闭状态
+                                            {{else if list.nErrorCode == '18'}}AB互锁状态
+                                            {{else if list.nErrorCode == '19'}}巡逻卡
+                                            {{else if list.nErrorCode == '1A'}}设备处于闯入报警状态
+                                            {{else if list.nErrorCode == '20'}}时间段错误
+                                            {{else if list.nErrorCode == '21'}}假期内开门时间段错误
+                                            {{else if list.nErrorCode == '30'}}需要先验证有首卡权限的卡片
+                                            {{else if list.nErrorCode == '40'}}卡片正确,输入密码错误
+                                            {{else if list.nErrorCode == '41'}}卡片正确,输入密码超时
+                                            {{else if list.nErrorCode == '42'}}卡片正确,输入错误
+                                            {{else if list.nErrorCode == '43'}}卡片正确,输入超时
+                                            {{else if list.nErrorCode == '44'}}正确,输入密码错误
+                                            {{else if list.nErrorCode == '45'}}正确,输入密码超时
+                                            {{else if list.nErrorCode == '50'}}组合开门顺序错误
+                                            {{else if list.nErrorCode == '51'}}组合开门需要继续验证
+                                            {{else if list.nErrorCode == '60'}}验证通过,控制台未授权
+                                            {{else if list.nErrorCode == '61'}}卡片正确,人脸错误
+                                            {{else if list.nErrorCode == '62'}}卡片正确,人脸超时
+                                            {{else if list.nErrorCode == '63'}}重复进入
+                                            {{else if list.nErrorCode == '64'}}未授权,需要后端平台识别
+                                            {{else if list.nErrorCode == '65'}}温度过高
+                                            {{else if list.nErrorCode == '66'}}未戴口罩
+                                            {{else if list.nErrorCode == '67'}}健康码获取失败
+                                            {{else if list.nErrorCode == '68'}}黄码禁止通行
+                                            {{else if list.nErrorCode == '69'}}红码禁止通行
+                                            {{else if list.nErrorCode == '6a'}}健康码无效
+                                            {{else if list.nErrorCode == '6b'}}绿码验证通过
+                                            {{else if list.nErrorCode == '70'}}获取健康码信息
+                                            {{else if list.nErrorCode == '71'}}校验证件信息（平台下发对应证件号的校验结果）
+                                            {{else if list.nErrorCode == 'A8'}}未佩戴安全帽{{/if}}
+                                        {{/if}}</td>
+                                        <td>{{list.newstuTime}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var ip = GetString("ip");
+        var port = GetString("port");
+        var user = GetString("user");
+        var password = GetString("password");
+        var type = GetString("type");
+        $(function () {
+            // layui.use(["form", "laydate"], function () {
+            //     $ = layui.jquery;
+            //     var form = layui.form;
+            //     var laydate = layui.laydate;
+
+            //     laydate.render({
+            //         elem: '#startDateTime',
+            //         type: 'datetime',
+            //         format: 'yyyy-M-d H:m:s'
+            //     });
+            //     laydate.render({
+            //         elem: '#endDateTime',
+            //         type: 'datetime',
+            //         format: 'yyyy-M-d H:m:s'
+            //     });
+            //     //监听事件提交
+            //     form.on("submit(search)", function (data) { 
+            //         let params={
+            //             addr: ip + ':' + port,
+            //             user: user,
+            //             password: password
+            //         }
+            //         if($('#startDateTime').val())params.accessstart=$('#startDateTime').val().split('+')[0]+' '+$('#startDateTime').val().split('+')[1];
+            //         if($('#endDateTime').val())params.accessend=$('#endDateTime').val().split('+')[0]+' '+$('#endDateTime').val().split('+')[1];
+            //         getDoorInfo('dahua', params, function (res) {
+            //             let newres = JSON.parse(res);
+            //             newres.data = JSON.parse(res).data.reverse();
+            //             var html = template('listtemplate', newres);
+            //             $('tbody').html(html);
+            //         })
+            //     });
+            // })
+            //获取事件信息
+            // let stuTime = '2024-03-05 23:2:23';
+            // console.log(getDateTime(new Date(Date.parse(stuTime)+ 1000 * 60 * 60 * 8)))
+            if(!type){
+                $('#opendoor,#closedoor').show();
+            }
+            getDoorInfo('dahua', {
+                addr: ip + ':' + port,
+                user: user,
+                password: password
+            }, function (res) {
+                let newres = JSON.parse(res);
+                newres.data = JSON.parse(res).data.reverse();
+                $('form button').click(function () {
+                    let type = $(this).attr('data-type');
+                    $(this).removeClass('layui-btn-primary');
+                    $(this).parent().siblings().find('button').addClass('layui-btn-primary');
+                    let data = {
+                        "data": []
+                    }
+                    if (type) {
+                        if(type=='all'){
+                            $.each(newres.data, function (n, val) {
+                                val.newstuTime = getDateTime(new Date(Date.parse(val.stuTime) + 1000 * 60 * 60 * 8))
+                                data.data.push(val)
+                            })
+                        }else{
+                            $.each(newres.data, function (n, val) {
+                                if (val.emMethod == type) {
+                                    val.newstuTime = getDateTime(new Date(Date.parse(val.stuTime) + 1000 * 60 * 60 * 8))
+                                    data.data.push(val)
+                                }
+                            })
+                        }
+                        var html = template('listtemplate', data);
+                        $('tbody').html(html);
+                    } else {
+                        $.each(newres.data, function (n, val) {
+                            if (val.emMethod != '2' && val.emMethod != '16' && val.emMethod != '1' && val.emMethod != '6') {
+                                val.newstuTime = getDateTime(new Date(Date.parse(val.stuTime) + 1000 * 60 * 60 * 8))
+                                data.data.push(val)
+                            }
+                        })
+                        var html = template('listtemplate', data);
+                        $('tbody').html(html);
+                    }
+
+                }).first().click();
+            })
+
+            //开门
+            $('#opendoor').click(function () {
+                getDoorInfo('dahua', {
+                    addr: ip + ':' + port,
+                    user: user,
+                    password: password,
+                    control: 1
+                }, function (res) {
+                    if (JSON.parse(res).data) {
+                        layer.msg('开门成功', {
+                            icon: 1,
+                            time: 2000
+                        });
+                    } else {
+                        layer.msg('开门失败', {
+                            icon: 1,
+                            time: 2000
+                        });
+                    }
+
+                })
+            })
+            //关门
+            $('#closedoor').click(function () {
+                getDoorInfo('dahua', {
+                    addr: ip + ':' + port,
+                    user: user,
+                    password: password,
+                    control: 0
+                }, function (res) {
+                    if (JSON.parse(res).data) {
+                        layer.msg('关门成功', {
+                            icon: 1,
+                            time: 2000
+                        });
+                    } else {
+                        layer.msg('关门失败', {
+                            icon: 1,
+                            time: 2000
+                        });
+                    }
+                })
+            })
+        })
+    </script>
+</body>
+
+</html>

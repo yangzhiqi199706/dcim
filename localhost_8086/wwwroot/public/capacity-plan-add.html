@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">计划名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PlanName" value="" name="PlanName" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">用途<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PlanUse" value="" name="PlanUse" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">计划使用时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PlanUseTime" value="" name="PlanUseTime" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属服务器<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属区域<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">U位需求<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="UNeed" value="" name="UNeed" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">功率需求<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PowerNeed" value="" name="PowerNeed" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">电源插口需求<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="JackNeed" value="" name="JackNeed" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">网口需求<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="PortNeed" value="" name="PortNeed" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">光口需求<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="SmoothNeed" value="" name="SmoothNeed" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">承重需求<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="WeightNeed" value="" name="WeightNeed" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#PlanUseTime', //指定元素
+                    type:'datetime'
+                });
+                //服务器
+                getServer(form, function () {
+                    form.on("select(ServerCode)", function (data) {
+                        param.ServerCode = data.value;
+                        getArea(form, data);
+                    });
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateCapacityPlanKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

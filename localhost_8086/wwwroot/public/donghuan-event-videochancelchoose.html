@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入监控名称" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                            <div class="layui-input-block" id="videoAlllist" style="margin-left: 0px; border:2px solid #1C2C87;padding:10px;margin-bottom: 15px;"></div>
+                            <div class="layui-form-item">
+                                <button class="layui-btn x-right" id="submit" lay-submit lay-filter="submit"
+                                    type="button">确定</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <script type="text/html" id="videotemplate">
+                    {{if data.length>0}}
+                        {{each data as list i}}
+                            <input type="checkbox" name="LinkVideoChannel" value="{{list.value}}" title="{{list.name}}" lay-skin="primary" {{if list.checkstatus=='true'}}checked{{/if}}>
+                        {{/each}}
+                    {{else}}
+                        <div style="text-align: center;color: #fff; line-height: 2;">无监控设备信息</div>
+                    {{/if}}
+                </script>
+            </div>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        var form;
+        //监控通道
+        let videoAlllist = {
+            data: []
+        };
+        var chooseid = [];//已选择属性的id，方便排除重复选择，提交数据
+        var inputid = GetString("inputid");//返回值填充id对象
+        var value = decodeURI(GetString("value"));//默认选中的值
+        $(function () {
+            $('.wait').show();
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                if (value != '') {
+                    chooseid = value.indexOf(',') > -1 ? value.split(',') : [value];
+                }
+                videolist.info('get', 'api/device/query/devices?page=1&count=100', '', function (rres) {
+                // getDoorInfo('video', {
+                //     addr: videoUrl,
+                //     isapi: 'api/device/query/devices?page=1&count=100',
+                //     format: 'json'
+                // }, function (rres) {
+                    $.each(rres.data.list, function (m, n) {
+                        var channelurl = 'api/device/query/tree/' + n.deviceId + '?page=1&count=100&parentId=' + n.deviceId + '&onlyCatalog=false';
+                        // getDoorInfo('video', {
+                        //     addr: videoUrl,
+                        //     isapi: channelurl,
+                        //     format: 'json'
+                        // }, function (re) {
+                        videolist.info('get', channelurl, '', function (re) {
+                            if (re.data.list.length != 0) {
+                                $.each(re.data.list, function (x, y) {
+                                    videoAlllist.data.push({
+                                        name: n.name + '[' + y.name + ']',
+                                        value: n.deviceId + '_' + y.id
+                                    })
+                                    if (m == rres.data.list.length - 1 && re.data.list.length - 1 == x) {
+                                        //展示视频联
+                                        if (chooseid) {
+                                            $.each(videoAlllist.data, function (n, val) {
+                                                val.checkstatus = 'false';
+                                                $.each(chooseid, function (x, y) {
+                                                    if (y == val.value) {
+                                                        val.checkstatus = 'true';
+                                                        return;
+                                                    }
+                                                });
+                                                if (n == videoAlllist.data.length - 1) {
+                                                    var videohtml = template("videotemplate", videoAlllist);
+                                                    $("#videoAlllist").html(videohtml);
+                                                    form.render();
+                                                }
+                                            });
+                                        } else {
+                                            var videohtml = template("videotemplate", videoAlllist);
+                                            $("#videoAlllist").html(videohtml);
+                                            form.render();
+                                        };
+                                        $('.wait').hide();
+                                    }
+                                });
+                            }
+                        });
+                    });
+                })
+                //监听搜索
+                form.on("submit(search)", function (data) {
+                    $('.wait').show();
+                    var search = data.field.search;
+                    var newdata = {
+                        'data': []
+                    };
+                    // console.log(JSON.parse(JSON.stringify(originalData)));
+                    // console.log(search);
+                    const originalDataArr = JSON.parse(JSON.stringify(videoAlllist));
+                    // console.log(originalDataArr)
+                    if (originalDataArr && originalDataArr.data.length != 0) {
+                        if (search) {//search是搜索设备 
+                            newdata.data = originalDataArr.data.filter(function (element) {
+                                return element.name.indexOf(search) >= 0;
+                            });
+                        } else {
+                            newdata.data = originalDataArr.data;
+                        }
+                    }
+                    newdata = dealDataCheck(newdata);
+                    var html = template("videotemplate", newdata);
+                    $("#videoAlllist").html(html);
+                    form.render();
+                    $('.wait').hide();
+                    return false;
+                });
+                //监听选择
+                form.on('checkbox', function(data) {
+                    console.log(data.elem);  // 当前复选框的 DOM 元素
+                    console.log(data.value); // 复选框的值
+                    console.log(data.othis); // 当前复选框的 jQuery 对象
+
+                    if (data.elem.checked) {
+                        chooseid.push(data.value);
+                    } else {
+                        let haveIndex = chooseid.findIndex(v=>v==data.value);
+                        chooseid.splice(haveIndex, 1);
+                    }
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    chooseid = [];
+                    $.each($("#videoAlllist input[name=LinkVideoChannel]"), function (n, val) {
+                        if (val.checked == true) {
+                            chooseid.push($(val).val());
+                        };
+                    })
+                    var index = parent.layer.getFrameIndex(window.name);
+                    parent.layer.close(index);
+                    $(window.parent.document).find('#' + inputid).val(chooseid.join(','));
+                    if (window.parent.setParam) window.parent.setParam();
+                })
+            });
+        })
+        //chooseid 有值数据搜索选中处理
+        function dealDataCheck(data) {
+            $.each(data.data, function (n, val) {
+                val.checkstatus = 'false';
+                $.each(chooseid, function (x, y) {
+                    if (y == val.value) {
+                        val.checkstatus = 'true';
+                        return;
+                    }
+                });
+            })
+            return data;
+        }
+
+    </script>
+</body>
+
+</html>

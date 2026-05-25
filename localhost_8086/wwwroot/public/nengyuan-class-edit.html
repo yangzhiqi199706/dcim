@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">分类名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="NYClassName" value="{{data.NYClassName}}" name="NYClassName" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">PUE ID</label>
+                    <div class="layui-input-inline">
+                        <textarea placeholder="" readonly id="PUEId" name="PUEId" class="layui-textarea">{{data.PUEId}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-choose.html?inputid=PUEId&value='+encodeURI(encodeURI($('#PUEId').val())))">选择参数</a>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-chooseparam.html?inputid=PUEId&value='+encodeURI(encodeURI($('#PUEId').val())))">选择自定义参数</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">电度ID</label>
+                    <div class="layui-input-inline">
+                        <textarea placeholder="" readonly id="DegreeId" name="DegreeId" class="layui-textarea">{{data.DegreeId}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-choose.html?inputid=DegreeId&value='+encodeURI(encodeURI($('#DegreeId').val())))">选择参数</a>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-chooseparam.html?inputid=DegreeId&value='+encodeURI(encodeURI($('#DegreeId').val())))">选择自定义参数</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">功率ID</label>
+                    <div class="layui-input-inline">
+                        <textarea placeholder="" readonly id="PowerId" name="PowerId" class="layui-textarea">{{data.PowerId}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-choose.html?inputid=PowerId&value='+encodeURI(encodeURI($('#PowerId').val())))">选择参数</a>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-chooseparam.html?inputid=PowerId&value='+encodeURI(encodeURI($('#PowerId').val())))">选择自定义参数</a>
+                    </div>
+                </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">供电负载系数</label>
+                    <div class="layui-input-inline">
+                        <textarea placeholder="" readonly id="ColdPowerId" name="ColdPowerId" class="layui-textarea">{{data.ColdPowerId}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-choose.html?inputid=ColdPowerId&value='+encodeURI(encodeURI($('#ColdPowerId').val())))">选择参数</a>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-chooseparam.html?inputid=ColdPowerId&value='+encodeURI(encodeURI($('#ColdPowerId').val())))">选择自定义参数</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">制冷负载系数</label>
+                    <div class="layui-input-inline">
+                        <textarea placeholder="" readonly id="ColdRatioId" name="ColdRatioId" class="layui-textarea">{{data.ColdRatioId}}</textarea>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-choose.html?inputid=ColdRatioId&value='+encodeURI(encodeURI($('#ColdRatioId').val())))">选择参数</a>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-chooseparam.html?inputid=ColdRatioId&value='+encodeURI(encodeURI($('#ColdRatioId').val())))">选择自定义参数</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属服务器<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属区域<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+
+            //获取详情
+            list.info("GetNYClassDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    getServer(form,function(){
+                        //继成上个接口
+                        layuiSelected("ServerCode", r.data.ServerName);
+                        form.on("select(ServerCode)", function (data) {
+                            getArea(form,data);
+                        });
+                    });
+                    getArea(form,{value:r.data.ServerCode},function(){
+                        //继成上个接口
+                        layuiSelected("AreaId", r.data.AreaName);
+                    });
+                    //监听提交
+                    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("ChangeNYClassKey", strformData, function (r) {
+                            backToparent("修改成功");
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

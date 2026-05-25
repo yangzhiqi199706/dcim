@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入资产编号/资产描述" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <table class="layui-table layui-col-tree">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                    <th>资产条ID</th>
+                                    <th>网关ID</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr> 
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.AssetsNumber}}</td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td>{{list.AssetsDescribe}}</td>
+                                        <td>{{list.UId}}</td>
+                                        <td>{{list.GatewayId}}</td>
+                                        <td>
+                                            {{if list.PutoutStatus=='false'}}
+                                            <a title="绑定" data-id="{{list.id}}" data-AssetsNumber="{{list.AssetsNumber}}" data-AssetsTypeName="{{list.AssetsTypeName}}" data-asstid="{{list.AssetsId}}"  onclick="chooseOne(this)"  href="javascript:;">
+                                                <i class="layui-icon">&#xe64c;</i>
+                                            </a>
+                                            {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetAssetsPutoutListKey";
+        var chooseId=0;
+        var AssetsNumber='';
+        var AssetsTypeName='';
+        var AssetsId='';
+        var id=GetString("id");
+        var AreaId=GetString("areaid");
+        var idindex=GetString("index");
+        $(function(){
+            //初始化数据
+            param.PutoutWay='O';
+            param.PutoutStatus='false';
+            param.AreaId=AreaId;
+            //初始化数据
+            param.ComboBox = "all";
+            //类型树形列表
+            list.info('GetAssetsTypeListKey', param,function(r){
+                var data=[];
+                //按pid排序
+                r.data.sort(function (a, b) {
+                    if (parseInt(a.AssetsTypeParentId) < parseInt(b.AssetsTypeParentId)) {
+                        return -1;
+                    } else if (parseInt(a.AssetsTypeParentId) == parseInt(b.AssetsTypeParentId)) {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                });
+                 //树形数据
+                var firstthrchild=-1;
+                $.each(r.data,function(n,val){
+                    if(val.AssetsTypeParentId==0){
+                        if(val.AssetsTypeName.indexOf('基础设施')>=0){
+                            var newdata={
+                                title:val.AssetsTypeName,
+                                id:val.id,
+                                spread:false,
+                                other:1,
+                                children:[]
+                            }
+                            data.push(newdata);
+                        }
+                    }else{
+                        $.each(data,function(x,y){
+                            if(y.id==val.AssetsTypeParentId ){
+                                if(val.AssetsTypeName.indexOf('机柜')>=0){
+                                    y.children.push({
+                                        title:val.AssetsTypeName,
+                                        id:val.id,
+                                        spread:false,
+                                        other:2,
+                                        children:[]
+                                    })
+                                }
+                            }else{
+                                if(y.children.length!=0){
+                                    $.each(y.children,function(m,l){
+                                        if(l.id==val.AssetsTypeParentId ){
+                                            if(val.AssetsTypeName.indexOf('机柜')>=0){
+                                                if(firstthrchild==-1){
+                                                    l.children.push({
+                                                        title:val.AssetsTypeName,
+                                                        id:val.id,
+                                                        spread:false,
+                                                        checked:true,
+                                                        other:3
+                                                    })
+                                                    firstthrchild=val.id;
+                                                }else{
+                                                    l.children.push({
+                                                        title:val.AssetsTypeName,
+                                                        id:val.id,
+                                                        spread:false,
+                                                        other:3
+                                                    })
+                                                }
+                                            }
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+                })
+                delete(param['ComboBox']);//去掉不分页参数
+
+                layui.use(["form","tree"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var tree = layui.tree;
+                    tree.render({
+                        elem:"#tree",
+                        data:data,
+                        id: 'treeId',
+                        click: function(obj){
+                            if(obj.data.other==3){
+                                $('.layui-tree-txt').removeAttr('style');
+                                $(obj.elem).find('.layui-tree-txt').css('color','#148cf1');
+                                //属性列表
+                                param.AssetsTypeId=obj.data.id;
+                                param.pageNo = 1;
+                                list.get(url, param);
+                            }
+                        }
+                    }); 
+                    //初始属性列表
+                    $('.layui-tree-checkedFirst').find('.layui-tree-txt').css('color','#148cf1');
+                    // param.AssetsTypeId=firstthrchild;
+                    delete(param['ComboBox']);//去掉不分页参数
+                    list.get(url,param);
+                    //监听提交
+                    form.on("submit(search)", function (data) {
+                        param.pageNo = 1;
+                        param.search = data.field.search;
+                        delete(param['ComboBox']);//去掉不分页参数
+                        list.get(url,param);
+                        return false;
+                    });    
+                });
+            });
+            
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            delete(param['ComboBox']);//去掉不分页参数
+            list.get(url, param);
+        }
+        //选择
+        function chooseOne(obj){
+            layer.confirm('确认绑定此资产？', function (index) {
+                chooseId=$(obj).data('id');
+                AssetsNumber=$(obj).attr('data-AssetsNumber');
+                AssetsTypeName=$(obj).attr('data-AssetsTypeName');
+                AssetsId=$(obj).attr('data-asstid');
+                list.info('CreateCabinetUKey',{
+                    token:token,
+                    id:id,
+                    AssetsId:AssetsId,
+                    PutoutId:chooseId
+                },function(r){
+                    var index = parent.layer.getFrameIndex(window.name);
+                    parent.layer.close(index);
+                    if(idindex){
+                        $(window.parent.document).find('#AssetsTypeName'+idindex).val(AssetsTypeName+AssetsNumber);
+                        $(window.parent.document).find('#AssetsId'+idindex).val(AssetsId);
+                        $(window.parent.document).find('#AssetsId'+idindex).parent().siblings().last().find('.layui-btn-danger').css('display','block')
+                    }else{
+                        $(window.parent.document).find('#AssetsTypeName').val(AssetsTypeName+AssetsNumber);
+                        $(window.parent.document).find('#AssetsId').val(AssetsId);
+                    } 
+                })
+                layer.close(index);
+            });
+        }
+    </script>
+</body>
+
+</html>

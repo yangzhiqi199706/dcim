@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<style>
+    .layui-input-inline {
+        line-height: 38px;
+        color: #fff
+    }
+</style>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">事件ID：</label>
+                    <div class="layui-input-inline">
+                       {{data.id}}
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">事件名称：</label>
+                    <div class="layui-input-inline">
+                       {{data.TypeName}}
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        事件等级：
+                    </label>
+                    <div class="layui-input-inline">
+                        {{data.LevelName}}
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        前端服务器：
+                    </label>
+                    <div class="layui-input-inline">
+                        {{data.ServerName}}
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">报警时间：</label>
+                    <div class="layui-input-inline">
+                       <!-- {{data.update_time}} -->
+                       <td>{{(data.create_time ? ('' + data.create_time).split('-')[0] + '-' : '') + ((data.TextMessage && ('' + data.TextMessage).split(',').length > 4) ? (('' + data.TextMessage).split(',')[4]).replace(/[^0-9:]/g, '-').replace(/-+/g, '-').replace(/-(\d{1,2}:\d{1,2}:\d{1,2})$/, ' $1').replace(/^-|-$/g, '') : '')}}</td>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">处理方式：</label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入处理方式" name="Solution" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">事件确认后告警通知方式：</label>
+                    <div class="layui-input-block">
+                        <input type="checkbox" title="禁用电话告警" name="phoneEnabeld" lay-text="ON|OFF">
+                        <input type="checkbox" title="禁用短信告警" name="smsEnabeld" lay-text="ON|OFF">
+                        <input type="checkbox" title="禁用邮件告警" name="mailEnabeld" lay-text="ON|OFF">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script src="js/dealCancelNotify.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        $(function () {
+            var eventId = GetString("id");
+            var id = GetString("id");
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                form.render();
+                //获取详情
+                list.info("GetRealAlarmsDetailKey", {
+                    token: token,
+                    id: id
+                }, function (r) {
+                    var html = template("detail", r);
+                    $("#formNow").html(html);
+                    layui.use(["form"], function () {
+                        $ = layui.jquery;
+                        var form = layui.form;
+                        form.render();
+                        //监听提交
+                        form.on("submit(submit)", function (data) {
+                            var checkboxArr = [];
+                            // console.log(data.field.phoneEnabeld)
+                            // 告警确认，未选择表示3种通知都保留  如果最后通知都关闭了， 则不需要再次通知NotifyState = 0
+                            // 反确认告警是 NotifyState = 1 NotifyMode清空 ，告警的通知配置使用事件的配置
+                            if (data.field.phoneEnabeld != undefined) {
+                                checkboxArr.push(data.field.phoneEnabeld == 'on' ? '' : 1)
+                            }else{
+                                checkboxArr.push(1);
+                            }
+                            if (data.field.smsEnabeld != undefined) {
+                                checkboxArr.push(data.field.smsEnabeld == 'on' ? '' : 2)
+                            }else{
+                                checkboxArr.push(2);
+                            }
+                            if (data.field.mailEnabeld != undefined) {
+                                checkboxArr.push(data.field.mailEnabeld == 'on' ? '' : 6)
+                            }else{
+                                checkboxArr.push(6);
+                            }
+                            var strformData = {
+                                token: token,
+                                eventId: eventId,
+                                Solution: data.field.Solution,
+                                NotifyState: checkboxArr.length>0 ? 1 : 0,
+                                NotifyMode: checkboxArr.toString(),
+                                dealWay: '2'
+                            }
+                            list.info("CheckAlarmKey", strformData, function (res) {
+                                // param.pageNo = 1;
+                                // delete (param['ComboBox']);
+                                // list.get("GetRealAlarmsKey", param, '', function () {
+                                //     checkall(form)
+                                // });
+                                // //确认后如果全局取消告警需要通知，则创建通知信息
+                                //获取全局告警取消配置
+                                list.info('GetAlarmParamKey', {
+                                    id: 1,
+                                    token: token
+                                }, function (result) {
+                                    if (result.data.CancelNotify == 1) {
+                                        dealCancelNotify(r,checkboxArr.toString(),true)
+                                    }else{
+                                        backToparent("告警已确认！！");
+                                    }
+                                })
+                            });
+                        });
+                    });
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    if (eventId) strformData.append("alarmid", eventId);//工单id与告警id绑定
+                    list.form("CreateWorkOrderKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            delete (param['ComboBox']);
+            param.pageNo = curr;
+            list.get(url, param, '', function () {
+                checkall(form)
+            });
+        }
+        
+    </script>
+</body>
+
+</html>

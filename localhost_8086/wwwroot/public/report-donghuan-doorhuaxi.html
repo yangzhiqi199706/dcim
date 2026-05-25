@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->门禁记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>记录类型</text>
+                                <select id="conType" name="conType" lay-filter="conType">
+                                    <option value="1">考勤记录</option>
+                                    <option value="2">操作记录</option>
+                                    <option value="3">控制记录</option>
+                                </select>
+                                <text>门禁设备</text>
+                                <select id="DeviceName" name="DeviceName" lay-filter="DeviceName">
+                                </select>
+                                <text>日期范围</text>
+                                <input type="text" name="startDateTime" id="startDateTime" class="layui-input"
+                                    placeholder="开始日期">
+                                <input type="text" name="endDateTime" id="endDateTime" class="layui-input"
+                                    placeholder="结束日期">
+                                <div class="two-search">
+                                    <button class="layui-btn x-right" lay-submit lay-filter="search"
+                                        type="button" style="margin-left: 5px;">搜索</button>
+                                    <button class="layui-btn x-right" type="button" id="syncatt" style="margin-left: 5px;">一键同步</button>
+                                    <button class="layui-btn x-right" type="button" id="syncattOut" style="margin-left: 0;">导出</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-right-big">
+                            <table class="layui-table" id="atttable">
+                                <thead>
+                                    <tr>
+                                        <th>工号</th>
+                                        <th>姓名</th>
+                                        <th>设备名称</th>
+                                        <th>考勤状态</th>
+                                        <th>验证方式</th>
+                                        <th>考勤时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                                <script type="text/html" id="atttemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.Pin}}</td>
+                                        <td>{{if list.Name}}{{list.Name}}{{/if}}</td>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.dataStatus}}</td>
+                                        <td>{{list.Verify}}</td>
+                                        <td>{{list.Time}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </table>
+                            <table class="layui-table" id="cmdtable">
+                                <thead>
+                                    <tr>
+                                        <th>编号</th>
+                                        <th>用户名</th>
+                                        <th>门禁卡号</th>
+                                        <th>设备名称</th>
+                                        <th>动作</th>
+                                        <th>结果</th>
+                                        <th>记录时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                                <script type="text/html" id="cmdtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.EmpName}}</td>
+                                        <td>{{list.IdCard}}</td>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.DevAction}}</td>
+                                        <td>{{list.Result}}</td>
+                                        <td>{{list.create_time}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </table>
+                            <table class="layui-table" id="opertable">
+                                <thead>
+                                    <tr>
+                                        <th>设备名称</th>
+                                        <th>操作</th>
+                                        <th>操作对象</th>
+                                        <th>操作时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                                <script type="text/html" id="opertemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.OpType}}</td>
+                                        <td>{{list.OpWho}}</td>
+                                        <td>{{list.OpTime}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+                <table id="listout" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>工号</th>
+                            <th>姓名</th>
+                            <th>设备名称</th>
+                            <th>考勤状态</th>
+                            <th>验证方式</th>
+                            <th>考勤时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <script type="text/html" id="detail">
+                    {{if data.length!=0}} {{each data as list i}}
+                    <tr>
+                        <td>{{list.Pin}}</td>
+                        <td>{{if list.Name}}{{list.Name}}{{/if}}</td>
+                        <td>{{list.DeviceName}}</td>
+                        <td>{{list.dataStatus}}</td>
+                        <td>{{list.Verify}}</td>
+                        <td>{{list.Time}}</td>
+                    </tr>
+                    {{/each}} {{else}}
+                    <tr>
+                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                    </tr>
+                    {{/if}}
+                </script>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetDoorZktAttListKey";
+        var conType = '1', allperson = [], alldev = [], htmltpl = 'atttemplate', htmlobj = '#atttable tbody', chooseid = '', sn = '';
+        $(function () {
+
+            //获取所有人员信息
+            $.ajaxSettings.async = false;
+            list.info('GetDoorZktUserListKey', {
+                token: token,
+                ComboBox: 'all'
+            }, function (r) {
+                allperson = r.data
+            })
+
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({
+                    elem: '#startDateTime'
+                });
+                laydate.render({
+                    elem: '#endDateTime'
+                });
+                //考勤同步一键同步所有设备与用户
+                $('#syncatt').click(function () {
+                    layui.loading(1);
+                    layer.msg("等待数据同步！", {
+                        icon: 1,
+                        time: 2000
+                    }, function () {
+                        //获取所有中控门禁设备
+                        $.ajaxSettings.async = false;
+                        list.info('GetDeviceListKey', {
+                            ClassName: '门禁',
+                            token: token,
+                            ComboBox: 'all',
+                            ProtocolCode: '14002'
+                        }, function (res) {
+                            if (res.data.length > 0) {
+                                $.each(res.data, function (n, val) {
+                                    //通知同步数据 用户 和考勤
+                                    list.info('ChangeDoorParamKey', {
+                                        token: token,
+                                        SN: val.SerialNumber,
+                                        attSync: 1,
+                                        userSync: 1
+                                    }, function (res) { })
+                                })
+                            }
+                        })
+                        $.ajaxSettings.async = true;
+                        setTimeout(function () {
+                            //请求用户信息
+                            list.info('GetDoorZktUserListKey', {
+                                token: token,
+                                ComboBox: 'all'
+                            }, function (r) {
+                                allperson = r.data
+                            })
+                            list.getobj(url, param, {
+                                pageelem: 'bottomPaging',
+                                htmltpl: htmltpl,
+                                htmlobj: htmlobj,
+                                total: ''
+                            }, pagechange, dealdata);
+                            layer.msg("数据已同步！", {
+                                icon: 1,
+                                time: 2000
+                            }, function () {
+                            })
+                        }, 10000)
+                    })
+                })
+
+                //考勤导出
+                $('#syncattOut').click(function () {
+                    list.info(url, {
+                        token: token,
+                        ComboBox: 'all',
+                        startDateTime: param.startDateTime,
+                        endDateTime: param.endDateTime,
+                        SN: param.SN
+                    }, function (res) {
+                        // if(res.data.length>0){
+                        dealdata(res, function (r) {
+                            let htmls = template("detail", r);
+                            $("#listout tbody").html(htmls);
+                            // let day =getDateTime().split(' ')[0];
+                            displayexport('syncattOut', 'listout', '考勤记录', true);
+                        });
+                        // }
+                    })
+                })
+
+                //门禁设备
+                list.info("GetDeviceListKey", {
+                    token: token,
+                    ClassName: "门禁",
+                    ComboBox: 'all'
+                }, function (res) {
+                    alldev = res.data;
+                    var html = "<option value=''>请选择</option>";
+                    $.each(res.data, function (n, val) {
+                        html += "<option value=\"" + val.SerialNumber + "\" data-id=\"" + val.id + "\">" + val.DeviceName + "</option>";
+                    });
+                    $("#DeviceName").append(html);
+                    form.render("select");
+                    form.on("select(DeviceName)", function (data) {
+                        sn = data.value;
+                        if (data.value) {
+                            chooseid = data.elem[data.elem.selectedIndex].dataset.id
+                        } else {
+                            chooseid = ''
+                        }
+                    })
+                })
+
+                $.ajaxSettings.async = true;
+
+                //初始化数据
+                $('#atttable').show();
+                $('#cmdtable,#opertable').hide();
+                list.getobj(url, param, {
+                    pageelem: 'bottomPaging',
+                    htmltpl: htmltpl,
+                    htmlobj: htmlobj,
+                    total: ''
+                }, pagechange, dealdata);
+
+                //监听类型 切换请求url
+                form.on("select(conType)", function (data) {
+                    conType = data.value;
+                    switch (data.value) {
+                        case '1':
+                            url = 'GetDoorZktAttListKey';
+                            $('#atttable,#syncattOut,#syncatt').show();
+                            $('#cmdtable,#opertable').hide();
+                            htmltpl = 'atttemplate';
+                            htmlobj = '#atttable tbody';
+                            break;
+                        case '2':
+                            url = 'GetDoorZktOperListKey';
+                            $('#opertable').show();
+                            $('#cmdtable,#atttable,#syncattOut,#syncatt').hide();
+                            htmltpl = 'opertemplate';
+                            htmlobj = '#opertable tbody';
+                            break;
+                        case '3':
+                            url = 'GetDoorZktCmdListKey';
+                            $('#cmdtable').show();
+                            $('#opertable,#atttable,#syncattOut,#syncatt').hide();
+                            htmltpl = 'cmdtemplate';
+                            htmlobj = '#cmdtable tbody';
+                            break;
+                    }
+                    param.pageNo = 1
+                    list.getobj(url, param, {
+                        pageelem: 'bottomPaging',
+                        htmltpl: htmltpl,
+                        htmlobj: htmlobj,
+                        total: ''
+                    }, pagechange, dealdata);
+                })
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.SN = data.field.DeviceName;
+                    param.DevID = chooseid;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    list.getobj(url, param, {
+                        pageelem: 'bottomPaging',
+                        htmltpl: htmltpl,
+                        htmlobj: htmlobj,
+                        total: ''
+                    }, pagechange, dealdata);
+                    return false;
+                });
+            });
+        })
+        function dealdata(r, callback) {
+            if (conType == '1') {//考勤记录
+                let data = r.data.info ? r.data.info : r.data;
+                $.each(data, function (n, val) {
+                    if (val.Pin) {
+                        let findindex = allperson.findIndex(v => v.Pin == val.Pin && v.SN == val.SN);
+                        if (findindex > -1) {
+                            val.Name = allperson[findindex].Name
+                        }
+                    }
+                    val.DeviceName = '';
+                    if (val.SN) {
+                        let findindex = alldev.findIndex(v => v.SerialNumber == val.SN);
+                        if (findindex > -1) {
+                            val.DeviceName = alldev[findindex].DeviceName
+                        }
+                    }
+                    val.dataStatus = parseInt(val.dataStatus);
+                    if (val.dataStatus >= 0 && val.dataStatus <= 250) {
+                        val.dataStatus = '正常';
+                    } else if (val.dataStatus == 252) {
+                        val.dataStatus = '非法时间段';
+                    } else if (val.dataStatus == 253) {
+                        val.dataStatus = '非法开锁组合';
+                    } else if (val.dataStatus == 254) {
+                        val.dataStatus = '无效用户';
+                    } else if (val.dataStatus == 255) {
+                        val.dataStatus = '无考勤状态';
+                    }
+                    switch (val.Verify) {
+                        case '0': val.Verify = '指静脉或人脸或指纹或卡或密码 (自动识别)'; break;
+                        case '1': val.Verify = '仅指纹'; break;
+                        case '2': val.Verify = '工号验证'; break;
+                        case '3': val.Verify = '仅密码'; break;
+                        case '4': val.Verify = '仅卡'; break;
+                        case '5': val.Verify = '指纹或密码'; break;
+                        case '6': val.Verify = '指纹或卡'; break;
+                        case '7': val.Verify = '卡或密码'; break;
+                        case '8': val.Verify = '工号加指纹'; break;
+                        case '9': val.Verify = '指纹加密码'; break;
+                        case '10': val.Verify = '卡加指纹'; break;
+                        case '11': val.Verify = '卡加密码'; break;
+                        case '12': val.Verify = '指纹加密码加卡'; break;
+                        case '13': val.Verify = '工号加指纹加密码'; break;
+                        case '14': val.Verify = '工号加指纹 或 卡加指纹'; break;
+                        case '15': val.Verify = '人脸'; break;
+                        case '16': val.Verify = '人脸加指纹'; break;
+                        case '17': val.Verify = '人脸加密码'; break;
+                        case '18': val.Verify = '人脸加卡'; break;
+                        case '19': val.Verify = '人脸加指纹加卡'; break;
+                        case '20': val.Verify = '人脸加指纹加密码'; break;
+                        case '21': val.Verify = '指静脉'; break;
+                        case '22': val.Verify = '指静脉加密码'; break;
+                        case '23': val.Verify = '指静脉加卡'; break;
+                        case '24': val.Verify = '指静脉加密码加卡'; break;
+                        case '25': val.Verify = '掌纹'; break;
+                        case '26': val.Verify = '掌纹加卡'; break;
+                        case '27': val.Verify = '掌纹加面部'; break;
+                        case '28': val.Verify = '掌纹加指纹'; break;
+                        case '29': val.Verify = '掌纹加指纹加面部'; break;
+                        case '200': val.Verify = '其他'; break;
+                    }
+                })
+            } else if (conType == '2') {//操作记录
+                $.each(r.data.info, function (n, val) {
+                    if (val.OpWho) {
+                        let findindex = allperson.findIndex(v => v.Pin == val.OpWho && v.SN == val.SN);
+                        if (findindex > -1) {
+                            val.OpWho = allperson[findindex].Name
+                        }
+                    }
+                    val.DeviceName = '';
+                    if (val.SN) {
+                        let findindex = alldev.findIndex(v => v.SerialNumber == val.SN);
+                        if (findindex > -1) {
+                            val.DeviceName = alldev[findindex].DeviceName
+                        }
+                    }
+                    //操作代码
+                    if (val.OpType != 3 && val.OpType != 5 && val.OpType != 6 && $.isNumeric(val.OpWho)) val.OpWho = '工号：' + val.OpWho;
+                    switch (val.OpType) {
+                        case '0': val.OpType = '开机'; break;
+                        case '1': val.OpType = '关机'; break;
+                        case '2': val.OpType = '验证失败'; break;
+                        case '3': val.OpType = '报警';
+                            switch (val.OpWho) {
+                                case '50': val.OpWho = '检测到门关闭'; break;
+                                case '51': val.OpWho = '检测到门打开'; break;
+                                case '53': val.OpWho = '出门按钮'; break;
+                                case '54': val.OpWho = '门意外损坏'; break;
+                                case '55': val.OpWho = '机器坏了'; break;
+                                case '58': val.OpWho = '尝试无效验证'; break;
+                                case '65535': val.OpWho = '报警已取消'; break;
+                            }
+                            break;
+                        case '4': val.OpType = '进入菜单'; break;
+                        case '5':
+                            val.OpType = '更改设置';
+                            val.OpWho = '修改设置项序号：' + val.OpWho + '的值为：' + val.Value1;
+                            break;
+                        case '6':
+                            val.OpType = '登记指纹';
+                            val.OpWho = '指纹序号：' + val.OpWho + '，指纹模板长度：' + val.Value1;
+                            break;
+                        case '7': val.OpType = '登记密码'; break;
+                        case '8': val.OpType = '登记HID卡'; break;
+                        case '9': val.OpType = '删除用户'; break;
+                        case '10': val.OpType = '删除指纹'; break;
+                        case '11': val.OpType = '删除密码'; break;
+                        case '12': val.OpType = '删除射频卡'; break;
+                        case '13': val.OpType = '清除数据'; break;
+                        case '14': val.OpType = '创建MF卡'; break;
+                        case '15': val.OpType = '登记MF卡'; break;
+                        case '16': val.OpType = '注册MF卡'; break;
+                        case '17': val.OpType = '删除MF卡注册'; break;
+                        case '18': val.OpType = '清除MF卡内容'; break;
+                        case '19': val.OpType = '把登记数据移到卡中'; break;
+                        case '20': val.OpType = '把卡中的数据复制到机器中'; break;
+                        case '21': val.OpType = '设置时间'; break;
+                        case '22': val.OpType = '出厂设置'; break;
+                        case '23': val.OpType = '删除进出记录'; break;
+                        case '24': val.OpType = '清除管理员权限'; break;
+                        case '25': val.OpType = '修改门禁组设置'; break;
+                        case '26': val.OpType = '修改用户门禁设置'; break;
+                        case '27': val.OpType = '修改门禁时间段'; break;
+                        case '28': val.OpType = '修改开锁组合设置'; break;
+                        case '29': val.OpType = '开锁'; break;
+                        case '30': val.OpType = '登记新用户'; break;
+                        case '31': val.OpType = '更改指纹属性'; break;
+                        case '32': val.OpType = '胁迫报警'; break;
+                        case '33': val.OpType = '门铃呼叫'; break;
+                        case '34': val.OpType = '反潜'; break;
+                        case '35': val.OpType = '删除考勤照片'; break;
+                        case '36': val.OpType = '修改用户其他信息'; break;
+                        case '37': val.OpType = '节假日'; break;
+                        case '38': val.OpType = '还原数据'; break;
+                        case '39': val.OpType = '备份数据'; break;
+                        case '40': val.OpType = 'U盘上传'; break;
+                        case '41': val.OpType = 'U盘下载'; break;
+                        case '42': val.OpType = 'U盘考勤记录加密'; break;
+                        case '43': val.OpType = 'U盘下载成功后删除记录'; break;
+                        case '53': val.OpType = '出门开关'; break;
+                        case '54': val.OpType = '门磁'; break;
+                        case '55': val.OpType = '报警'; break;
+                        case '56': val.OpType = '恢复参数'; break;
+                        case '68': val.OpType = '注册用户照片'; break;
+                        case '69': val.OpType = '修改用户照片'; break;
+                        case '70': val.OpType = '修改用户姓名'; break;
+                        case '71': val.OpType = '修改用户权限'; break;
+                        case '76': val.OpType = '修改网络设置IP'; break;
+                        case '77': val.OpType = '修改网络设置掩码'; break;
+                        case '78': val.OpType = '修改网络设置网关'; break;
+                        case '79': val.OpType = '修改网络设置DNS'; break;
+                        case '80': val.OpType = '修改连接设置密码'; break;
+                        case '81': val.OpType = '修改连接设置设备ID'; break;
+                        case '82': val.OpType = '修改云服务器地址'; break;
+                        case '83': val.OpType = '修改云服务器端口'; break;
+                        case '87': val.OpType = '修改门禁记录设置'; break;
+                        case '88': val.OpType = '修改人脸参数标志'; break;
+                        case '89': val.OpType = '修改指纹参数标志'; break;
+                        case '90': val.OpType = '修改指静脉参数标志'; break;
+                        case '91': val.OpType = '修改掌纹参数标志'; break;
+                        case '92': val.OpType = 'U盘升级标志'; break;
+                        case '100': val.OpType = '修改RF卡信息'; break;
+                        case '101': val.OpType = '登记人脸'; break;
+                        case '102': val.OpType = '修改人员权限'; break;
+                        case '103': val.OpType = '删除人员权限'; break;
+                        case '104': val.OpType = '增加人员权限'; break;
+                        case '105': val.OpType = '删除门禁记录'; break;
+                        case '106': val.OpType = '删除人脸'; break;
+                        case '107': val.OpType = '删除人员照片'; break;
+                        case '108': val.OpType = '修改参数'; break;
+                        case '109': val.OpType = '选择WIFISSID'; break;
+                        case '110': val.OpType = 'proxy使能'; break;
+                        case '111': val.OpType = 'proxyip修改'; break;
+                        case '112': val.OpType = 'proxy端口修改'; break;
+                        case '113': val.OpType = '修改人员密码'; break;
+                        case '114': val.OpType = '修改人脸信息'; break;
+                        case '115': val.OpType = '修改operator的密码'; break;
+                        case '116': val.OpType = '恢复门禁设置'; break;
+                        case '117': val.OpType = 'operator密码输入错误'; break;
+                        case '118': val.OpType = 'operator密码锁定'; break;
+                        case '120': val.OpType = '修改Legic卡数据长度'; break;
+                        case '121': val.OpType = '登记指静脉'; break;
+                        case '122': val.OpType = '修改指静脉'; break;
+                        case '123': val.OpType = '删除指静脉'; break;
+                        case '124': val.OpType = '登记掌纹'; break;
+                        case '125': val.OpType = '修改掌纹'; break;
+                        case '126': val.OpType = '删除掌纹'; break;
+                    }
+                })
+            } else if (conType == '3') {//控制记录
+                $.each(r.data.info, function (n, val) {
+                    switch (val.DevAction) {
+                        case '1': val.DevAction = '开门'; break;
+                        case '2': val.DevAction = '关门'; break;
+                        case '3': val.DevAction = '常开'; break;
+                        case '4': val.DevAction = '常关'; break;
+                    }
+                    if (val.Result == '0') {
+                        val.Result = '控制成功'
+                    } else if (val.Result == null) {
+                        val.Result = '等待响应'
+                    } else {
+                        val.Result = '控制失败'
+                    }
+                })
+            }
+            if (callback) callback(r);
+        }
+        //导出数据模板
+        //obj 操作 a对象
+        function exportlist(obj, url) {
+            var html = '<a href=' + ajaxUrl + url + '?token=' + token;
+            if (param.DeviceName) html += '&DeviceName=' + param.DeviceName;
+            if (param.startDateTime) html += '&startDateTime=' + (Date.parse(param.startDateTime) / 1000)
+            if (param.endDateTime) html += '&endDateTime=' + (Date.parse(param.endDateTime) / 1000);
+            html += ' id="exportlist"></a>';
+            $(obj).parent().append(html);
+
+            $('#exportlist')[0].click();
+            setTimeout(function () {
+                $('#exportlist').remove();
+            }, 3000);
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.getobj(url, param, {
+                pageelem: 'bottomPaging',
+                htmltpl: htmltpl,
+                htmlobj: htmlobj,
+                total: ''
+            }, pagechange, dealdata);
+        }
+    </script>
+</body>
+
+</html>

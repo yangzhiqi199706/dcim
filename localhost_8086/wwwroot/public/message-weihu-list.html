@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>消息中心->维护任务</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入维护任务名称" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>维护编号</th>
+                                    <th>维护任务名称</th>
+                                    <th>维护内容</th>
+                                    <th>关联设备</th>
+                                    <th>发起人</th>
+                                    <th>维护负责人</th>
+                                    <th>计划完成时间</th>
+                                    <th>状态</th>
+                                    <th>发起时间</th>
+                                    <th>系统派发</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.WHTaskNumber}}</td>
+                                        <td>{{list.WHTaskName}}</td>
+                                        <td>{{list.WHTaskCon}}</td>
+                                        <td>{{list.WHDeviceId}}</td>
+                                        <td>{{list.CreateEmpName}}</td>
+                                        <td>{{list.WHEmpName}}</td>
+                                        <td>{{list.PlanComplateDate}}</td>
+                                        <td>{{list.WHStatus}}</td>
+                                        <td>{{list.create_time}}</td>
+                                        <td>{{if list.system==1}}否{{else}}是{{/if}}</td>
+                                        <td>
+                                            <a title="执行" onclick="xadmin.open('执行','yunwei-weihu-do.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe652;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetWHTaskListKey";
+        $(function(){
+            param.Status='待执行';
+            //初始化数据
+            list.get(url, param);
+            //分页回调
+            function pagechange(curr) {
+                param.pageNo = curr;
+                list.get(url, param);
+            }
+            layui.use("form", function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    list.get(url, param);
+                    return false;
+                });
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+</html>

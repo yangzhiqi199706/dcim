@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script language="javascript" src="js/echarts.js"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->维保管理->供应商评分</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" lay-filter="type" value="year" title="年" checked>
+                                <input type="radio" name="type" lay-filter="type" value="month" title="月">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="year" name="year" class="layui-input" placeholder="年">
+                                <input type="text" id="month" name="month" class="layui-input" placeholder="年月"
+                                    style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="capacity-chart" class="score-chart">
+                            <div>
+                                <span>响应速度排名</span>
+                                <div>
+                                    <table class="layui-table">
+                                        <tbody id="speed">
+                                            <script type="text/html" id="speedtemplate">
+                                                {{if data.length!=0}} {{each data as list i}}
+                                                {{if i<4}}
+                                                <tr> 
+                                                    <td>{{list.SupplierName}}</td>
+                                                    <td>
+                                                        <i class="layui-icon" {{if list.PreWBResponseSpeed>=1}}style="color: #FF6400;"{{else if list.PreWBResponseSpeed<1 && list.PreWBResponseSpeed>0}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastSpeed}}%,#666 {{list.lastSpeed+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                        <i class="layui-icon" {{if list.PreWBResponseSpeed>=2}}style="color: #FF6400;"{{else if list.PreWBResponseSpeed<2 && list.PreWBResponseSpeed>1}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastSpeed}}%,#666 {{list.lastSpeed+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                        <i class="layui-icon" {{if list.PreWBResponseSpeed>=3}}style="color: #FF6400;"{{else if list.PreWBResponseSpeed<3 && list.PreWBResponseSpeed>2}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastSpeed}}%,#666 {{list.lastSpeed+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                        <i class="layui-icon" {{if list.PreWBResponseSpeed>=4}}style="color: #FF6400;"{{else if list.PreWBResponseSpeed<4 && list.PreWBResponseSpeed>3}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastSpeed}}%,#666 {{list.lastSpeed+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                        <i class="layui-icon" {{if list.PreWBResponseSpeed==5}}style="color: #FF6400;"{{/if}}>&#xe67a;</i>
+                                                    </td>
+                                                </tr>
+                                                {{/if}}
+                                                {{/each}} {{else}}
+                                                <tr>
+                                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                                </tr>
+                                                {{/if}}
+                                            </script>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <span>维保质量评分排名</span>
+                                <table class="layui-table">
+                                    <tbody id="qa">
+                                        <script type="text/html" id="qatemplate">
+                                            {{if data.length!=0}} {{each data as list i}}
+                                            {{if i<4}}
+                                            <tr> 
+                                                <td>{{list.SupplierName}}</td>
+                                                <td>
+                                                    <i class="layui-icon" {{if list.PreWBQa>=1}}style="color: #FF6400;"{{else if list.PreWBQa<1 && list.PreWBQa>0}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastQa}}%,#666 {{list.lastQa+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                    <i class="layui-icon" {{if list.PreWBQa>=2}}style="color: #FF6400;"{{else if list.PreWBQa<2 && list.PreWBQa>1}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastQa}}%,#666 {{list.lastQa+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                    <i class="layui-icon" {{if list.PreWBQa>=3}}style="color: #FF6400;"{{else if list.PreWBQa<3 && list.PreWBQa>2}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastQa}}%,#666 {{list.lastQa+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                    <i class="layui-icon" {{if list.PreWBQa>=4}}style="color: #FF6400;"{{else if list.PreWBQa<4 && list.PreWBQa>3}}style="color: transparent;background: linear-gradient(to right, #FF6400 0%,#FF6400 {{list.lastQa}}%,#666 {{list.lastQa+1}}%,#666 100%);background-clip: text;-webkit-background-clip: text;"{{/if}}>&#xe67a;</i>
+                                                    <i class="layui-icon" {{if list.PreWBQa==5}}style="color: #FF6400;"{{/if}}>&#xe67a;</i>
+                                                </td>
+                                            </tr>
+                                            {{/if}}
+                                            {{/each}} {{else}}
+                                            <tr>
+                                                <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                            </tr>
+                                            {{/if}}
+                                        </script>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <span>维保数量排名</span>
+                                <div id="scoreChart"></div>
+                            </div>
+                        </div>
+                        <table class="layui-table" id="table-list">
+                            <thead>
+                                <tr>
+                                    <th>供应商Id</th>
+                                    <th>供应商</th>
+                                    <th>响应速度评分</th>
+                                    <th>维保质量评分</th>
+                                    <th>维保数量</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list">
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>{{list.SupplierId}}</td>
+                                        <td>{{list.SupplierName}}</td>
+                                        <td>{{list.PreWBResponseSpeed}}</td>
+                                        <td>{{list.PreWBQa}}</td>
+                                        <td>{{list.TotalWBNumber}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            $('.con-nav a').click(function () {
+                $(this).removeClass('layui-btn-primary').siblings().addClass('layui-btn-primary');
+                if ($(this).index() == 0) {
+                    $('#table-list').show();
+                    $('#capacity-chart').hide();
+                } else {
+                    $('#table-list').hide();
+                    $('#capacity-chart').show();
+                }
+            }).first().click();
+            //参数
+            var supplierparam = {
+                token: token,
+                startDateTime: '',
+                endDateTime: ''
+            }
+            //统计
+            GetScore(supplierparam);
+            function GetScore(supplierparam) {
+                list.info('SupplierScoreKey', supplierparam, function (r) {
+
+                    var scoretitle = [];
+                    var scoredata = []
+                    $.each(r.data, function (n, val) {
+                        scoretitle.push(val.SupplierName);
+                        scoredata.push(val.TotalWBNumber);
+                        val.lastSpeed = ((val.PreWBResponseSpeed % 1) / 1) * 100;
+                        val.lastQa = ((val.PreWBQa % 1) / 1) * 100;
+                    });
+
+                    var html = template("listtemplate", r);
+                    $("#list").html(html);
+
+                    speedr = r;
+                    //按速度排序
+                    speedr.data.sort(function (a, b) {
+                        if (a.PreWBResponseSpeed > b.PreWBResponseSpeed) {
+                            return -1;
+                        } else if (a.PreWBResponseSpeed == b.PreWBResponseSpeed) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    });
+                    var html = template("speedtemplate", speedr);
+                    $("#speed").html(html);
+
+                    qar = r;
+                    //按质量排序
+                    qar.data.sort(function (a, b) {
+                        if (a.PreWBQa > b.PreWBQa) {
+                            return -1;
+                        } else if (a.PreWBQa == b.PreWBQa) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    });
+                    var html = template("qatemplate", qar);
+                    $("#qa").html(html);
+
+                    var scoreChartDom = document.getElementById('scoreChart');
+                    var scoreChart = echarts.init(scoreChartDom);
+                    var scoreChartoption = {
+                        xAxis: {
+                            type: 'category',
+                            data: scoretitle,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    type: 'solid',
+                                    color: '#1898ED',
+                                    width: '1'
+                                }
+                            },
+                            axisLabel: {
+                                interval: 0,
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+                                formatter: '{value}',
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: 'rgba(24, 152, 237, 0.17）',
+                                    type: 'dashed'
+                                }
+                            },
+                        },
+                        grid: {
+                            top: '20',
+                            left: '50',
+                            bottom: '20'
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            }
+                        },
+                        series: [{
+                            data: scoredata,
+                            label: {
+                                show: true,
+                                position: 'top'
+                            },
+                            type: 'bar',
+                            barWidth: 20,
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: '#F4F8FB'
+                            },
+                        }]
+                    };
+                    scoreChartoption && scoreChart.setOption(scoreChartoption);
+                })
+            };
+
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#month',
+                    type: 'month'
+                });
+                laydate.render({
+                    elem: '#year',
+                    type: 'year'
+                });
+                var type = 'year';
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    if (data.value == 'year') {
+                        $('#year').show();
+                        $('#month').hide();
+                        type = 'year';
+                    } else {
+                        $('#year').hide();
+                        $('#month').show();
+                        type = 'month';
+                    }
+                    return false;
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    let start, end;
+                    if (type == 'year') {
+                        start = data.field.year + '-01-01 00:00:00';
+                        end = data.field.year + '-12-31 23:59:59';
+                    } else {
+                        start = data.field.month + '-01 00:00:00';
+                        let endday = '31';
+                        let year = data.field.month.split('-')[0];
+                        let month = data.field.month.split('-')[1];
+                        switch (month) {
+                            case '04':
+                            case '06':
+                            case '09':
+                            case '11': endday = 30; break;
+                            case '02':
+                                if (year % 4 == 0) {
+                                    if (year % 100 == 0) {
+                                        endday = year % 400 == 0 ? 29 : 28;
+                                    } else {
+                                        endday = 29;
+                                    }
+                                } else {
+                                    endday = 28;
+                                }
+                                break;
+                        }
+                        end = data.field.month + '-' + endday + ' 23:59:59';
+                    }
+                    supplierparam.startDateTime = start;
+                    supplierparam.endDateTime = end;
+                    GetScore(supplierparam);
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

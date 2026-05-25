@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .layui-form-checkbox {
+            margin-top: 0 !important;
+        }
+
+        .thrbox+.layui-form-checkbox {
+            margin: 5px 0 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">角色<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="role_name" lay-filter="role_name" class="layui-input" placeholder="角色"
+                            value="" lay-verify="required">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">菜单权限<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <table class="layui-table">
+                            <tbody id="menuli">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">动环权限<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <table class="layui-table">
+                            <tbody id="dcimlist">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            layui.use('form', function () {
+                var form = layui.form;
+
+                //菜单
+                list.info('MenuList', {
+                    token: token
+                }, function (r) {
+                    var menu = '';
+                    if (r.data.length == 0) {
+                        menu = '<tr><td>请联系管理员添加菜单</td></tr>'
+                    } else {
+                        //版本判断
+                        r.data = setdcim(r)
+                        $.each(r.data, function (n, val) {
+                            var childrenlen = val.children ? val.children.length : 1;
+                            menu += '<tr>';
+                            menu += '<td rowspan="' + childrenlen + '">';
+                            menu += '<input name="role_menu" type="checkbox" lay-skin="primary" lay-filter="parent" title="' + val.menu_name + '" value="' + val.id + '"  id="' + val.id + '">';
+                            menu += '</td>';
+                            if (val.children && val.children.length != 0) {
+                                $.each(val.children, function (x, y) {
+                                    if (x == 0) {
+                                        setmenutpl(y, val);
+                                        return false;
+                                    }
+                                });
+                            }
+                            menu += '</tr>';
+                            if (val.children && val.children.length != 0) {
+                                $.each(val.children, function (x, y) {
+                                    if (x != 0) {
+                                        menu += '<tr>';
+                                        setmenutpl(y, val);
+                                        menu += '</tr>';
+                                    }
+                                });
+                            }
+                        });
+                        function setmenutpl(y, val) {
+                            menu += '<td>';
+                            menu += '<input name="role_menu" lay-filter="father"  lay-skin="primary" data-parent="' + val.id + '" type="checkbox" title="' + y.menu_name + '" value="' + y.id + '">';
+                            menu += '</td>';
+                            if (y.children && y.children.length != 0) {
+                                menu += '<td style="display:none">';
+                                $.each(y.children, function (a, b) {
+                                    // menu += '<input name="role_menu" lay-filter="childone" lay-skin="primary" data-child-parent="' + val.id + '" type="checkbox" title="' + b.menu_name + '" value="' + b.id + '">';
+                                    menu += `
+                                        <table class="layui-table">
+                                            <tbody>`;
+                                    var childrenlen = b.children ? b.children.length : 1;
+                                    menu += '<tr>';
+                                    menu += '<td rowspan="' + childrenlen + '">';
+                                    menu += '<input name="role_menu" type="checkbox" lay-skin="primary" lay-filter="parent" title="' + b.menu_name + '" value="' + b.id + '"  id="' + b.id + '">';
+                                    menu += '</td>';
+                                    if (b.children && b.children.length != 0) {
+                                        $.each(b.children, function (m, n) {
+                                            if (m == 0) {
+                                                setmenutpl(n, b);
+                                                return false;
+                                            }
+                                        });
+                                    }
+                                    menu += '</tr>';
+                                    if (b.children && b.children.length != 0) {
+                                        $.each(b.children, function (m, n) {
+                                            if (m != 0) {
+                                                menu += '<tr>';
+                                                setmenutpl(n, b);
+                                                menu += '</tr>';
+                                            }
+                                        });
+                                    }
+                                    menu += `</tbody>
+                                        </table>`;
+                                });
+                                menu += '</td>';
+                            }
+                        }
+                    }
+                    $('#menuli').html(menu);
+                    list.info('GetDmpageListKey', {
+                        token: token,
+                        ComboBox: 'all'
+                    }, function (res) {
+                        let pagehtml = '';
+                        if (res.data.length == 0) {
+                            pagehtml = '<tr><td>请添加动环系统页面</td></tr>'
+                        } else {
+                            $.each(res.data, function (n, val) {
+                                var childrenlen = val.children ? (val.children.length == 0 ? 1 : val.children.length) : 1;
+                                pagehtml += '<tr>';
+                                pagehtml += '<td rowspan="' + childrenlen + '">';
+                                pagehtml += '<input name="role_page" data-type="page" type="checkbox" lay-skin="primary" lay-filter="parent" title="' + val.PageName + '" value="' + val.id + '"  id="page' + val.id + '">';
+                                pagehtml += '</td>';
+                                if (val.children && val.children.length != 0) {
+                                    $.each(val.children, function (x, y) {
+                                        if (x == 0) {
+                                            setPagetpl(y, val);
+                                            return false;
+                                        }
+                                    });
+                                }
+                                pagehtml += '</tr>';
+                                if (val.children && val.children.length != 0) {
+                                    $.each(val.children, function (x, y) {
+                                        if (x != 0) {
+                                            pagehtml += '<tr>';
+                                            setPagetpl(y, val);
+                                            pagehtml += '</tr>';
+                                        }
+                                    });
+                                }
+                            });
+                            function setPagetpl(y, val) {
+                                pagehtml += '<td>';
+                                pagehtml += '<input name="role_page" data-type="page" lay-filter="father"  lay-skin="primary" data-parent="' + val.id + '" type="checkbox" title="' + y.PageName + '" value="' + y.id + '" id="page' + y.id + '">';
+                                pagehtml += '</td>';
+                                if (y.children && y.children.length != 0) {
+                                    pagehtml += '<td>';
+                                    $.each(y.children, function (a, b) {
+                                        var childrenlen = b.children ? (b.children.length == 0 ? 1 : b.children.length) : 1;
+                                        pagehtml += '<input name="role_page" data-type="page" class="thrbox" type="checkbox" lay-skin="primary" lay-filter="childone" data-parent="' + val.id + '" data-child-parent="' + y.id + '" title="' + b.PageName + '" value="' + b.id + '"  id="page' + b.id + '"><br/>';
+                                        if (b.children && b.children.length != 0) {
+                                            $.each(b.children, function (m, n) {
+                                                if (m == 0) {
+                                                    setPagetpl(n, b);
+                                                    return false;
+                                                }
+                                            });
+                                        }
+                                        if (b.children && b.children.length != 0) {
+                                            $.each(b.children, function (m, n) {
+                                                if (m != 0) {
+                                                    setPagetpl(n, b);
+                                                }
+                                            });
+                                        }
+                                    });
+                                    pagehtml += '</td>';
+                                }
+                            }
+                        }
+                        $('#dcimlist').html(pagehtml);
+                        form.render();
+                        //全选二级菜单
+                        form.on('checkbox(parent)', function (data) {
+                            if (data.elem.checked) {
+                                $(data.elem).parent().siblings('td').find('input').prop("checked", true);
+                            } else {
+                                $(data.elem).parent().siblings('td').find('input').prop("checked", false);
+                            }
+                            if ($(data.elem).parent().attr('rowspan') > 1) {
+                                if (data.elem.checked) {
+                                    $(data.elem).parents('tr').siblings('tr').find('input[data-parent=' + data.value + ']').prop("checked", true).parent().next('td').find('input').prop("checked", true);
+                                } else {
+                                    $(data.elem).parents('tr').siblings('tr').find('input[data-parent=' + data.value + ']').prop("checked", false).parent().next('td').find('input').prop("checked", false);
+                                }
+                            }
+                            form.render();
+                        });
+                        //全选功能菜单 && 反选一级
+                        form.on('checkbox(father)', function (data) {
+                            if($(data.elem).attr('data-type')){
+                                $('#page' + $(data.elem).attr('data-parent')).prop("checked", true);
+                            }else{
+                                $('#' + $(data.elem).attr('data-parent')).prop("checked", true);
+                            }
+                            if (data.elem.checked) {
+                                $(data.elem).parent().next('td').find('input').prop("checked", true);
+                            } else {
+                                $(data.elem).parent().next('td').find('input').prop("checked", false);
+                            }
+                            form.render();
+                        });
+                        //反全选
+                        form.on('checkbox(childone)', function (data) {
+                            $(data.elem).parent().prev('td').find('input').prop("checked", true);
+                            if($(data.elem).attr('data-type')){
+                                $('#page' + $(data.elem).attr('data-child-parent')+',#page'+$(data.elem).attr('data-parent')).prop("checked", true);
+                            }else{
+                                $('#' + $(data.elem).attr('data-child-parent')+',#'+$(data.elem).attr('data-parent')).prop("checked", true);
+                            }
+                            form.render('checkbox');
+                        });
+                        //提交数据
+                        form.on("submit(submit)", function (data) {
+                            var strformData = new FormData($('#formNow')[0]);
+                            var role_menus = '';
+                            $.each(strformData.getAll('role_menu'), function (n, val) {
+                                role_menus += val + ',';
+                            });
+                            strformData.delete("role_menu");
+                            strformData.append("role_menus", role_menus.substring(0, role_menus.length - 1));
+
+                            var role_page = '';
+                            $.each(strformData.getAll('role_page'), function (n, val) {
+                                role_page += val + ',';
+                            });
+                            strformData.delete("role_page");
+                            strformData.append("role_dmpage", role_page.substring(0, role_page.length - 1));
+                            strformData.append('token', token);
+                            list.form('AddRole', strformData, function (r) {
+                                backToparent('添加成功');
+                            })
+                        })
+                    })
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

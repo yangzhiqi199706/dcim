@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .layui-form-item .layui-input-inline {
+            width: 210px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>系统配置->系统信息</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <a class="layui-btn layui-btn-primary" href="system-parameter-platform.html">
+                            平台设置
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="system-pushset-list.html">
+                            推送配置
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="system-information-list.html">
+                            系统信息
+                        </a>
+                        <a class="layui-btn" href="system-about-list.html">
+                            关于我们
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                            <script type="text/html" id="detail">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">公司名称</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="company" value="成都思迈特信息科技有限公司" name="company" autocomplete="off" class="layui-input" readonly>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">网站</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="website" value="www.c-smt.com.cn" name="website" autocomplete="off" class="layui-input" readonly>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">联系电话</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="telphone" value="15882006695" name="telphone" autocomplete="off" class="layui-input" readonly>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">软件版本号</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="version" value="1.0.1" name="version" autocomplete="off" class="layui-input" readonly>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">到期时间</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="EndTime" value="" autocomplete="off" class="layui-input" readonly/>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">机器码</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="MAC" value="" autocomplete="off" class="layui-input" readonly/>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">Licence</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="Licence" value="" name="Licence" autocomplete="off" class="layui-input"/>
+                                    </div>
+                                    <a class="layui-btn layui-btn" onclick="SaveLicence()">更新</a>
+                                </div>
+                                <!-- <div class="layui-form-item">
+                                    <label class="layui-form-label">公司名称</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="company" value="{{data.company}}" name="company" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">网站</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="website" value="{{data.website}}" name="website" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">联系电话</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="telphone" value="{{data.telphone}}" name="telphone" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">软件版本号</label>
+                                    <div class="layui-input-inline">
+                                        <input type="text" id="version" value="{{data.version}}" name="version" autocomplete="off" class="layui-input">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label"></label>
+                                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                                </div> -->
+                            </script>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+
+            list.info("GetLicenseKey", {
+                token: token,
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                $('#Licence').val(r.data.data);
+                $('#MAC').val(r.data.mac);
+                getTime(r.data.data);
+            })
+
+            // layui.use(["form"], function () {
+            //     $ = layui.jquery;
+            //     var form = layui.form;
+            //     //监听提交
+            //     form.on("submit(submit)", function (data) {
+            //         list.info('ChangePlatKey',{
+            //             token:token,
+            //             company:$('input[name=company]').val(),
+            //             website:$('input[name=website]').val(),
+            //             telphone:$('input[name=telphone]').val(),
+            //             version:$('input[name=version]').val(),
+            //         },function(r){
+            //             layer.msg("修改成功", {
+            //                 icon: 1,
+            //                 time: 1000
+            //             });
+            //         })
+            //     });
+            // });
+        })
+        //更新
+        function SaveLicence() {
+            var code = $('#Licence').val();
+            list.info("ChangeLicenseKey", {
+                code: code
+            }, function (r) {
+                getTime(code);
+            })
+        }
+        //时间
+        function getTime(code) {
+            list.info("VarLicenseKey", {
+                code: code
+            }, function (r) {
+                if (r.data.indexOf('不正确') > -1) {
+                    localStorage.clear();
+                    tologin();
+                    return false;
+                }
+                $('#EndTime').val(r.data)
+            })
+        }
+    </script>
+</body>
+
+</html>

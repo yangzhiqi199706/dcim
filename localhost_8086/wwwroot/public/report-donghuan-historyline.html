@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script language="javascript" src="js/echarts.js"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div id="chartLine" style="width:100%;height:740px;"></div>
+    </div>
+    <script>
+        var chartData = parent.theChartData()[0];
+        var startData = parent.theChartData()[1];
+        var endData = parent.theChartData()[2];
+        $(function () {
+            // console.log(getHoursBetween(new Date(startData), new Date(endData)));
+            // console.log(JSON.stringify(chartData));
+            //根据区间生成小时   时间区间
+            let chartTime = getHoursBetween(new Date(startData), new Date(endData))
+
+            // 处理数据
+            let seriesData = {};
+            chartData.data.forEach(item => {
+                let deviceName = item.DeviceName;
+                item.originalinfo.forEach(infoItem => {
+                    let paramKey = infoItem.paramKey;
+
+                    if (!seriesData[`${deviceName}-${paramKey}`]) {//初始执行补0
+                        seriesData[`${deviceName}-${paramKey}`] = Array(chartTime.length).fill(0);
+                    }
+
+                    let paramVal = parseFloat(infoItem.paramVal.replace(/[^\d.-]/g, '')); // 提取数值部分
+                    let createTime = item.create_time.slice(0, 13); // 提取时间部分
+                    // 找到对应的时间点插入数据
+                    let timeIndex = chartTime.indexOf(createTime);
+                    if (timeIndex !== -1 && !seriesData[`${deviceName}-${paramKey}`][timeIndex]) {
+                        seriesData[`${deviceName}-${paramKey}`][timeIndex] = paramVal;
+                    }
+                });
+            });
+
+            let series = [];
+            for (let key in seriesData) {
+                series.push({
+                    name: key,
+                    type: 'line',
+                    smooth: true,
+                    data: seriesData[key]
+                });
+            }
+
+            // 初始化ECharts实例
+            setLine('chartLine', chartTime, series)
+            // var myChart = echarts.init($('#chartLine')[0]);
+            // var option = {
+            //     tooltip: {
+            //         trigger: 'axis'
+            //     },
+            //     legend: {
+            //         data: series.map(s => s.name),
+            //         top: '5%',
+            //         right: '0%'
+            //     },
+            //     xAxis: {
+            //         type: 'category',
+            //         data: chartTime
+            //     },
+            //     yAxis: {
+            //         type: 'value'
+            //     },
+            //     series: series
+            // };
+            // myChart.setOption(option);
+        });
+        //生成曲线
+        function setLine(obj, time, data) {
+            var statusChartDom = document.getElementById(obj);
+            var statusChart = echarts.init(statusChartDom);
+
+            var statusChartoption = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                grid: {
+                    left: 100,
+                    right: 100,
+                    bottom: 50,
+                    top: 150,
+                    containLabel: true
+                },
+                dataZoom: [
+                    {
+                        startValue: startData.split(':')[0],
+                        endValue: endData.split(':')[0]
+                    },
+                    {
+                        type: 'inside'
+                    }
+                ],
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    axisLine: {
+                        lineStyle: {
+                            color: '#1898ED'
+                        }
+                    },
+                    axisLabel: {
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+                        show: true,
+                    },
+                    data: time
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        }
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: 'rgba(24, 152, 237, 0.17',
+                            type: 'dashed'
+                        }
+                    }
+                },
+                series: data
+            };
+            statusChartoption && statusChart.setOption(statusChartoption);
+        }
+
+        //获取时间区间内的小时
+        function getHoursBetween(start, end) {
+            let hours = [];
+            for (let m = start; m <= end; m.setHours(m.getHours() + 1)) {
+                hours.push(getDateTime(new Date(m)).split(':')[0]);
+            }
+            return hours;
+        }
+    </script>
+</body>
+
+
+</html>

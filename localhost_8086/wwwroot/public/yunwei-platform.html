@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->我的工作台</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <table class="layui-table platform">
+                            <thead>
+                                <tr>
+                                    <th colspan="3" style="text-align:center ;">工单管理</th>
+                                </tr>
+                            </thead>
+                            <tbody class="chooseTable">
+                                <tr>
+                                    <td>待办</td>
+                                    <td>处理中</td>
+                                    <td>待审核</td>
+                                </tr>
+                                <tr id="order">
+                                    <td>0</td>
+                                    <td>0</td>
+                                    <td>0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="layui-table platform">
+                            <thead>
+                                <tr>
+                                    <th colspan="4" style="text-align:center ;">巡检维护</th>
+                                </tr>
+                            </thead>
+                            <tbody class="chooseTable">
+                                <tr>
+                                    <td>待执行巡检</td>
+                                    <td>逾期巡检</td>
+                                    <td>待执行维护</td>
+                                    <td>逾期维护</td>
+                                </tr>
+                                <tr id="xjwh">
+                                    <td>0</td>
+                                    <td>0</td>
+                                    <td>0</td>
+                                    <td>0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="layui-table platform x-right">
+                            <tbody class="chooseTable">
+                                <tr>
+                                    <td><a class="layui-btn"
+                                            onclick="xadmin.open('发起工单','yunwei-order-add.html')">发起工单</a></td>
+                                    <td><a class="layui-btn"
+                                            onclick="xadmin.open('值班日志','yunwei-zbrecord-add.html?status=false')">值班日志</a>
+                                    </td>
+                                    <td><a class="layui-btn"
+                                            onclick="xadmin.open('补前一班日志','yunwei-zbrecord-add.html?status=true')">补前一班日志</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="layui-table" id="table-list">
+                            <thead>
+                                <tr>
+                                    <th colspan="3">工单消息</th>
+                                    <th style="text-align:right;"><a title="查看更多"
+                                            onclick="xadmin.open('工单消息','yunwei-orderrecord-list.html')"
+                                            href="javascript:;">
+                                            >>查看更多
+                                        </a></th>
+                                </tr>
+                            </thead>
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>工单名称</th>
+                                    <th>消息内容</th>
+                                    <th>消息时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.OrderNumber}}</td>
+                                        <td>{{list.OrderName}}</td>
+                                        <td>{{list.MsgCon}}</td>
+                                        <td>{{list.create_time}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetOrderMsgKey";
+        var topWindow = $(window.parent.document);
+        $(function () {
+            list.info('PlatStatisticsKey', {
+                token: token
+            }, function (r) {
+                $('#order>td').eq(0).html(r.data.OrderNeedDo);
+                if (r.data.OrderNeedDo > 0) {
+                    $('#order>td').eq(0).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','工单管理');
+                        localStorage.setItem('orderStatus', '待办');
+                    })
+                }
+                $('#order>td').eq(1).html(r.data.OrderDealing);
+                if (r.data.OrderDealing > 0) {
+                    $('#order>td').eq(1).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','工单管理')
+                        localStorage.setItem('orderStatus', '处理中');
+                    })
+                }
+                $('#order>td').eq(2).html(r.data.OrderNeedCheck);
+                if (r.data.OrderNeedCheck > 0) {
+                    $('#order>td').eq(2).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','工单管理')
+                        localStorage.setItem('orderStatus', '待审核');
+                    })
+                }
+                $('#xjwh>td').eq(0).html(r.data.XJNeedCheck);
+                if (r.data.XJNeedCheck > 0) {
+                    $('#xjwh>td').eq(0).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','配置','巡检任务')
+                        localStorage.setItem('xjStatus', '待执行');
+                    });
+                }
+                $('#xjwh>td').eq(1).html(r.data.XJOverdue);
+                if (r.data.XJOverdue > 0) {
+                    $('#xjwh>td').eq(1).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','配置','巡检任务')
+                        localStorage.setItem('xjStatus', '逾期未执行');
+                    })
+                }
+                $('#xjwh>td').eq(2).html(r.data.WHNeedCheck);
+                if (r.data.WHNeedCheck > 0) {
+                    $('#xjwh>td').eq(2).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','维护任务')
+                        localStorage.setItem('whStatus', '待执行');
+                    });
+                }
+                $('#xjwh>td').eq(3).html(r.data.WHOverdue);
+                if (r.data.WHOverdue > 0) {
+                    $('#xjwh>td').eq(3).css('cursor', 'pointer').click(function () {
+                        clcikNav('运维管理','维护任务')
+                        localStorage.setItem('whStatus', '逾期未执行');
+                    })
+                }
+            });
+            function clcikNav(nav,type,child) {
+                var topWindow = $(window.parent.document);
+                var index=-1;
+                var childindex=0;
+                var childindex2=1;
+                list.info('myMenus', {
+                    token: token
+                }, function (r) {
+                    if(r.data.length!=0){
+                        $.each(r.data,function(n,val){
+                            if(val.menu_name==nav){
+                                index=n;
+                                if(type=='配置'){
+                                    $.each(val.children,function(x,y){
+                                        if(y.menu_name==type){
+                                            childindex=x;
+                                            $.each(y.children,function(a,b){
+                                                if(a == 0){
+                                                    $.each(b.children,function(m,n){
+                                                        childindex2++;
+                                                    })
+                                                }
+                                                if(a == 1){
+                                                    childindex2++;
+                                                    $.each(b.children,function(m,n){
+                                                        if(n.menu_name==child){
+                                                            return;
+                                                        }else{
+                                                            childindex2++;
+                                                        }
+                                                    })
+                                                }
+                                            })
+                                            return;
+                                        }
+                                    })
+                                }else{
+                                    $.each(val.children,function(x,y){
+                                        if(y.menu_name==type){
+                                            childindex=x;
+                                            return;
+                                        }
+                                    });
+                                }
+                                return;
+                            }
+                        })
+                        if (index != -1) {
+                            if(type=='配置'){
+                                $('#nav>li', topWindow).eq(index).children().eq(1).children().eq(childindex).find('li').eq(childindex2).find('a').click();
+                            }else{
+                                $('#nav>li', topWindow).eq(index).children().eq(1).children().eq(childindex).find('a').click();
+                            }
+                        } else {
+                            layer.msg('无权限查看', {
+                                icon: 5,
+                                time: 1000
+                            });
+                        }
+                    }
+                });
+            }
+            //初始化数据
+            list.get(url, param);
+            layui.use("form", function () {
+                $ = layui.jquery;
+                var form = layui.form;
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+
+</html>

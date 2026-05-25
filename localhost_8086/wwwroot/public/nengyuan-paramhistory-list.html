@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->自定义参数历史记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>日期范围</text>
+                                <input type="text" id="startDateTime" name="startDateTime" class="layui-input"
+                                    placeholder="开始日期">
+                                <input type="text" id="endDateTime" name="endDateTime" class="layui-input"
+                                    placeholder="结束日期">
+                                <text>自定义参数</text>
+                                <select id="ParamId" name="ParamId" lay-filter="ParamId" lay-search>
+                                    <option value="">请选择自定义参数</option>
+                                </select>
+                                <div class="two-search">
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">搜索</button>
+                                    <!-- <button class="layui-btn" type="button"
+                                    onclick="displayexport('down','paramtable','自定义参数历史记录')" id="down" style="margin-left: 0px;">导出</button> -->
+                                    <button class="layui-btn x-right" type="button" id="historyOut">导出</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-right-big">
+                            <table class="layui-table" id="paramtable">
+                                <thead>
+                                    <tr>
+                                        <th>编号</th>
+                                        <th>参数名称</th>
+                                        <th>日期</th>
+                                        <th>计算结果</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                            <td>{{list.ParamName}}</td>
+                                            <td>{{list.Day}}</td>
+                                            <td>{{list.Result.replace(/,/g, '')}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                        <table id="listOut" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>参数名称</th>
+                                    <th>日期</th>
+                                    <th>计算结果</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                        <script type="text/html" id="details">
+                            {{if data.length!=0}} {{each data as list i}}
+                                <tr>
+                                    <td>{{(i+1)}}</td>
+                                    <td>{{list.ParamName}}</td>
+                                    <td>{{list.Day}}</td>
+                                    <td>{{list.Result.replace(/,/g, '')}}</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                            {{/if}}
+                        </script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetParamDayListKey";
+        $(function () {
+            //初始化数据
+            list.get(url, param);
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({
+                    elem: '#startDateTime',
+                    type: 'date',
+                    done: function (value, date, endDate) {
+                        // 设置默认时间为 00:00:00
+                        if (value) {
+                            $('#startDateTime').val(value + ' 00:00:00');
+                        }
+                    }
+                });
+                laydate.render({
+                    elem: '#endDateTime',
+                    type: 'date',
+                    done: function (value, date, endDate) {
+                        // 设置默认时间为 23:59:59
+                        if (value) {
+                            $('#endDateTime').val(value + ' 23:59:59');
+                        }
+                    }
+                });
+                list.info('GetParamListKey', {
+                    token: token,
+                    ComboBox: 'all'
+                }, function (r) {
+                    var paramhtml = `<option value="">请选择自定义参数</option>`;
+                    if (r.data.length != 0) {
+                        $.each(r.data, function (n, val) {
+                            paramhtml += `<option value="` + val.id + `">` + val.ParamName + `</option>`;
+                        })
+                    }
+                    $("#ParamId").html(paramhtml);
+                    // form.on("select(id)", function (data) {
+                    //     var ParamId = data.value;
+                    //     console.log(ParamId);
+                    // })
+                    form.render();
+                })
+
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    // console.log(data);
+
+                    // console.log(data.field);
+
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.ParamId = data.field.ParamId;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    list.get(url, param);
+                    return false;
+                });
+            });
+        })
+        //导出
+        $('#historyOut').click(function () {
+            list.info(url, {
+                token: token,
+                ComboBox: 'all',
+                search: param.search,
+                startDateTime: param.startDateTime,
+                endDateTime: param.endDateTime,
+                ParamId: param.ParamId
+            }, function (res) {
+                // console.log('res', res);
+                if (res.data.length > 0) {
+                    dealdata(res, function (r) {
+                        // console.log(r);
+                        let htmls = template("details", r);
+                        $("#listOut tbody").html(htmls);
+                        displayexport('historyOut', 'listOut', '自定义参数历史记录', true);
+                    });
+                } else {
+                    layer.msg("没有可导出的数据", {
+                        icon: 5,
+                        time: 1000
+                    });
+                }
+            })
+        });
+
+        // 处理数据
+        function dealdata(r, callback) {
+            let data = r.data;
+            if (callback) {
+                let res = {
+                    data: data
+                }
+                callback(res);
+            }
+        }
+
+        //导出数据模板
+        //obj 操作 a对象
+        // function exportlist(obj, url) {
+        //     var html = '<a href=' + ajaxUrl + url + '?token=' + token;
+        //     if (param.search) html += '&search=' + param.search;
+        //     if (param.startDateTime) html += '&startDateTime=' + (Date.parse(param.startDateTime) / 1000)
+        //     if (param.endDateTime) html += '&endDateTime=' + (Date.parse(param.endDateTime) / 1000);
+        //     html += ' id="exportlist"></a>';
+        //     $(obj).parent().append(html);
+
+        //     $('#exportlist')[0].click();
+        //     setTimeout(function () {
+        //         $('#exportlist').remove();
+        //     }, 3000);
+        // }
+
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+
+</html>

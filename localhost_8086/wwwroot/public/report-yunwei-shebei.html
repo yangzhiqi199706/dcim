@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表管理->运维管理->设备可用性</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" value="month" title="本月" lay-filter="type"  checked>
+                                <input type="radio" name="type" value="upmonth" title="上月" lay-filter="type">
+                                <input type="radio" name="type" value="auto" title="自定义" lay-filter="type">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="startDateTime" class="layui-input" placeholder="开始日期" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="endDateTime" class="layui-input" placeholder="结束日期" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <div class="layui-inline layui-show-xs-block x-right">
+                            <button class="layui-btn search" lay-submit type="button">导出</button>
+                        </div>
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="massage-box massage-boxsmall">
+                            <div class="capacity-statistics-title">设备可用性统计</div>
+                            <table class="layui-table" id="view-route">
+                                <thead>
+                                    <tr>
+                                        <th>可用性等级</th>
+                                        <th>设备数量</th>
+                                        <th>可用性范围</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>L1</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>L2</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>L3</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>L4</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="massage-box massage-box-md5">
+                            <div class="capacity-statistics-title">设备可用性情况</div>
+                            <div id="yearChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-boxsmall">
+                            <div class="capacity-statistics-title">设备可用性情况</div>
+                            <div id="totalChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md12">
+                            <div class="capacity-statistics-title">维护任务详细信息</div>
+                            <form class="x-right layui-form">
+                                <div class="layui-inline layui-show-xs-block">
+                                    <select id="AssetsTypeId" name="AssetsTypeId" lay-filter="AssetsTypeId">
+                                        <option value="">资产类型</option>
+                                    </select>
+                                </div>
+                            </form>
+                            <div class="chartmargin"></div>
+                            <table class="layui-table" id="view-route" >
+                                <thead>
+                                    <tr>
+                                        <th>编号</th>
+                                        <th>资产编号</th>
+                                        <th>资产类型</th>
+                                        <th>型号</th>
+                                        <th>资产描述</th>
+                                        <th>资产状态</th>
+                                        <th>关联动环</th>
+                                        <th>可用性</th>
+                                        <th>故障时间（小时）</th>
+                                        <th>购置日期</th>
+                                        <th>区域</th>
+                                        <th>所属服务器</th>
+                                        <th>机柜列</th>
+                                        <th>机柜</th>
+                                        <th>占用U位</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "";
+        $(function(){
+            var yearChartDom = document.getElementById('yearChart');
+            var yearChart = echarts.init(yearChartDom);
+            var yeartitle = ['L1','L2','L3','L4'];
+            var yeardata = ['0','0','0','0'];
+            var yeardata2 = ['0','0','0','0'];
+            var yeardata3 = ['0','0','0','0'];
+            var yeardata4 = ['0','0','0','0'];
+            var yearChartoption={
+                legend: {
+                    textStyle: {
+                        color:'#A2CAE1',
+                        fontSize:'11',
+                        lineHeight: 15
+                    },
+                },
+                xAxis: {
+                    type: 'category',
+                    data: yeartitle,
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'solid',
+                            color:'#F4F8FB',
+                            width:'1'
+                        }
+                    },
+                    axisLabel: {
+                        textStyle: {
+                            color: '#A2CAE1',//坐标值得具体的颜色
+                            lineHeight:30
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'solid',
+                            color:'#F4F8FB',
+                            width:'1'
+                        }
+                    },
+                    splitLine:{show: false},
+                    axisLabel: {
+                        interval:0,
+                        textStyle: {
+                            color: '#A2CAE1',//坐标值得具体的颜色
+                        },
+                    }
+                },
+                grid:{
+                    x:100,
+                    y:40,
+                    x2:25,
+                    y2:30
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                series: [{
+                    data:yeardata,
+                    label:{
+                        show:true,
+                        position: 'top'
+                    },
+                    type: 'line',
+                    name: 'L1',
+                    barWidth:20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: '#F4F8FB'
+                    },
+                },
+                {
+                    data:yeardata2,
+                    label:{
+                        show:true,
+                        position: 'top'
+                    },
+                    type: 'line',
+                    name: 'L2',
+                    barWidth:20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: '#F4F8FB'
+                    },
+                },
+                {
+                    data:yeardata3,
+                    label:{
+                        show:true,
+                        position: 'top'
+                    },
+                    type: 'line',
+                    name: 'L3',
+                    barWidth:20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: '#F4F8FB'
+                    },
+                },
+                {
+                    data:yeardata4,
+                    label:{
+                        show:true,
+                        position: 'top'
+                    },
+                    type: 'line',
+                    name: 'L4',
+                    barWidth:20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: '#F4F8FB'
+                    },
+                }
+            ]
+            };
+            yearChartoption && yearChart.setOption(yearChartoption);
+
+            var totalChartDom = document.getElementById('totalChart');
+            var totalChart = echarts.init(totalChartDom);
+            var totaltitle=[{'name':'L1','icon': 'circle'},
+                {'name':'L2','icon': 'circle'},
+                {'name':'L3','icon': 'circle'},
+                {'name':'L4','icon': 'circle'}
+            ];
+            var totaldata=[{'value': 0, 'name':'L1'},
+                {'value': 0, 'name': 'L2'},
+                {'value': 0, 'name': 'L3'},
+                {'value': 0, 'name': 'L4'}
+            ];
+            var totalChartoption={
+            legend: {
+                orient: 'vertical', 
+                data: totaltitle,
+                right: 0,
+                top: 55,
+                itemWidth:6,
+                itemHeight:6,
+                textStyle: {
+                color:'#A2CAE1',
+                fontSize:'11',
+                lineHeight: 15,
+                },
+                formatter: function(name){
+                var total = 0;
+                var tarValue = 0;
+                for (var i = 0, l =totaldata.length; i < l; i++) {
+                    total += totaldata[i].value;
+                    if (totaldata[i].name == name) {
+                        tarValue = totaldata[i].value;
+                    }
+                }
+                total = total==0?1:total;
+                var p = (tarValue / total * 100).toFixed(2);
+                return name+ ' ' + p + '%';
+                }
+            },
+            color:['#35DFFC','#3783FF','#FFCC37','#FF9000','#F96055'],
+            series: [
+                {
+                    name: '动环告警',
+                    type: 'pie',
+                    radius: ['65%', '90%'],
+                    top:25,
+                    left:-80,
+                    bottom:0,
+                    itemStyle:{
+                        shadowColor: 'rgba(225, 229, 255, 0.69)',
+                        shadowBlur: 16
+                    },label: {
+                        show: false,
+                        position: 'center'
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: '14.3',
+                            fontWeight: 'bold',
+                            formatter: '{b}：{c}'
+                        }
+                    },
+                    data:totaldata
+                }
+            ]
+            };
+            totalChartoption && totalChart.setOption(totalChartoption);
+            
+
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#startDateTime'
+                });
+                laydate.render({
+                    elem: '#endDateTime'
+                });
+                form.render();
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    console.log(data.value)
+                    if(data.value!='auto'){
+                        $('#startDateTime,#endDateTime').hide();
+                    }else{
+                        $('#startDateTime,#endDateTime').show();
+                    }
+                    return false;
+                });  
+                form.render();
+                //服务器
+                getServer(form,function(r){
+                    form.on("select(ServerCode)", function (data) {
+                        getArea(form,data);
+                    });
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    list.get(url,param);
+                    return false;
+                });    
+            });
+        })
+        
+    </script>
+</body>
+</html>

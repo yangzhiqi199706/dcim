@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jquery.qrcode.min.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.AssetsNumber}}</td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td>{{list.AssetsDescribe}}</td>
+                                        <td>
+                                            <a title="删除" onclick="cancelAssets({{list.id}},this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a> 
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </fodivrm>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetAssetsStoreListKey";
+        var form;
+        var id = GetString("id");
+        $(function(){
+            //初始化数据
+            param.MaintenanceId=id;
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                //初始化数据
+                list.get(url, param);
+            });
+        })
+        //解除绑定
+        function cancelAssets(assetid,obj){
+            layer.confirm('确认解除绑定此资产吗？', function (index) {
+                list.info('CancelRelationMaintenanceKey',{
+                    token: token,
+                    id: assetid,
+                    MaintenanceId:id
+                },function(r){
+                    layer.msg("解除成功", {
+                        icon: 1,
+                        time: 1000
+                    });
+                    $(obj).parents("tr").remove();
+                    layer.close(index);
+                })
+            });
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+
+</html>

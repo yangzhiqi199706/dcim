@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .two-left1 {
+            max-height:650px!important
+        }
+        .massage-chart{height:260px}
+        .massage-box-md9{min-height:318px}
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>能源管理->能效统计</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-body">
+                    <form class="layui-form layui-col-space5">
+                        <div class="layui-inline layui-show-xs-block">
+                            <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline layui-show-xs-block">
+                            <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                        <div class="layui-inline layui-show-xs-block">
+                            <input type="radio" name="type" lay-filter="type" value="year" title="年" checked>
+                            <input type="radio" name="type" lay-filter="type" value="month" title="月">
+                        </div>
+                        <div class="layui-inline layui-show-xs-block">
+                            <input type="text" id="year" name="year" class="layui-input" placeholder="年">
+                            <input type="text" id="month" name="month" class="layui-input" placeholder="年月"
+                                style="display:none;">
+                        </div>
+                        <div class="layui-inline layui-show-xs-block">
+                            <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                <i class="layui-icon">&#xe615;</i>
+                            </button>
+                            <button class="layui-btn" lay-submit lay-filter="import" type="button"
+                                onclick="displayexport('down','moneytable','每月总电费')" id="down">导出</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="layui-card-body">
+                    <div class="two-left1  massage-chart-big">
+                        <table class="layui-table" id="moneytable">
+                            <thead>
+                                <tr>
+                                    <th>月份</th>
+                                    <th>总耗能（Kw.h）</th>
+                                    <th>总电费（元）</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                        {{if data.length!=0}} {{each data as list i}}
+                                        <tr>
+                                            <td>{{list.Date}}</td>
+                                            <td>{{list.TotalNH}}</td>
+                                            <td>{{list.TotalDF}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="massage-box massage-box-md9">
+                        <div class="capacity-statistics-title">能耗趋势</div>
+                        <div id="monthnenghaoChart" class="massage-chart"></div>
+                    </div>
+                    <div class="massage-box massage-box-md9">
+                        <div class="capacity-statistics-title">电费统计</div>
+                        <div id="moneyChart" class="massage-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            var timetype = 'year';
+            var date = new Date();
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var chartparam = {
+                token: token,
+                ServerCode: '',
+                AreaId: '',
+                Date: year
+            }
+            getdata(chartparam);
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({
+                    elem: '#month',
+                    type: 'month',
+                    value: year + '-' + (month < 10 ? '0' + month : month)
+                });
+                laydate.render({
+                    elem: '#year',
+                    type: 'year',
+                    value: year
+                });
+                form.render();
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    timetype = data.value;
+                    if (data.value == 'year') {
+                        $('#year').show();
+                        $('#month').hide();
+                    } else {
+                        $('#year').hide();
+                        $('#month').show();
+                    }
+                    return false;
+                });
+                //服务器
+                getServer(form, function (r) {
+                    form.on("select(ServerCode)", function (data) {
+                        getArea(form, data);
+                    });
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    chartparam.ServerCode = data.field.ServerCode;
+                    chartparam.AreaId = data.field.AreaId;
+                    chartparam.Date = timetype == 'year' ? data.field.year : data.field.month;
+                    getdata(chartparam);
+                    return false;
+                });
+            });
+        })
+        function getdata(chartparam) {
+            list.info('GetPayInfoKey', chartparam, function (r) {
+                var html = template("listtemplate", r);
+                $("#moneytable tbody").html(html);
+                if (r.data) {
+                    var monthnenghaotitle = [];
+                    var monthnenghaodata = [];
+                    var monthmoneydata = [];
+                    $.each(r.data, function (n, val) {
+                        monthnenghaotitle.push(val.Date);
+                        monthnenghaodata.push(val.TotalNH);
+                        monthmoneydata.push(val.TotalDF);
+                    })
+                    setChart('monthnenghaoChart', monthnenghaotitle, monthnenghaodata, 'Kw.h');
+                    setChart('moneyChart', monthnenghaotitle, monthmoneydata, '元');
+                }
+            })
+        }
+        function setChart(id, monthnenghaotitle, monthnenghaodata, unit) {
+            var monthnenghaoChartDom = document.getElementById(id);
+            var monthnenghaoChart = echarts.init(monthnenghaoChartDom);
+            // var monthnenghaotitle = ['21','22','23','24','25','26','27','28','29','30','31'];
+            // var monthnenghaodata = ['45','85','75','89','24','78','42','77','89','34','102']
+            var monthnenghaoChartoption = {
+                xAxis: {
+                    type: 'category',
+                    data: monthnenghaotitle,
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            type: 'solid',
+                            color: '#1898ED',
+                            width: '1'
+                        }
+                    },
+                    axisLabel: {
+                        // interval: 0,
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: {
+                        textStyle: {
+                            color: '#A2CAE1',
+                            fontSize: '13'
+                        },
+                        formatter: '{value} ' + unit,
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: 'rgba(24, 152, 237, 0.17)',
+                            type: 'dashed'
+                        }
+                    },
+                },
+                grid: {
+                    top: '30',
+                    bottom: '20',
+                    left: '120',
+                    right: '20'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                series: [{
+                    data: monthnenghaodata,
+                    label: {
+                        show: true,
+                        position: 'top',
+                        color: '#fff',
+                        formatter: function (val) {
+                            if (val.value !== 0) {
+                                return val.value;
+                            } else {
+                                return '';
+                            }
+                        },
+                    },
+                    type: 'bar',
+                    barWidth: 20,
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: 'rgba(180, 180, 180, 0.2)'
+                    },
+                }]
+            };
+            monthnenghaoChartoption && monthnenghaoChart.setOption(monthnenghaoChartoption);
+        }
+
+    </script>
+</body>
+
+</html>

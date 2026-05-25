@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <link rel="stylesheet" href="./css/video.css">
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <table class="layui-table layui-form">
+                            <thead>
+                                <tr>
+                                    <th>报警区域</th>
+                                    <th>报警等级</th>
+                                    <th>报警来源</th>
+                                    <th>报警事件</th>
+                                    <th>产生值</th>
+                                    <th>报警时间</th>
+                                    <th>派单情况</th>
+                                    <th>影像</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr class="
+                                            {{if list.AlarmLevel==1}}
+                                            level1color
+                                            {{else if list.AlarmLevel==2}}
+                                            level2color
+                                            {{else if list.AlarmLevel==3}}
+                                            level3color
+                                            {{else if list.AlarmLevel==4}}
+                                            level4color
+                                            {{else if list.AlarmLevel==5}}
+                                            level5color
+                                            {{/if}}
+                                        ">
+                                        <td>{{list.AreaName}}</td>
+                                        <td>{{list.LevelName}}</span></td>
+                                        <td>{{list.DeviceName}}</td>
+                                        <!-- <td>{{list.TypeName}}</td> -->
+                                        <td>{{if list.TextMessage}}{{list.TextMessage.split(',')[2]}}{{else}}{{list.TypeName}}{{/if}}</td>
+                                        <td>{{if list.ParamValue}}{{list.ParamValue}}{{else}}-{{/if}}</td>
+                                        <!-- <td>{{list.update_time}}</td> -->
+                                        <td>{{if list.TextMessage}}
+                                            {{list.create_time.split('-')[0]}}-{{(list.TextMessage.split(',')[4]).replace('月','-').replace('日',' ')}}
+                                            {{else}}
+                                            {{list.update_time}}
+                                            {{/if}}
+                                        </td>
+                                        <td>
+                                            {{if dcim==-1}}
+                                            {{if !list.OrderNumber}}未派单{{else}}已派单{{/if}}
+                                            {{else}}
+                                            -
+                                            {{/if}}
+                                        </td>
+                                        {{if list.VideoImgArr && list.VideoImgArr.length>0 || list.VideoUrlArr && list.VideoUrlArr.length>0}}
+                                        <td>
+                                            {{if list.VideoImgArr && list.VideoImgArr.length>0}}
+                                                {{each list.VideoImgArr as m n}}
+                                                {{if m}}
+                                                <a href="{{m}}" rel="group{{list.id}}" class="fancybox-view layui-icon layui-icon-picture" {{if n>0}}style="display:none"{{/if}}></a>
+                                                {{/if}}
+                                                {{/each}}
+                                            {{/if}}
+                                            {{if list.VideoUrlArr && list.VideoUrlArr.length>0}}
+                                                {{each list.VideoUrlArr as v n}}
+                                                {{if v}}
+                                                <a href="javascript:;" rel="group{{list.id}}" class="fancybox-view layui-icon layui-icon-video" onclick="openVideo({{list.VideoUrlArrJson}})" {{if n > 0}}style="display:none"{{/if}}></a>
+                                                {{/if}}
+                                                {{/each}}
+                                            {{/if}}
+                                        </td>
+                                    {{else}}
+                                    <td>-</td>
+                                    {{/if}}
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetRealAlarmsKey";
+        var form;
+        $(function () {
+            // let cameralist = [];
+            // $.getJSON("../js/camera.json", function (data) {
+            //     if (data && data.length > 0) {
+            //         cameralist = data
+            //     }
+            // })
+            param.type = '1';
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                //初始化数据
+                param.ComboBox = "all";
+                list.info(url, param, function (r) {
+                    r.dcim = dm;
+                    $.each(r.data, function (n, val) {
+                        // let findcarme = cameralist.filter(v => v.AreaId == val.AreaId).map(item => item.id);;
+                        // val.cameralist = findcarme;
+                        val.VideoImgArr = [];//联动截图数组
+                        val.VideoUrlArr = []; // 视频URL数组
+                        if (val.VideoImg) {
+                            val.VideoImgArr = val.VideoImg.split(',').filter(Boolean);
+                        }
+                        if (val.VideoMP4) {
+                            val.VideoUrlArr = val.VideoMP4.split(',').filter(Boolean);
+                        }
+                        console.log('VideoUrlArr:', val.VideoUrlArr);
+                        val.VideoUrlArrJson = JSON.stringify(val.VideoUrlArr);
+                    })
+                    var html = template("listtemplate", r);
+                    $("table tbody").html(html);
+                    fnFancyBox('.fancybox-view');
+                });
+            });
+        });
+        let currentVideoIndex = 0;
+        let videoUrls = [];
+
+        function openVideo(videoUrlsParam) {
+            if (typeof videoUrlsParam === 'string') {
+                try {
+                    videoUrls = JSON.parse(videoUrlsParam);
+                } catch (e) {
+                    console.error('解析 JSON 字符串失败:', e);
+                    layer.msg('解析视频URL失败', { icon: 5, time: 1000 });
+                    return;
+                }
+            } else {
+                videoUrls = videoUrlsParam;
+            }
+
+            if (!Array.isArray(videoUrls) || videoUrls.length === 0) {
+                layer.msg('没有可用的视频', { icon: 5, time: 1000 });
+                return;
+            }
+
+            currentVideoIndex = 0; // 初始化当前视频索引
+            showCurrentVideo();
+        }
+
+        function showCurrentVideo() {
+            let videoContent = `
+                <div style="position: relative;">
+                    <video width="100%" height="auto" controls>
+                        <source src="${videoUrls[currentVideoIndex]}" type="video/mp4">
+                        您的浏览器不支持 video 标签。
+                    </video>
+                   <a class="fancybox-nav fancybox-prev" onclick="prevVideo()" href="javascript:;"><span></span></a>
+                    <a class="fancybox-nav fancybox-next" onclick="nextVideo()" href="javascript:;"><span></span></a>
+                </div>
+            `;
+
+            // 打开模态框
+            layer.open({
+                type: 1,
+                title: '视频播放',
+                shadeClose: true,
+                shade: 0.8,
+                area: ['800px', '510px'],
+                content: videoContent,
+                yes: function (index, layero) {
+                    layer.close(index);
+                }
+            });
+        }
+
+        function nextVideo() {
+            currentVideoIndex = (currentVideoIndex + 1) % videoUrls.length;
+            layer.closeAll(); // 关闭当前视频
+            showCurrentVideo();
+        }
+
+        function prevVideo() {
+            currentVideoIndex = (currentVideoIndex - 1 + videoUrls.length) % videoUrls.length;
+            layer.closeAll(); // 关闭当前视频
+            showCurrentVideo();
+        }
+    </script>
+</body>
+
+</html>

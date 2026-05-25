@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .massage-box-md6 {
+            width: calc(50% - 25px)
+        }
+
+        .massage-box-md6:nth-child(2n+1) {
+            margin-right: 0;
+        }
+
+        .massage-box-md6:nth-child(2n) {
+            margin-left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->能耗报表</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" lay-filter="type" value="day" title="日" checked>
+                                <input type="radio" name="type" lay-filter="type" value="month" title="月">
+                                <input type="radio" name="type" lay-filter="type" value="year" title="年">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input day" name="startDateTime" id="startDateTime"
+                                    placeholder="开始时间">
+                                <input type="text" id="month" name="month" class="layui-input" placeholder="年月"
+                                    style="display:none;">
+                                <input type="text" id="year" name="year" class="layui-input" placeholder="年"
+                                    style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input day" name="endDateTime" id="endDateTime" placeholder="结束时间">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn search x-right" type="button" id="down">导出</button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table" id="numTable">
+                            <thead>
+                                <tr>
+                                    <th>机房</th>
+                                    <th>总功率Kw</th>
+                                    <th>IT设备功率</th>
+                                    <th>空调功率</th>
+                                    <th>附属功率</th>
+                                    <th>总电量Kwh</th>
+                                    <th>IT电量</th>
+                                    <th>空调电量</th>
+                                    <th>附属电量</th>
+                                </tr>
+                            </thead>
+                            <tbody id="num"></tbody>
+                            <script type="text/html" id="numtemplate">
+                                {{if data.length!=0}} {{each data as list i}}
+                                <tr>
+                                    <td>{{list.name}}</td>
+                                    <td>{{list.allPower}}</td>
+                                    <td>{{list.itPower}}</td>
+                                    <td>{{list.airPower}}</td>
+                                    <td>-</td>
+                                    <td>{{list.allEle}}</td>
+                                    <td>{{list.itEle}}</td>
+                                    <td>{{list.airEle}}</td>
+                                    <td>-</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </table>
+                        <table class="layui-table" id="exportTable" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>&ensp;</th>
+                                    <th>机房</th>
+                                    <th>总功率Kw</th>
+                                    <th>IT设备功率</th>
+                                    <th>空调功率</th>
+                                    <th>附属功率</th>
+                                    <th>总电量Kwh</th>
+                                    <th>IT电量</th>
+                                    <th>空调电量</th>
+                                    <th>附属电量</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exportnum"></tbody>
+                            <script type="text/html" id="exportnumtemplate">
+                                {{if data.length!=0}} {{each data as list i}}
+                                <tr>
+                                    {{if i == 0}}
+                                    <td>{{list.start}} - {{list.end}}</td>
+                                    {{else}}
+                                    <td>&ensp;</td>
+                                    {{/if}}
+                                    <td>{{list.name}}</td>
+                                    <td>{{list.allPower}}</td>
+                                    <td>{{list.itPower}}</td>
+                                    <td>{{list.airPower}}</td>
+                                    <td>-</td>
+                                    <td>{{list.allEle}}</td>
+                                    <td>{{list.itEle}}</td>
+                                    <td>{{list.airEle}}</td>
+                                    <td>-</td>
+                                </tr>
+                                {{/each}} {{else}}
+                                <tr>
+                                    <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                </tr>
+                                {{/if}}
+                            </script>
+                        </table>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">总功率</div>
+                            <div id="allpowerChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">总电量</div>
+                            <div id="alleleChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">IT设备功率</div>
+                            <div id="itpowerChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">IT电量</div>
+                            <div id="iteleChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">空调功率</div>
+                            <div id="airpowerChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md6">
+                            <div class="capacity-statistics-title">空调电量</div>
+                            <div id="aireleChart" class="massage-chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            var timetype = 'day';
+            var date = new Date();
+            var year = date.getFullYear();
+            var month = date.getMonth() + 1;
+            var day = date.getDate();
+            var startDateTime;
+            var endDateTime;
+            var maxData;
+
+            //需要获取历史数据的参数id 
+            let parID = [];
+            let datatime = [];//时间长度
+            let datatimenum = [];//时间对应的数据
+
+            //机房列表 均值统计
+            let roomList = {
+                data: []
+            };
+            //自定义参数
+            let allaram = [];
+
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                $.ajaxSettings.async = false;
+                //获取自定义参数
+                list.info('GetParamListKey', {
+                    token: token,
+                    ComboBox: 'all'
+                }, function (res) {
+                    allaram = res.data;
+                })
+
+                //初始化 获取仅30天
+                for (let index = 1; index < 31; index++) {
+                    datatime.push(getDateTime(new Date(new Date() - 1000 * 60 * 60 * 24 * index)));
+                    datatimenum.push(0);
+                }
+                datatime = datatime.reverse();
+                startDateTime = datatime[0];
+                endDateTime = datatime[datatime.length - 1];
+                maxData = datatime[datatime.length - 1];
+
+                laydate.render({
+                    elem: '#month',
+                    type: 'month',
+                    value: year + '-' + (month < 10 ? '0' + month : month)
+                });
+                laydate.render({
+                    elem: '#year',
+                    type: 'year',
+                    value: year
+                });
+                laydate.render({
+                    elem: '#startDateTime',
+                    type: 'date',
+                    value: startDateTime,
+                    max:maxData
+                });
+                laydate.render({
+                    elem: '#endDateTime',
+                    type: 'date',
+                    value: endDateTime,
+                    max:maxData
+                });
+                form.render();
+
+                //区域中的机房
+                getArea(form, '', function (re) {
+                    $.each(re.data, function (n, val) {
+                        if (val.AreaName.indexOf('机房') > -1) {
+                            let index1 = allaram.findIndex(v => v.ParamName == val.AreaName + '总功率');
+                            // let allPower = index1 > -1 ? allaram[index1].Result : '-';
+                            let allPowerId = null;
+                            if (index1 > -1) { parID.push(allaram[index1].id); allPowerId = allaram[index1].id }
+
+                            let index2 = allaram.findIndex(v => v.ParamName == val.AreaName + 'IT设备功率' || v.ParamName == val.AreaName + 'IT功率');
+                            // let itPower = index2 > -1 ? allaram[index2].Result : '-';
+                            let itPowerId = null;
+                            if (index2 > -1) { parID.push(allaram[index2].id); itPowerId = allaram[index2].id }
+
+                            let index3 = allaram.findIndex(v => v.ParamName == val.AreaName + '空调功率');
+                            // let airPower = index3 > -1 ? allaram[index3].Result : '-';
+                            let airPowerId = null;
+                            if (index3 > -1) { parID.push(allaram[index3].id); airPowerId = allaram[index3].id }
+
+                            let index4 = allaram.findIndex(v => v.ParamName == val.AreaName + '总用电量');
+                            // let allEle = index4 > -1 ? allaram[index4].Result : '-';
+                            let allEleId = null;
+                            if (index4 > -1) { parID.push(allaram[index4].id); allEleId = allaram[index4].id }
+
+                            let index5 = allaram.findIndex(v => v.ParamName == val.AreaName + 'IT设备用电量' || v.ParamName == val.AreaName + 'IT用电量');
+                            // let itEle = index5 > -1 ? allaram[index5].Result : '-';
+                            let itEleId = null;
+                            if (index5 > -1) { parID.push(allaram[index5].id); itEleId = allaram[index5].id }
+
+                            let index6 = allaram.findIndex(v => v.ParamName == val.AreaName + '空调用电量');
+                            // let airEle = index6 > -1 ? allaram[index6].Result : '-';
+                            let airEleId = null;
+                            if (index6 > -1) { parID.push(allaram[index6].id); airEleId = allaram[index6].id }
+
+                            roomList.data.push({
+                                name: val.AreaName,
+                                allPower: 0,
+                                allPowerId: allPowerId,
+                                allPowerArr: datatimenum,
+                                itPower: 0,
+                                itPowerId: itPowerId,
+                                itPowerArr: datatimenum,
+                                airPower: 0,
+                                airPowerId: airPowerId,
+                                airPowerArr: datatimenum,
+                                allEle: 0,
+                                allEleId: allEleId,
+                                allEleArr: datatimenum,
+                                itEle: 0,
+                                itEleId: itEleId,
+                                itEleArr: datatimenum,
+                                airEle: 0,
+                                airEleId: airEleId,
+                                airEleArr: datatimenum,
+                            })
+                        }
+                    })
+                })
+
+                getData(startDateTime, endDateTime);
+                $.ajaxSettings.async = true;
+                //初始化  结束  
+
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    timetype = data.value;
+                    if (data.value == 'year') {
+                        $('#year').show();
+                        $('#month,.day').hide();
+                    } else if (data.value == 'month') {
+                        $('#year,.day').hide();
+                        $('#month').show();
+                    } else if (data.value == 'day') {
+                        $('#year,#month').hide();
+                        $('.day').show();
+                    }
+                    return false;
+                });
+
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    if (data.field.type == 'day') {
+                        startDateTime = data.field.startDateTime;
+                        endDateTime = data.field.endDateTime;
+                    } else if (data.field.type == 'month') {
+                        startDateTime = getOnemonth(data.field.month)[0].split(' ')[0];
+                        let curmonth = year.toString() + '-' + (month < 10 ? '0' + month : month).toString();
+                        // console.log(curmonth)
+                        if (data.field.month == curmonth) {//如果是本年本月则追溯到本月的今天的前一天
+                            endDateTime = curmonth + '-' + ((day-1) < 10 ? '0' + (day-1) : (day-1)).toString();
+                        } else {
+                            endDateTime = getOnemonth(data.field.month)[1].split(' ')[0];
+                        }
+                    } else if (data.field.type == 'year') {
+                        startDateTime = data.field.year + '-01-01';
+                        if (data.field.year == year) {
+                            endDateTime = year.toString() + '-' + (month < 10 ? '0' + month : month).toString() + '-' + (day < 10 ? '0' + day : day).toString();
+                        } else {
+                            endDateTime = data.field.year + '-12-31';
+                        }
+                    }
+                    dealTimeArr(startDateTime, endDateTime, function () {
+                        getData(startDateTime, endDateTime);
+                    });
+
+                    return false;
+                });
+
+                //根据起止时间获取数据
+                function getData(start, end) {
+                    //曲线参数
+                    var dataparam = {
+                        token: token,
+                        startDateTime: start + ' 00:00:00',
+                        endDateTime: end + ' 23:59:59',
+                        ParamIds: parID.join(','),
+                        ComboBox: 'all'
+                    }
+                    let chardata1 = [];
+                    let chardata2 = [];
+                    let chardata3 = [];
+                    let chardata4 = [];
+                    let chardata5 = [];
+                    let chardata6 = [];
+                    $.ajaxSettings.async = false;
+                    list.info('GetParamDayListKey', dataparam, function (res) {
+                        roomList.data.forEach((val, n) => {
+                            // console.log(val)
+                            let allPowerArr = res.data.filter(v => v.ParamId == val.allPowerId);
+                            let itPowerArr = res.data.filter(v => v.ParamId == val.itPowerId);
+                            let airPowerArr = res.data.filter(v => v.ParamId == val.airPowerId);
+                            let allEleArr = res.data.filter(v => v.ParamId == val.allEleId);
+                            let itEleArr = res.data.filter(v => v.ParamId == val.itEleId);
+                            let airEleArr = res.data.filter(v => v.ParamId == val.airEleId);
+
+                            val.allPowerArr = setlinedata(datatime, val.allPowerArr, allPowerArr);
+                            val.itPowerArr = setlinedata(datatime, val.itPowerArr, itPowerArr);
+                            val.airPowerArr = setlinedata(datatime, val.airPowerArr, airPowerArr);
+                            val.allEleArr = setlinedata(datatime, val.allEleArr, allEleArr);
+                            val.itEleArr = setlinedata(datatime, val.itEleArr, itEleArr);
+                            val.airEleArr = setlinedata(datatime, val.airEleArr, airEleArr);
+
+                            chardata1[n] = ({ name: val.name, data: val.allPowerArr });
+                            chardata2[n] = ({ name: val.name, data: val.itPowerArr });
+                            chardata3[n] = ({ name: val.name, data: val.airPowerArr });
+                            chardata4[n] = ({ name: val.name, data: val.allEleArr });
+                            chardata5[n] = ({ name: val.name, data: val.itEleArr });
+                            chardata6[n] = ({ name: val.name, data: val.airEleArr });
+                        })
+                    })
+                    $.ajaxSettings.async = true;
+                    //曲线
+                    setNH('allpowerChart', datatime, chardata1);
+                    setNH('itpowerChart', datatime, chardata2);
+                    setNH('airpowerChart', datatime, chardata3);
+                    setNH('alleleChart', datatime, chardata4,'1');
+                    setNH('iteleChart', datatime, chardata5,'1');
+                    setNH('aireleChart', datatime, chardata6,'1');
+                    //处理数据均值和电量
+                    console.log(roomList)
+                    $.each(roomList.data, function (n, val) {
+                        let startstr = start.substr(0,4)+'年'+start.substr(5,2)+'月'+start.substr(8,2)+'日';
+                        let endstr = end.substr(0,4)+'年'+end.substr(5,2)+'月'+end.substr(8,2)+'日';
+
+                        val.start = timetype == 'year' ? startstr.substr(0, 8) : startstr;
+                        val.end = timetype == 'year' ? endstr.substr(0, 8) : endstr;
+
+                        val.allPower = (sum(val.allPowerArr) / val.allPowerArr.length).toFixed(2);
+                        val.itPower = (sum(val.itPowerArr) / val.itPowerArr.length).toFixed(2);
+                        val.airPower = (sum(val.airPowerArr) / val.airPowerArr.length).toFixed(2);
+
+                        if(timetype == 'year'){
+                            val.allEle = sum(val.allEleArr).toFixed(2);
+                            val.itEle = sum(val.itEleArr).toFixed(2);
+                            val.airEle = sum(val.airEleArr).toFixed(2);
+                        }else{
+                            val.allEle = (val.allEleArr[val.allEleArr.length - 1] - val.allEleArr[0]).toFixed(2);
+                            val.itEle = (val.itEleArr[val.itEleArr.length - 1] - val.itEleArr[0]).toFixed(2);
+                            val.airEle = (val.airEleArr[val.airEleArr.length - 1] - val.airEleArr[0]).toFixed(2);
+                        }
+                    })
+                    var html = template("numtemplate", roomList);
+                    $("#num").html(html);
+                    //导出
+                    var exporthtml = template("exportnumtemplate", roomList);
+                    $("#exportnum").html(exporthtml);
+                }
+
+                function sum(arr) {
+                    let total = eval(arr.join('+'));
+                    return total;
+                }
+
+                //导出
+                $('#down').click(function () {
+                    displayexport('down', 'exportTable', '能耗报表');
+                })
+
+            });
+            //根据相差天数，匹配数据个数  
+            function dealTimeArr(start, end, callback) {
+                datatime = [];
+                let num = 0;
+                let numarr = [];
+                if (timetype != 'year') {
+                    num = getDayNum(start, end);
+                    for (let index = 0; index <= num; index++) {
+                        datatime.push(getDateTime(new Date(new Date(end) - 1000 * 60 * 60 * 24 * index)))
+                        numarr.push(0)
+                    }
+                    datatime = datatime.reverse();
+                } else {
+                    let yearstr = $('#year').val();
+                    num = yearstr == year ? month : 12;
+                    for (let index = 1; index <= num; index++) {
+                        datatime.push(yearstr + '-' + (index < 10 ? '0' + index : index))
+                        numarr.push(0);
+                    }
+                }
+                $.each(roomList.data, function (n, val) {
+                    if (val.allPowerArr) {
+                        val.allPowerArr = numarr
+                    }
+                    if (val.itPowerArr) {
+                        val.itPowerArr = numarr
+                    }
+                    if (val.airPowerArr) {
+                        val.airPowerArr = numarr
+                    }
+                    if (val.allEleArr) {
+                        val.allEleArr = numarr
+                    }
+                    if (val.itEleArr) {
+                        val.itEleArr = numarr
+                    }
+                    if (val.airEleArr) {
+                        val.airEleArr = numarr
+                    }
+                })
+                if (callback) callback();
+            }
+
+            //设置曲线数据
+            function setlinedata(datatime, dealarr, srcarr) {
+                let dealarr2 = JSON.parse(JSON.stringify(dealarr));
+                if (timetype != 'year') {
+                    // console.log(srcarr)
+                    datatime.forEach((y, x) => {
+                        let findthis = srcarr.findIndex(v => v.Day.split(' ')[0] === y);
+                        if (findthis > -1) {
+                            dealarr2[x] = parseFloat(srcarr[findthis].Result.replaceAll(',',''));
+                        } else {
+                            dealarr2[x] = 0
+                        }
+                    })
+                    // console.log(dealarr2)
+                } else {
+                    datatime.forEach((y, x) => {
+                        // console.log(y)
+                        let findarr = srcarr.filter(v => v.Day.indexOf(y) > -1);//功率取均值  电量取首尾相减
+                        findarr.sort((a, b) => new Date(b.Day) - new Date(a.Day));
+
+                        // console.log(findarr)
+
+                        if (findarr.length > 0) {
+                            if (findarr[0].ParamName.indexOf('功率') > -1) {
+                                let total = 0;
+                                findarr.forEach((val, n) => {
+                                    total += parseFloat(val.Result.replaceAll(',',''))
+                                })
+                                dealarr2[x] = parseFloat((total / findarr.length).toFixed(2));
+                            }
+                            if (findarr[0].ParamName.indexOf('电量') > -1) {
+                                let end = parseFloat(findarr[0].Result.replaceAll(',',''));
+                                // console.log(end)
+                                // console.log(findarr[0])
+                                let start = parseFloat(findarr[findarr.length - 1].Result.replaceAll(',',''));
+                                // console.log(start)
+                                // console.log(findarr[0].ParamName)
+                                dealarr2[x] = (end - start).toFixed(2);
+                            }
+                        }
+                    })
+                }
+                return dealarr2;
+            }
+            //设置曲线
+            //存在type则表示是计算每天的电量，当天值减昨天值，昨天值为0，则不能统计，默认值为0
+            function setNH(id, title, data,type) {
+                var nenghaoChartDom = document.getElementById(id);
+                var nenghaoChart = echarts.init(nenghaoChartDom);
+                var dataarr = [];
+                console.log(data)
+                $.each(data, function (n, val) {
+                    dataarr.push({
+                        data: val.data,
+                        type: 'line',
+                        smooth: 0.6,
+                        symbol: 'none',
+                        name: val.name,
+                        areaStyle: {
+                            normal: {
+                                //颜色渐变函数 前四个参数分别表示四个位置依次为左、下、右、上
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    {
+                                        offset: 0,
+                                        color: 'rgba(0,153,255,0.52)'
+                                    },
+                                    {
+                                        offset: 1,
+                                        color: 'rgba(0, 68, 172, 0.12)'
+                                    }
+                                ])
+                            }
+                        }
+                    })
+                })
+                // if(type)console.log(dataarr)
+                var nenghaoChartoption = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross'
+                        }
+                    },
+                    grid: {
+                        left: 15,
+                        right: 15,
+                        bottom: 10,
+                        top: 15,
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        axisLine: {
+                            lineStyle: {
+                                color: '#1898ED'
+                            }
+                        },
+                        axisLabel: {
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '13'
+                            },
+                            show: true,
+                        },
+                        data: title
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: {
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '13'
+                            },
+                            formatter: '{value}',
+                        },
+                        splitLine: {
+                            lineStyle: {
+                                color: 'rgba(24, 152, 237, 0.17)',
+                                type: 'dashed'
+                            }
+                        }
+                    },
+                    series: dataarr
+                };
+                nenghaoChartoption && nenghaoChart.setOption(nenghaoChartoption);
+            }
+        })
+        //时间格式化
+        function getDateTime(timeStr) {
+            var time = timeStr ? timeStr : new Date();
+            var y = time.getFullYear();
+            var m = time.getMonth() + 1;
+            m = m < 10 ? ("0" + m) : m;
+            var d = time.getDate();
+            d = d < 10 ? ("0" + d) : d;
+            return y + "-" + m + "-" + d;
+        }
+        //计算2个时间之间的相差天数
+        function getDayNum(start, end) {
+            const date1 = new Date(start);
+            const date2 = new Date(end);
+            const timeDifference = date2.getTime() - date1.getTime();
+            const daysDifference = timeDifference / (1000 * 3600 * 24);
+            return daysDifference;
+        }
+    </script>
+</body>
+
+</html>

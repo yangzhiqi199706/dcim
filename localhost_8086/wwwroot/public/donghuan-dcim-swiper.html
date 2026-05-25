@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <link rel="stylesheet" href="./css/dcim-dh.css">
+    <link rel="stylesheet" href="./css/swiper.min.css">
+    <script src="js/swiper.jquery.min.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        html,
+        body {
+            position: relative;
+            height: 100%
+        }
+
+        body {
+            background: #030955;
+            font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            color: #000;
+            margin: 0;
+            padding: 0
+        }
+
+        .swiper-container {
+            width: 100%;
+            height: 100%
+        }
+
+        .swiper-slide {
+            text-align: center;
+            font-size: 18px;
+            background: #fff;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-box-pack: center;
+            -ms-flex-pack: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-box-align: center;
+            -ms-flex-align: center;
+            -webkit-align-items: center;
+            align-items: center
+        }
+
+        .x-iframe {
+            width: 100%;
+            height: 100%
+        }
+
+        .swiper-slide .x-iframe::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+            background-color: #222;
+        }
+
+        .swiper-slide .x-iframe::-webkit-scrollbar-track {
+            -webkit-border-radius: 6px;
+            -moz-border-radius: 6px;
+            border-radius: 6px;
+            background-color: #222;
+        }
+
+        .swiper-slide .x-iframe::-webkit-scrollbar-thumb {
+            background-color: #148cf1;
+            -webkit-border-radius: 6px;
+            -moz-border-radius: 6px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Swiper -->
+    <div class="swiper-container">
+        <div class="swiper-wrapper">
+        </div>
+        <!-- Add Pagination -->
+        <div class="swiper-pagination swiper-pagination-white"></div>
+        <!-- Add Navigation -->
+        <div class="swiper-button-prev swiper-button-white"></div>
+        <div class="swiper-button-next swiper-button-white"></div>
+    </div>
+    <!-- Initialize Swiper -->
+    <script>
+        //获取地址栏携带的ids
+        let ids = GetString("ids");
+        let ani = GetString("ani");
+        let anitime = GetString("anitime");
+        let anispeed = GetString("anispeed");
+        let idsArr = ids.split(',');
+        $(function () {
+            $('.dcim-screen').remove();
+            //{ url: 'donghuan-dcimkm-jifang901.html?title=9F通讯中心' },
+            var data = [];
+            //获取组态页面
+            $.ajaxSettings.async = false;
+            list.info('GetDmpageListKey', {
+                ComboBox: '1'
+            }, function (r) {
+                if (r.data.length > 0) {
+                    // 递归查找所有层级的页面（支持任意深度 + id 统一转字符串比对）
+                    function findPages(list) {
+                        $.each(list, function (i, item) {
+                            if (idsArr.includes(String(item.id))) {
+                                data.push({ url: window.location.protocol + '//' + window.location.hostname + ':8081/index.html?type=preview&swiper=true&title=' + item.PageTxt })
+                            }
+                            if (item.children && item.children.length > 0) {
+                                findPages(item.children);
+                            }
+                        });
+                    }
+                    findPages(r.data);
+                }
+            })
+            $.ajaxSettings.async = true;
+            var html = '';
+            $.each(data, function (n, val) {
+                html += '<div class="swiper-slide"><iframe frameborder="0" src="' + val.url + '" scrolling="yes" class="x-iframe" allowfullscreen="true"></iframe></div>'
+            })
+            $('.swiper-wrapper').html(html);
+            var swiper = new Swiper('.swiper-container', {
+                pagination: '.swiper-pagination',
+                nextButton: '.swiper-button-next',
+                prevButton: '.swiper-button-prev',
+                autoplay: parseInt(anitime) * 1000,
+                paginationClickable: true,
+                keyboardControl: true,
+                effect: ani,
+                speed: parseInt(anispeed),
+                loop: true
+            });
+        })
+
+    </script>
+</body>
+
+</html>

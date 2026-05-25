@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">出库数量<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="number" value="" name="number" autocomplete="off" lay-verify="required" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item" id="B">
+                    <label class="layui-form-label">领用人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="EmpId" name="UseEmpId" lay-filter="EmpId" lay-verify="required">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label">备注</label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入内容" id="remark" name="remark" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            var id = GetString("id");
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                param.ComboBox = "all";
+                getEmp(form,'');    
+                //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    var number = strformData.get('number');
+                    strformData.append("token", token);
+                    strformData.append("id", id);
+                    if(number<1){
+                        layer.msg('出库数量必须大于0', {
+                            icon: 5,
+                            time: 1000
+                        });
+                        return;
+                    }
+                    list.form("ExportConsumablesKey", strformData, function (r) {
+                        backToparent("已出库");
+                    });
+                })
+            });
+        });
+    </script>
+</body>
+</html>

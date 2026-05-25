@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .imgPos {
+            position: relative;
+            top: -2px;
+            width: 18px
+        }
+
+        .catchBtn {
+            width: 100%;
+            padding-top: 10px;
+            clear: both
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入设备IP" name="searchIp">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入设备端口" name="searchPort">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入模块类型" name="searchType">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="catchBtn">
+                        <button class="layui-btn" onclick="batchDeployment('arm')">
+                            批量主机布防
+                        </button>
+                        <button class="layui-btn" onclick="batchDeployment('disarm')">
+                            批量主机撤防
+                        </button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table layui-form">
+                            <thead>
+                                <tr>
+                                    <th class="showcheck">
+                                        <input type="checkbox" id="checkall" lay-filter="checkall" lay-skin="primary">
+                                    </th>
+                                    <th>设备ID</th>
+                                    <th>IP</th>
+                                    <th>端口</th>
+                                    <th>模块类型</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td width="80">
+                                            <input type="checkbox" value="{{list.id}}" name="id" lay-filter="checkone" lay-skin="primary" data-id="{{list.id}}">
+                                        </td>
+                                        <td>{{list.id}}</td>
+                                        <td>{{list.ip}}</td>
+                                        <td>{{list.port}}</td>
+                                        <td>{{list.model}}</td>
+                                        <td>
+                                            <a title="防区状态" onclick="xadmin.open('防区状态','donghuan-device-hostdeploy-status.html','','','{{list.id}}')" href="javascript:;" >
+                                                <i class="layui-icon">&#xe7ae;</i>
+                                            </a>
+                                            <a title="事件" onclick="xadmin.open('事件','donghuan-device-hostdeploy-event.html','','','{{list.id}}')" href="javascript:;" >
+                                                <i class="layui-icon">&#xe656;</i>
+                                            </a>
+                                            <a title="撤防" onclick="fetchChangeStatus('{{list.id}}', '', 'arm');" href="javascript:;">
+                                                <img src="images/closenotice.png" class="imgPos">
+                                            </a>
+                                            <a title="布防" onclick="fetchChangeStatus('{{list.id}}', '', 'disarm');" href="javascript:;">
+                                                <img src="images/notice.png" class="imgPos">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //主机通用接口配置。
+        let getDataUrl = 'http://' + window.location.hostname + ':8000';
+        //全部设备数据
+        let resData = {
+            data: []
+        };
+        //选择设备
+        let selectedDevices = [];
+        $(function () {
+
+            // 初始化Layui模块
+            layui.use(["form", "upload"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+
+                // 获取设备数据
+                getDeviceData(form);
+
+                // 搜索提交
+                form.on("submit(search)", function (data) {
+                    let searchIp = data.field.searchIp;
+                    let searchPort = data.field.searchPort;
+                    let searchType = data.field.searchType;
+                    if (searchIp || searchPort || searchType) {
+                        let filterData = [];
+                        if (searchIp) {
+                            filterData = resData.data.filter(v => (searchIp && v.ip.indexOf(searchIp) > -1));
+                        }else{
+                            filterData = resData.data;
+                        }
+                        if (searchPort) {
+                            filterData = filterData.filter(v => (searchPort && v.port.toString().indexOf(searchPort) > -1));
+                        }
+                        if (searchType) {
+                            filterData = filterData.filter(v => (searchType && v.model.indexOf(searchType) > -1));
+                        }
+                        getHostDevList(form, filterData);
+                    } else {
+                        getHostDevList(form, resData.data);
+                    }
+                    return false;
+                });
+
+                // 修改后的全选/单选事件处理
+                form.on('checkbox(checkall)', function (data) {
+                    var child = $(data.elem).closest('.layui-table').find('tbody input[type="checkbox"][lay-filter="checkone"]');
+                    selectedDevices = []; // 清空数组
+
+                    child.each(function () {
+                        this.checked = data.elem.checked;
+                        var sn = $(this).data('id');
+                        if (data.elem.checked && sn) {
+                            selectedDevices.push(sn);
+                        }
+                    });
+                    form.render('checkbox');
+                    console.log('全选操作:', selectedDevices); // 调试
+                });
+
+                form.on('checkbox(checkone)', function (data) {
+                    var sn = $(data.elem).data('id');
+                    if (data.elem.checked) {
+                        if (sn && !selectedDevices.includes(sn)) {
+                            selectedDevices.push(sn);
+                        }
+                    } else {
+                        selectedDevices = selectedDevices.filter(item => item !== sn);
+                    }
+
+                    // 更新全选状态
+                    var allChecked = selectedDevices.length === $(data.elem).closest('.layui-table').find('tbody input[type="checkbox"][lay-filter="checkone"]').length;
+                    $("#checkall").prop('checked', allChecked);
+                    form.render('checkbox');
+                    console.log('单选操作:', selectedDevices); // 调试
+                });
+            });
+
+            // 定时刷新数据
+            // var time = setInterval(function () {
+            //     getDeviceData(form);
+            // }, 120000);
+        })
+
+        //获取设备列表
+        //data [{}]
+        function getHostDevList(form, data) {
+            if (data) {//如果data存在，即为本地查询
+                let newData = {
+                    data: data
+                }
+                let lists = template("listtemplate", newData);
+                $("tbody").html(lists);
+                form.render();
+            } else {
+                $.get(getDataUrl + '/devices', {}, function (res) {
+                    if (res.length > 0) {
+                        resData.data = res;
+                    }
+                    let lists = template("listtemplate", resData);
+                    $("tbody").html(lists);
+                    form.render();
+                })
+            }
+        }
+
+        //异步获取设备数据
+        async function getDeviceData(form) {
+            try {
+                await getHostDevList(form);
+            } catch (error) {
+                console.error('获取设备数据失败:', error);
+                layer.msg('设备数据加载失败', { icon: 5, time: 2000 });
+            }
+            return true
+        }
+
+
+        //批量布防、撤防提交数据
+        // type arm布防  disarm撤防
+        async function fetchChangeStatus(id, returnStr, type = 'arm') {
+            let dealUrl = `/devices/${id}/` + type;
+            try {
+                await $.get(getDataUrl + dealUrl, {}, function (res) {
+                    if (type == 'arm') {
+                        if (res.armed === false) {
+                            returnStr += `主机ID:${id},布防失败！`
+                        }
+                    } else {
+                        if (res.armed !== false) {
+                            returnStr += `主机ID:${id},撤防失败！`
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error(`${type}处理失败:`, error);
+                layer.msg(`${type}处理失败:`, { icon: 5, time: 2000 });
+            }
+            return returnStr;
+        }
+
+        // 批量布防撤防功能
+        function batchDeployment(type) {
+            if (selectedDevices.length === 0) {
+                layer.msg('请至少选择一条数据', { icon: 5, time: 2000 });
+                return false;
+            }
+            let returnStr = '';
+            $.each(selectedDevices, function (n, val) {
+                let tipsStatus = false;
+                if (n + 1 == val.length) tipsStatus = true;
+                returnStr = fetchChangeStatus(val, returnStr, type);
+            })
+            if (returnStr) {
+                layer.msg(returnStr, { icon: 5, time: 1000 })
+            } else {
+                layer.msg(type == 'arm' ? '布防成功' : '撤防成功', { icon: 1, time: 1000 })
+            }
+            return false;
+        }
+    </script>
+</body>
+
+</html>

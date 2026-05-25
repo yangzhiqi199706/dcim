@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<style>
+    #tree {
+        max-height: 1000px !important;
+    }
+
+    .last2 {
+        display: none;
+    }
+
+    @keyframes redwinkBackground {
+        0% {
+            background-color: #ff0000;
+        }
+
+        50% {
+            background-color: #eeaeae;
+        }
+
+        100% {
+            background-color: #ff0000;
+        }
+    }
+
+    @keyframes bluewinkBackground {
+        0% {
+            background-color: #216FEC;
+        }
+
+        50% {
+            background-color: #9a99f0;
+        }
+
+        100% {
+            background-color: #216FEC;
+        }
+    }
+
+    .redwink {
+        animation: redwinkBackground 1s infinite;
+    }
+
+    .bluewink {
+        animation: bluewinkBackground 1s infinite;
+    }
+</style>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>资产管理->资产管理->资产可视化</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="column" name="column" lay-filter="column">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="CabinetId" name="CabinetId" lay-filter="CabinetId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <ul id="menulist">
+                        <li class="notneedid">上架</li>
+                        <li class="notneedid uid upuid">预上架</li>
+                        <li class="notneedid uid cupuid">取消预上架</li>
+                        <li class="needid">下架</li>
+                        <li class="needid uid downuid">预下架</li>
+                        <li class="needid uid cdownuid">取消预下架</li>
+                        <!-- <li class="needid uid">异常下架</li> -->
+                        <li class="needid">修改私有属性</li>
+                        <li class="notneedid use">U位启用</li>
+                        <li class="notneedid notuse">U位禁用</li>
+                        <li class="needid">维修登记</li>
+                        <!-- <li>维修完成</li> -->
+                        <!-- <li onclick="xadmin.open('面板图设置','asset-view-setimg.html')">面板图设置</li> -->
+                        <li onclick="xadmin.open('面板展示内容设置','asset-view-setcon.html','','','{{list.id}}')">面板展示内容设置</li>
+                        <!-- <li class="needid">离线转在线</li>
+                        <li class="needid">变更标签</li> -->
+                    </ul>
+                    <div class="layui-card-body">
+                        <ul id="tree" class="view-box">
+                            <script type="text/html" id="utemplate">
+                            {{each data as list i}}
+                            <li data-id="{{list.id}}" data-ULocation="{{list.ULocation}}"
+                                data-UAttributeVal="{{list.UAttributeVal}}" data-SerialNumber="{{list.SerialNumber}}"
+                                data-ip="{{list.ip}}" data-AssetsDescribe="{{list.AssetsDescribe}}"
+                                data-type="{{list.setconType}}" class="ModelList{{list.ULocation}}"
+                                data-AssetsId="{{list.AssetsId}}" data-BrandModel="{{list.BrandModel}}"
+                                data-AssetsNumber="{{list.AssetsNumber}}" data-UStatus="{{list.UStatus}}"
+                                data-UdeviceStatus="{{list.UdeviceStatus}}" data-ServerCode="{{list.ServerCode}}"
+                                data-ServerName="{{list.ServerName}}" data-AreaId="{{list.AreaId}}"
+                                data-AreaName="{{list.AreaName}}" data-UTag="{{list.UTag}}">
+                                <div>{{list.ULocation}}</div>
+                                {{if list.setconType == "BrandModel"}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}">{{list.BrandModel}}</div>
+                                {{else if list.setconType == "AssetsDescribe"}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}">{{list.AssetsDescribe}}</div>
+                                {{else if list.setconType == "AssetsNumber"}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}">{{list.AssetsNumber}}</div>
+                                {{else if list.setconType == "ip"}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}">{{list.ip}}</div>
+                                {{else if list.setconType == "order"}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}">{{list.SerialNumber}}</div>
+                                {{else if list.setconType == "UTag"}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}">{{list.UTag}}</div>
+                                {{else if list.setconType == ""}}
+                                <div style="{{if list.UStatus}}background-color:#222;{{/if}}"
+                                    class="mid ModelFrontImg{{list.ULocation}}"></div>
+                                {{/if}}
+                                <div class="last ModelLast{{list.ULocation}}" style="
+                                            {{if list.UStatus=='在架位'}}
+                                                background-color:#3A913D;
+                                            {{else if list.UStatus=='预占位'}}
+                                                background-color:#216FEC;
+                                            {{else if list.UStatus=='维修位'}}
+                                                background-color:#FF0003;
+                                            {{else if list.UStatus=='上架中'}}
+                                                background-color:#109978;
+                                            {{else if list.UStatus=='下架中'}}
+                                                background-color:#C817CB;
+                                            {{else if list.UStatus=='禁用位'}}
+                                                background-color:#454543;
+                                            {{else if list.UStatus=='标签丢失'}}
+                                                background-color:#A00304;
+                                            {{else if list.UStatus=='信息不一致'}}
+                                                background-color:#A0CA1A;
+                                            {{else if list.UStatus=='已出租'}}
+                                                background-color:#4D4DFF;
+                                            {{/if}}
+                                        "></div>
+                                <div class="last last2 ULast{{list.ULocation}}
+                                        {{if list.UdeviceStatus=='2'}}
+                                            bluewink
+                                        {{else if list.UdeviceStatus=='3'}}
+                                            redwink
+                                        {{/if}}
+                                        " style="
+                                            {{if list.UdeviceStatus=='0'}}
+                                                background-color:#216FEC;
+                                            {{else if list.UdeviceStatus=='1'}}
+                                                background-color:#FF0000;
+                                            {{/if}}
+                                        "></div>
+                            </li>
+                            {{/each}}
+                            </script>
+                        </ul>
+                        <div class="view-box-con">
+                            <table class="layui-table layui-col-tree" id="view-detail">
+                                <span>图例：</span>
+                                <ul class="view-tips">
+                                    <li>
+                                        <label style="background-color:#3A913D;"></label>
+                                        <span>在架位</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#216FEC;"></label>
+                                        <span>预占位</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#FF0003;"></label>
+                                        <span>维修位</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#109978;"></label>
+                                        <span>上架中</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#C817CB;"></label>
+                                        <span>下架中</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#454543;"></label>
+                                        <span>禁用位</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#A0CA1A;"></label>
+                                        <span>信息不一致</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#4D4DFF;"></label>
+                                        <span>已出租</span>
+                                    </li>
+                                </ul>
+                                <br />
+                                <span class="last2">状态图例：</span>
+                                <ul class="view-tips last2">
+                                    <li>
+                                        <label style="background-color:#216FEC;"></label>
+                                        <span>上架</span>
+                                    </li>
+                                    <li>
+                                        <label style="background-color:#FF0000;"></label>
+                                        <span>异常下架</span>
+                                    </li>
+                                    <li>
+                                        <label class="bluewink"></label>
+                                        <span>预上架</span>
+                                    </li>
+                                    <li>
+                                        <label class="redwink"></label>
+                                        <span>预下架</span>
+                                    </li>
+                                </ul>
+                                <tbody id="detail"></tbody>
+                                <script type="text/html" id="detailtpl">
+                                <tr>
+                                    <td>机柜编号</td>
+                                    <td>{{data.position}}</td>
+                                    <td>机柜类型</td>
+                                    <td>{{data.AssetsTypeName}}</td>
+                                    <td>负责人</td>
+                                    <td>{{data.PersonName}}</td>
+                                    <td>总电源插口</td>
+                                    <td>{{data.RatedJackPort}}个</td>
+                                </tr>
+                                <tr>
+                                    <td>机柜功率</td>
+                                    <td>{{data.RatedPower}}W</td>
+                                    <td>型号</td>
+                                    <td>{{data.BrandModel}}</td>
+                                    <td>投入时间</td>
+                                    <td>{{data.BuyTime}}</td>
+                                    <td>已用电源插口</td>
+                                    <td>{{data.UsedJackPort}}个</td>
+                                </tr>
+                                <tr>
+                                    <td>可用功率</td>
+                                    <td>{{data.RatedPower-data.UsedPower-data.PreUsedPower}}W</td>
+                                    <td>额定容量</td>
+                                    <td>{{data.RatedU}}U</td>
+                                    <td>额定承重</td>
+                                    <td>{{data.RatedWeight}}Kg</td>
+                                    <td>可用电源插口</td>
+                                    <td>{{data.RatedJackPort-data.UsedJackPort-data.PreUsedJackPort}}个</td>
+                                </tr>
+                                <tr>
+                                    <td>实际功率</td>
+                                    <td>0W</td>
+                                    <!-- <td>{{data.UsedPower}}</td> -->
+                                    <td>可用容量</td>
+                                    <td>{{data.RatedU-data.UsedU}}U</td>
+                                    <td>可用承重</td>
+                                    <td>{{data.RatedWeight-data.UsedWeight-data.PreUsedWeight}}Kg</td>
+                                    <td>预占电源插口</td>
+                                    <td>{{data.PreUsedJackPort}}个</td>
+                                </tr>
+                                <tr>
+                                    <td>预占功率</td>
+                                    <td>{{data.PreUsedPower}}W</td>
+                                    <td>预占U位</td>
+                                    <td>{{data.PreUsedU}}U</td>
+                                    <td>预占承重</td>
+                                    <td colspan="3">{{data.PreUsedWeight}}Kg</td>
+                                </tr>
+                                </script>
+                            </table>
+                            <div class="con-nav">
+                                <a class="layui-btn">资产详细信息</a>
+                                <a class="layui-btn layui-btn-primary">属性详情</a>
+                                <a class="layui-btn layui-btn-primary">维修详情</a>
+                                <a class="layui-btn layui-btn-primary">使用轨迹</a>
+                                <a class="layui-btn layui-btn-primary">路由信息</a>
+                            </div>
+                            <table class="layui-table layui-col-tree" id="view-desc">
+                                <tbody></tbody>
+                                <script type="text/html" id="desctpl">
+                                <tr>
+                                    <td>资产编号</td>
+                                    <!-- <td>{{data.AssetsNumber}}</td> -->
+                                    <td><input type="text" {{if !data.isId}}disabled="true" {{/if}} id="AssetsNumber"
+                                            name="AssetsNumber" value="{{data.AssetsNumber}}" lay-verify="required"
+                                            autocomplete="off" class="layui-input"></td>
+                                    <td>资产类型</td>
+                                    <td>{{data.AssetsTypeName}}</td>
+                                    <td>资产描述</td>
+                                    <!-- <td>{{data.AssetsDescribe}}</td> -->
+                                    <td><input type="text" {{if !data.isId}}disabled="true" {{/if}} id="AssetsDescribe"
+                                            name="AssetsDescribe" value="{{data.AssetsDescribe}}" lay-verify="required"
+                                            autocomplete="off" class="layui-input"></td>
+                                    <td>型号</td>
+                                    <td>{{data.BrandModel}}</td>
+                                </tr>
+                                <tr>
+                                    <td>供应商</td>
+                                    <td>{{data.SupplierName}}</td>
+                                    <td>购置日期</td>
+                                    <td>{{data.BuyTime}}</td>
+                                    <td>维保过期</td>
+                                    <td>{{data.WeiBaoEndTime}}</td>
+                                    <td>上架时间</td>
+                                    <td>{{data.GroundingTime}}</td>
+                                </tr>
+                                <tr>
+                                    <td>上架人</td>
+                                    <td>{{data.GroundingPersonName}}</td>
+                                    <td>租户</td>
+                                    <td>{{data.TenantName}}</td>
+                                    <td>管理部门</td>
+                                    <td>{{data.DeptName}}</td>
+                                    <td>管理人员</td>
+                                    <td>{{data.PersonName}}</td>
+                                </tr>
+                                <tr>
+                                    <td>起始U位</td>
+                                    <td>{{data.ULocation}}</td>
+                                    <td>U位标签</td>
+                                    <td>{{data.UTag}}</td>
+                                    <td>动环关联</td>
+                                    <td></td>
+                                    <td>性能关联</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td>总网口</td>
+                                    <td>{{if data.RateNetworkPort}}{{data.RateNetworkPort}}个{{/if}}</td>
+                                    <td>已用网口</td>
+                                    <td>{{if data.UsedNetworkPort}}{{data.UsedNetworkPort}}个{{/if}}</td>
+                                    <td>前面板图</td>
+                                    <td>{{if data.ModelFrontImg}}<a class="layui-btn-warm fancybox-view"
+                                            href="{{data.ModelFrontImg}}">
+                                            <img src="{{data.ModelFrontImg}}" alt="">
+                                        </a>{{/if}}</td>
+                                    <td>后面板图</td>
+                                    <td>{{if data.ModelAfterImg}}<a class="layui-btn-warm fancybox-view"
+                                            href="{{data.ModelAfterImg}}">
+                                            <img src="{{data.ModelAfterImg}}" alt="">
+                                        </a>{{/if}}</td>
+                                </tr>
+                                <tr>
+                                    <td>全景图</td>
+                                    <td colspan="7">{{if data.ModelAllImg}}<a class="layui-btn-warm fancybox-view"
+                                            href="{{data.ModelAllImg}}">
+                                            <img src="{{data.ModelAllImg}}" alt="">
+                                        </a>{{/if}}</td>
+                                </tr>
+                                </script>
+                            </table>
+                            <table class="layui-table layui-col-tree" id="view-attr">
+                                <thead>
+                                    <tr>
+                                        <th>属性编号</th>
+                                        <th>属性名称</th>
+                                        <th>属性值</th>
+                                        <th>数据类型</th>
+                                        <th>属性单位</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="attrtemplate">
+                                        {{if data.length!=0}} {{each data as list i}}
+                                        <tr>
+                                            <td>{{list.AttrNumber}}</td>
+                                            <td>{{list.AttrName}}</td>
+                                            <td>{{list.AttributeVal}}</td>
+                                            <td>{{list.DataType}}</td>
+                                            <td>{{list.AttrUnit}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="view-repair">
+                                <table class="layui-table layui-col-tree">
+                                    <thead>
+                                        <tr>
+                                            <th>编号</th>
+                                            <th>维修类型</th>
+                                            <th>故障描述</th>
+                                            <th>维修日期</th>
+                                            <th>维修人</th>
+                                            <th>维修状态</th>
+                                            <th>完成时间</th>
+                                            <th>维修结果</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <script type="text/html" id="repairlisttemplate">
+                                            {{if data.info.length!=0}} {{each data.info as list i}}
+                                            <tr>
+                                                <td>{{list.RepairNumber}}</td>
+                                                <td>{{if list.RepairType=='IR'}}在库维修{{else}}外送维修（在库）{{/if}}</td>
+                                                <td>{{list.FaultDescribe}}</td>
+                                                <td>{{list.RepairTime}}</td>
+                                                <td>{{list.RepairEmp}}</td>
+                                                <td>{{list.RepairStatus}}</td>
+                                                <td>{{list.FinishTime}}</td>
+                                                <td>{{list.RepairResult}}</td>
+                                            </tr>
+                                            {{/each}} {{else}}
+                                            <tr>
+                                                <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                            </tr>
+                                            {{/if}}
+                                        </script>
+                                    </tbody>
+                                </table>
+                                <div id="repairbottomPaging" class="x-right"></div>
+                            </div>
+                            <div id="view-use">
+                                <table class="layui-table layui-col-tree">
+                                    <thead>
+                                        <tr>
+                                            <th>编号</th>
+                                            <th>变更类型</th>
+                                            <th>变更内容</th>
+                                            <th>变更人</th>
+                                            <th>变更日期</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <script type="text/html" id="uselisttemplate">
+                                            {{if data.info.length!=0}} {{each data.info as list i}}
+                                            <tr>
+                                                <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                                <td>{{list.ChangeType}}</td>
+                                                <td>{{list.ChangeDescribe}}</td>
+                                                <td>{{list.PersonName}}</td>
+                                                <td>{{list.create_time}}</td>
+                                            </tr>
+                                            {{/each}} {{else}}
+                                            <tr>
+                                                <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                            </tr>
+                                            {{/if}}
+                                        </script>
+                                    </tbody>
+                                </table>
+                                <div id="usebottomPaging" class="x-right"></div>
+                            </div>
+                            <table class="layui-table layui-col-tree" id="view-route">
+                                <thead>
+                                    <tr>
+                                        <th colspan="10">A</th>
+                                        <th colspan="10">B</th>
+                                    </tr>
+                                </thead>
+                                <thead>
+                                    <tr>
+                                        <th>所属区域</th>
+                                        <th>机柜列</th>
+                                        <th>机柜</th>
+                                        <th>占用U位</th>
+                                        <th>资产类型</th>
+                                        <th>型号</th>
+                                        <th>端口类型</th>
+                                        <th>端口编号</th>
+                                        <th>资产编号</th>
+                                        <th>资产描述</th>
+                                        <th>所属区域</th>
+                                        <th>机柜列</th>
+                                        <th>机柜</th>
+                                        <th>占用U位</th>
+                                        <th>资产类型</th>
+                                        <th>型号</th>
+                                        <th>端口类型</th>
+                                        <th>端口编号</th>
+                                        <th>资产编号</th>
+                                        <th>资产描述</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="routelisttemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr >
+                                            <td>{{list.AreaName}}</td>
+                                            <td>{{list.column}}</td>
+                                            <td>{{list.position}}</td>
+                                            <td>{{list.ULocation}}</td>
+                                            <td>{{list.AssetsTypeName}}</td>
+                                            <td>{{list.BrandModel}}</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td>{{list.AssetsNumber}}</td>
+                                            <td>{{list.AssetsDescribe}}</td>
+                                            <td>{{list.bAreaName}}</td>
+                                            <td>{{list.bcolumn}}</td>
+                                            <td>{{list.bposition}}</td>
+                                            <td>{{list.bULocation}}</td>
+                                            <td>{{list.bAssetsTypeName}}</td>
+                                            <td>{{list.bBrandModel}}</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td>{{list.bAssetsNumber}}</td>
+                                            <td>{{list.bAssetsDescribe}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/dealUIdStatus.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        // var setconType = !localStorage.getItem("setconType")?'':localStorage.getItem("setconType");
+        let UId = '';//是否U位资产  PMS0000000000002
+        let GatewayId = '';//是否u位定位资产
+        let devAddress = '';
+        let allCabinet = [];
+        let getUTime;//资产自定获取U位信息
+
+        //查询设备的串联地址
+        function searchDevAddress(GatewayId) {
+            list.info("GetDeviceDetailKey", {
+                token: token,
+                id: GatewayId
+            }, function (r) {
+                devAddress = r.data?.DeviceAddress;
+            })
+        }
+        $(function () {
+            $('.view-box-con').click(function (event) {
+                $('#menulist').css({ 'display': 'none' });
+            });
+            layui.use(["form", "tree"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var ServerCode, AreaId, column, DeptId;
+                //服务器
+                getServer(form, function (r) {
+                    //继成上个接口
+                    layuiSelected("ServerCode", r.data[0].ServerName);
+                    ServerCode = r.data[0].id;
+                    form.on("select(ServerCode)", function (data) {
+                        param.ComboBox = 'all';
+                        getArea(form, data);
+                    });
+                    getArea(form, { value: ServerCode }, function (re) {
+                        //继成上个接口
+                        if (re.data.length == 0) { return; }
+                        layuiSelected("AreaId", re.data[0].AreaName);
+                        AreaId = re.data[0].id;
+                        form.on("select(AreaId)", function (data) {
+                            param.ComboBox = 'all';
+                            getColumn(form, data);
+                            form.on("select(column)", function (data) {
+                                param.ComboBox = 'all';
+                                initCabinet(form, data);
+                            });
+                        });
+                        getColumn(form, { value: AreaId }, function (res) {
+                            //继成上个接口
+                            if (res.data.length == 0) { return; }
+                            layuiSelected("column", res.data[0].column);
+                            column = res.data[0].column;
+                            form.on("select(column)", function (data) {
+                                param.ComboBox = 'all';
+                                initCabinet(form, data);
+                            });
+                            initCabinet(form, { value: column });
+                        });
+                    });
+                });
+                $('.con-nav a').click(function () {
+                    $(this).removeClass('layui-btn-primary').siblings().addClass('layui-btn-primary')
+                    switch ($(this).index()) {
+                        case 0: $('#view-desc').show(); $('#view-attr,#view-repair,#view-use,#view-route').hide(); break;
+                        case 1: $('#view-attr').show(); $('#view-desc,#view-repair,#view-use,#view-route').hide(); break;
+                        case 2: $('#view-repair').show(); $('#view-desc,#view-attr,#view-use,#view-route').hide(); break;
+                        case 3: $('#view-use').show(); $('#view-desc,#view-attr,#view-repair,#view-route').hide(); break;
+                        case 4: $('#view-route').show(); $('#view-desc,#view-attr,#view-repair,#view-use').hide(); break;
+                    }
+                }).first().click();
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    // param.pageNo = 1;
+                    // delete(param['ComboBox']);
+                    // list.get(url,param)
+                    clearInterval(getUTime);
+                    getU();
+                    if (UId || GatewayId) {
+                        getUTime = setInterval(function () {
+                            getU('1');
+                        }, 10000);
+                    }
+                    return false;
+                });
+            });
+        })
+        //机柜信息初始化与选择
+        function initCabinet(form, data) {
+            getAssetCabinet(form, data, function (ress) {
+                UId = '';
+                GatewayId = '';
+                devAddress = '';
+                allCabinet = [];
+                if (ress.data.length == 0) { return; }
+                allCabinet = ress.data;
+                // UId = ress.data[0]['UId'];
+                // GatewayId = ress.data[0]['GatewayId'];
+                // console.log(UId)
+                // console.log(GatewayId)
+                // searchDevAddress(GatewayId);
+
+                delete (param['ComboBox']);
+                form.on("select(CabinetId)", function (data) {
+                    let finduid = allCabinet.findIndex(v => v.id == data.value);
+                    // console.log('3')
+                    // console.log(allCabinet)
+                    // console.log(finduid)
+                    if (finduid > -1) {
+                        UId = ress.data[finduid]['UId'];
+                        GatewayId = ress.data[finduid]['GatewayId'];
+                        searchDevAddress(GatewayId);
+                    } else {
+                        UId = '';
+                        GatewayId = '';
+                        devAddress = '';
+                    }
+                });
+            })
+        }
+        function getType() {
+            var setconType = !localStorage.getItem("setconType") ? '' : localStorage.getItem("setconType");
+            var Uarray = $('#tree li');
+            var arr = [];
+            for (var i = 0; i < Uarray.length; i++) {
+                arr.push(Uarray[i].className)
+            }
+            $.each(arr, function (i, item) {
+                if (setconType == 'BrandModel') {
+                    var value = $(`.${item}`).attr('data-BrandModel')
+                } else if (setconType == 'AssetsDescribe') {
+                    var value = $(`.${item}`).attr('data-AssetsDescribe')
+                } else if (setconType == 'AssetsNumber') {
+                    var value = $(`.${item}`).attr('data-AssetsNumber')
+                } else if (setconType == 'ip') {
+                    var value = $(`.${item}`).attr('data-ip')
+                } else if (setconType == 'order') {
+                    var value = $(`.${item}`).attr('data-SerialNumber')
+                } else if (setconType == 'UTag') {
+                    var value = $(`.${item}`).attr('data-UTag')
+                } else {
+                    var value = ''
+                }
+                $(`.${item} div:nth-child(2)`).text(`${value}`)
+            })
+        }
+        //获取U位状态
+        // index == 1 不获取资产信息
+        //intertime 定时任务 不执行机柜信息
+
+        function getU(index, intertime) {
+            if (!$('#CabinetId').val()) {
+                layer.msg('请选择机柜！', {
+                    icon: 5,
+                    time: 2000
+                });
+                return false
+            }
+
+            list.info('GetAssetVisualizationKey', {
+                token: token,
+                CabinetId: $('#CabinetId').val()
+            }, function (r) {
+                var html = template('detailtpl', r)
+                $('#detail').html(html);
+            });
+
+            var setconType = !localStorage.getItem("setconType") ? '' : localStorage.getItem("setconType");
+            list.info('getCabinetUKey', {
+                token: token,
+                id: $('#CabinetId').val()
+            }, function (r) {
+                $.each(r.data, function (i, item) {
+                    item.setconType = setconType
+                })
+
+                r.data = r.data.reverse();//数据倒序
+                var lists = template("utemplate", r);
+
+                $("#tree").html(lists);
+
+                console.log('UId', UId)
+                console.log('GatewayId', GatewayId)
+                if (UId || GatewayId) {
+                    $('.last2').css('display', 'inline-block');
+                    $('.view-box .mid').css('width', 'calc(100% - 60px)');
+                } else {
+                    $('.last2').hide();
+                }
+
+                if (r.data.length > 0) {
+                    //数组去重
+                    var newData = r.data;
+                    let map = new Map();
+                    for (let item of newData) {
+                        if (!map.has(item.AssetsId)) {
+                            map.set(item.AssetsId, item)
+                        }
+                    }
+                    newData = [...map.values()];
+                    // console.log(newData);
+                    $.each(newData, function (key, value) {
+                        if (value.AssetsId && value.UAttributeVal !== '') {
+                            $(`.ModelFrontImg${value.ULocation}`).css({
+                                "position": "absolute",
+                                "height": `calc(20*${value.UAttributeVal}px - 2px)`,
+                                "right": "20px",
+                                "display": "flex",
+                                "align-items": "center",
+                                "justify-content": "center"
+                            });
+                            if (UId || GatewayId) {
+                                $(`.ModelFrontImg${value.ULocation}`).css({ "right": "40px" })
+                            }
+                            $(`.ModelList${value.ULocation}`).css({ "position": "relative" });
+                            $(`.ModelLast${value.ULocation},.ULast${value.ULocation}`).css({
+                                "position": "relative",
+                                "left": "150px"
+                            });
+                            if (!UId && !GatewayId) {
+                                $(`.ModelLast${value.ULocation}`).css({ "left": "170px" });
+                            }
+                        }
+                    })
+                    $.each(r.data, function (i, item) {
+                        if (item.ModelFrontImg) {
+                            $(`.ModelFrontImg${r.data.length - i}`).css({
+                                'background-image': 'url(' + imgUrl + item.ModelFrontImg + ')',
+                                "background-size": "100%"
+                            }
+                            );
+                        }
+                        item.setconType = setconType
+                    })
+                }
+                if (r.data.length != 0 && index != '1') {
+                    getAssetDetail(r.data[0]['AssetsId']);
+                }
+                var $this, id, AssetsId;
+                $('#tree li').mousedown(function (event) {
+                    $('#menulist').css({
+                        'display': 'block',
+                        'top': event.pageY - 50 + 'px',
+                        'left': event.pageX + 'px'
+                    });
+                    $this = $(this);
+                    id = $(this).attr('data-id');
+                    AssetsId = $(this).attr('data-AssetsId');
+                    $('#menulist li').show();
+                    if (!AssetsId) {//无资产
+                        $('#menulist li.needid').hide();
+                        if ($this.attr('data-UStatus')) {
+                            $('#menulist li.notuse,#menulist li.use').hide();
+                            if ($this.attr('data-UStatus') == '禁用位') {
+                                $('#menulist li.use').show();
+                            }
+                        } else {
+                            $('#menulist li.notuse').show();
+                            $('#menulist li.use').hide();
+                        }
+                    } else {//有资产
+                        $('#menulist li.notneedid').hide();
+                    }
+                    if (!UId && !GatewayId) {
+                        $('#menulist li.uid').hide();
+                    } else {
+                        //有uid，通过u状态判断 
+                        $('.cupuid,.cdownuid').hide();
+                        switch ($this.attr('data-UdeviceStatus')) {
+                            case '2':
+                                $('#menulist li.cupuid').show();
+                                $('#menulist li.upuid').hide();
+                                break;//取消预上架
+                            case '3':
+                                $('#menulist li.cdownuid').show();
+                                $('#menulist li.downuid').hide();
+                                break;//取消预下架
+                        }
+                    };
+                    getAssetDetail(AssetsId);
+                    getAssetAttr(AssetsId);
+                    getAssetRepair(AssetsId);
+                    getAssetUse(AssetsId);
+                    getAssetRoute(AssetsId);
+                })
+                $('#menulist li').unbind('click').click(function () {
+                    switch ($(this).text()) {
+                        case '上架':
+                            grounding($this.attr('data-servercode'),
+                                $this.attr('data-servername'),
+                                $this.attr('data-areaid'),
+                                $this.attr('data-areaname'),
+                                $('#column').val(),
+                                $('#CabinetId option:selected').text()); break;
+                        case 'U位启用': use($this, id); break;
+                        case 'U位禁用': notuse($this, id); break;
+                        case '下架': back($this, AssetsId); break;
+                        case '修改私有属性': private(AssetsId); break;
+                        case '维修登记': repair(AssetsId, $this.attr('data-brandmodel'), $this.attr('data-assetsnumber')); break;
+                        case '离线转在线': offon(AssetsId); break;
+                        case '预上架': preGrounding($this, id); break;
+                        case '预下架': preReturn($this, id); break;
+                        case '取消预上架': cancelPreGrounding($this, id); break;
+                        case '取消预下架': cancelPreReturn($this, id); break;
+                        // case '异常下架': abnormalReturn($this, id); break;
+                    }
+                })
+            });
+        }
+        //上架
+        function grounding(ServerCode, ServerName, AreaId, AreaName, column, position) {
+            $('#menulist').hide();
+            xadmin.open('上架', 'asset-grounding-add.html?ServerCode=' + ServerCode + '&ServerName='
+                + encodeURI(encodeURI(ServerName))
+                + '&AreaId=' + AreaId + '&AreaName='
+                + encodeURI(encodeURI(AreaName))
+                + '&column='
+                + encodeURI(encodeURI(column))
+                + '&position='
+                + encodeURI(encodeURI(position)))
+        }
+        //U位启用
+        function use(obj, id) {
+            list.info('ChangeUStatus', {
+                token: token,
+                id: id,
+                UStatus: ''
+            }, function (r) {
+                $('#menulist').hide();
+                $(obj).children('div.last').first().css('background-color', '#000');
+            });
+        }
+        //U位禁用
+        function notuse(obj, id) {
+            list.info('ChangeUStatus', {
+                token: token,
+                id: id,
+                UStatus: '禁用位'
+            }, function (r) {
+                $('#menulist').hide();
+                $(obj).children('div.last').first().css('background-color', '#454543');
+            });
+        }
+        //下架
+        function back(obj, assetsid) {
+            $('#menulist').hide();
+            xadmin.open('下架回库', 'asset-return-add.html', '', '', null
+                + '&AssetsId=' + assetsid
+                + '&type=viewback&UId='
+                + UId + '&GatewayId='
+                + GatewayId + '&devAddress='
+                + devAddress + '&CabinetId='
+                + $('#CabinetId').val()
+                + '&ULocation='
+                + $(obj).attr('data-ULocation')
+                + '&uhigh=' + $(obj).attr('data-UAttributeVal'));
+        }
+        //预上架
+        function preGrounding(obj, id) {//只有一个U位
+            // list.info('ChangeUStatus', {
+            //     token: token,
+            //     id: id,
+            //     UdeviceStatus: '2'
+            // }, function (r) {
+            $('#menulist').hide();
+            // $(obj).children('div.last2').first().css('background-color', '').removeClass('redwink').addClass('bluewink');
+            if (UId) {
+                setUStatus(UId, $(obj).attr('data-ULocation'), '2');//控制变更
+            } else if (GatewayId) {
+                setUposStatus(GatewayId, $(obj).attr('data-ULocation'), '2', devAddress, $('#CabinetId').val());//控制变更
+            }
+
+            // });
+        }
+        //取消预上架
+        function cancelPreGrounding(obj, id) {//只有一个U位
+            $('#menulist').hide();
+            if (UId) {
+                setUStatus(UId, $(obj).attr('data-ULocation'), '4');//控制变更
+            } else if (GatewayId) {
+                setUposStatus(GatewayId, $(obj).attr('data-ULocation'), '4', devAddress, $('#CabinetId').val());//控制变更
+            }
+        }
+        //预下架
+        function preReturn(obj, id) {
+            $('#menulist').hide();
+            let ULocation = $(obj).attr('data-ULocation');
+            let uhigh = $(obj).attr('data-UAttributeVal')
+            let ustart = ULocation - uhigh + 1;
+            let uend = ULocation;
+            for (i = ustart; i <= uend; i++) {
+                // console.log(i);
+                if (i == uend) {
+                    if (UId) {
+                        setUStatus(UId, i, '3', true);
+                    } else if (GatewayId) {
+                        setUposStatus(GatewayId, i, '3', devAddress, $('#CabinetId').val(), true);//控制变更
+                    }
+                } else {
+                    if (UId) {
+                        setUStatus(UId, i, '3');
+                    } else if (GatewayId) {
+                        setUposStatus(GatewayId, i, '3', devAddress, $('#CabinetId').val());//控制变更
+                    }
+                }
+            }
+        }
+        //取消预下架
+        function cancelPreReturn(obj, id) {//只有一个U位
+            $('#menulist').hide();
+            let ULocation = $(obj).attr('data-ULocation');
+            let uhigh = $(obj).attr('data-UAttributeVal')
+            let ustart = ULocation - uhigh + 1;
+            let uend = ULocation;
+            for (i = ustart; i <= uend; i++) {
+                // console.log(i);
+                if (i == uend) {
+                    if (UId) {
+                        setUStatus(UId, i, '0', true);
+                    } else if (GatewayId) {
+                        setUposStatus(GatewayId, i, '0', devAddress, $('#CabinetId').val(), true);//控制变更
+                    }
+                } else {
+                    if (UId) {
+                        setUStatus(UId, i, '0');
+                    } else if (GatewayId) {
+                        setUposStatus(GatewayId, i, '0', devAddress, $('#CabinetId').val());//控制变更
+                    }
+                }
+            }
+        }
+        //异常下架
+        function abnormalReturn(obj, id) {
+            $('#menulist').hide();
+            let ULocation = $(obj).attr('data-ULocation');
+            let uhigh = $(obj).attr('data-UAttributeVal')
+            let ustart = ULocation - uhigh + 1;
+            let uend = ULocation;
+            for (i = ustart; i <= uend; i++) {
+                if (UId) {
+                    setUStatus(UId, i, '1', true);
+                } else if (GatewayId) {
+                    setUposStatus(GatewayId, i, '1', devAddress, $('#CabinetId').val(), true);
+                }
+            }
+            // });
+        }
+        //私有属性
+        function private(assetsid) {
+            $('#menulist').hide();
+            xadmin.open('私有属性', 'asset-private-add.html', '', '', null + '&AssetsId=' + assetsid);
+        }
+        //维修登记
+        function repair(assetsid, BrandModel, AssetsNumber) {
+            $('#menulist').hide();
+            xadmin.open('维修登记', 'asset-repair-add.html', '', '', null
+                + '&AssetsId='
+                + assetsid
+                + '&BrandModel='
+                + encodeURI(encodeURI(BrandModel))
+                + '&AssetsNumber=' + encodeURI(encodeURI(AssetsNumber)));
+        }
+        //离线转在线
+        function offon(assetsid) {
+            $('#menulist').hide();
+            xadmin.open('离线转在线', 'asset-view-offon.html', '', '', 'AssetsId=' + assetsid);
+        }
+        //U位对应资产详情
+        function getAssetDetail(id) {
+            list.info('GetAssetsAllDetailKey', {
+                token: token,
+                id: id
+            }, function (r) {
+                if (r.data.ModelFrontImg && r.data.ModelFrontImg.indexOf('http') < 0) {
+                    r.data.ModelFrontImg = imgUrl + r.data.ModelFrontImg;
+                }
+                if (r.data.ModelAfterImg && r.data.ModelAfterImg.indexOf('http') < 0) {
+                    r.data.ModelAfterImg = imgUrl + r.data.ModelAfterImg;
+                }
+                if (r.data.ModelAllImg && r.data.ModelAllImg.indexOf('http') < 0) {
+                    r.data.ModelAllImg = imgUrl + r.data.ModelAllImg;
+                }
+                r.data.isId = id;
+                var html = template('desctpl', r)
+                $('#view-desc').html(html);
+                $('#AssetsNumber').blur(function () {
+                    list.info('ChangeAssetsNDKey', {
+                        token: token,
+                        AssetsNumber: $(this).val(),
+                        id: id,
+                        AssetsDescribe: $('#AssetsDescribe').val()
+                    }, function (r) {
+                        getU('1')
+                    });
+                });
+                $('#AssetsDescribe').blur(function () {
+                    list.info('ChangeAssetsNDKey', {
+                        token: token,
+                        AssetsDescribe: $(this).val(),
+                        id: id,
+                        AssetsNumber: $('#AssetsNumber').val()
+                    }, function () {
+                        getU('1')
+                    });
+                });
+                //预览图片
+                fnFancyBox('.fancybox-view');
+            });
+        }
+        //U位对应资产属性
+        function getAssetAttr(id) {
+            list.info('GetAssetsStoreAttrKey', {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template('attrtemplate', r)
+                $('#view-attr tbody').html(html);
+            });
+        }
+        //U位对应资产维修
+        var Repairparam = {
+            token: token,
+            pageNo: 1,
+            pageSize: 15,
+            startDateTime: '',
+            endDateTime: ''
+        };
+        function getAssetRepair(id) {
+            Repairparam.AssetsId = id;
+            list.getobj('GetRepairPlanKey', Repairparam, {
+                pageelem: 'repairbottomPaging',
+                htmltpl: 'repairlisttemplate',
+                htmlobj: '#view-repair tbody',
+                total: ''
+            }, Repairpagechange);
+        }
+        //分页回调
+        function Repairpagechange(curr) {
+            Repairparam.pageNo = curr;
+            list.getobj('GetRepairPlanKey', Repairparam, {
+                pageelem: 'repairbottomPaging',
+                htmltpl: 'repairlisttemplate',
+                htmlobj: '#view-repair tbody',
+                total: ''
+            }, Repairpagechange);
+        }
+        //U位对应资产变更
+        var Useparam = {
+            token: token,
+            pageNo: 1,
+            pageSize: 15,
+            startDateTime: '',
+            endDateTime: ''
+        };
+        function getAssetUse(id) {
+            Useparam.AssetsId = id;
+            list.getobj('GetAssetChangeInfoKey', Useparam, {
+                pageelem: 'usebottomPaging',
+                htmltpl: 'uselisttemplate',
+                htmlobj: '#view-use tbody',
+                total: ''
+            }, Usepagechange);
+        }
+        //分页回调
+        function Usepagechange(curr) {
+            Useparam.pageNo = curr;
+            list.getobj('GetAssetChangeInfoKey', Useparam, {
+                pageelem: 'usebottomPaging',
+                htmltpl: 'uselisttemplate',
+                htmlobj: '#view-use tbody',
+                total: ''
+            }, Usepagechange);
+        }
+        //U位对应资产路由
+        function getAssetRoute(id) {
+            list.info('GetRouteListKey', {
+                token: token,
+                pageNo: 1,
+                pageSize: 15,
+                startDateTime: '',
+                endDateTime: '',
+                AssetsId: id
+            }, function (r) {
+                var html = template('routelisttemplate', r)
+                $('#view-route tbody').html(html);
+            });
+        } 
+    </script>
+</body>
+
+</html>

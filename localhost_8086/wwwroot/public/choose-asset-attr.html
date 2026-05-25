@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <div class="layui-box-tree">
+                            <label>可配置属性</label>
+                            <table class="layui-table layui-col-tree layui-form">
+                                <thead>
+                                    <tr>
+                                        <th>属性编号</th>
+                                        <th>属性名称</th>
+                                        <th>数据类型</th>
+                                        <th>属性单位</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr onclick="chooseOne(this)" data-id="{{list.id}}" data-number="{{list.AttrNumber}}" data-name="{{list.AttrName}}" data-type="{{list.DataType}}" data-unit="{{list.AttrUnit}}">
+                                            <td>{{list.AttrNumber}}</td>
+                                            <td>{{list.AttrName}}</td>
+                                            <td>{{list.DataType}}</td>
+                                            <td>{{list.AttrUnit}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                            <label>已配置属性</label>
+                            <table class="layui-table layui-col-tree layui-form">
+                                <thead>
+                                    <tr>
+                                        <th>操作</th>
+                                        <th>属性编号</th>
+                                        <th>属性名称</th>
+                                        <th>数据类型</th>
+                                        <th>属性值</th>
+                                        <th>属性单位</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chooseTable"  class="chooseTable">
+                                    <script type="text/html" id="attrtemplate">
+                                        {{if data.length!=0}} {{each data as list i}}
+                                        <tr>
+                                            <td>
+                                                <a title="移除" onclick="removeChoose(this)" data-id="{{list.AttributeId}}" href="javascript:;">
+                                                    <i class="layui-icon">&#xe640;</i>
+                                                </a>
+                                            </td>
+                                            <td>{{list.AttrNumber}}</td>
+                                            <td>{{list.AttrName}}</td>
+                                            <td>{{list.DataType}}</td>
+                                            <td><input class="layui-input" name="attrCheck" value="{{list.AttributeVal}}" id="{{list.AttributeId}}"/></td>
+                                            <td>{{list.AttrUnit}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">无选择属性</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div class="layui-form-item">
+                                <button class="layui-btn x-right" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var chooseid=[];//已选择属性的id，方便排除重复选择，提交数据
+        $(function(){
+            var typeid = GetString("id");
+            //请求地址
+            var url = "GetAssetsAttrListKey";
+            //初始化数据
+            //已有属性
+            param.ComboBox='all';
+            param.AssetsTypeId=typeid;
+            list.info('GetAssetsTypeAttrKey',param,function(r){
+                var lists = template("attrtemplate", r);
+                $("#chooseTable").html(lists);
+                $.each(r.data,function(n,val){
+                    chooseid.push(val.AttributeId);
+                })
+            })
+
+            delete(param['ComboBox']);
+            delete(param['AssetsTypeId']);
+            layui.use(["form","tree"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var tree = layui.tree;
+                tree.render({
+                    elem:"#tree",
+                    data:[
+                        {
+                            title: '资产属性',
+                            spread:true,
+                            children: [
+                                {
+                                    title: '物理属性',
+                                    checked:true,
+                                },
+                                {title: '功耗属性'},
+                                {title: '端口属性'},
+                                {title: '私有属性'}
+                            ]
+                        },
+                        {
+                            title: '配置属性',
+                            spread:true,
+                            children: [
+                                {title: '硬件属性'},
+                                {title: '操作系统'},
+                                {title: '其它'}
+                            ]
+                        }
+                    ],
+                    click: function(obj){
+                        if(!obj.data.children){
+                            $('.layui-tree-txt').removeAttr('style');
+                            $(obj.elem).find('.layui-tree-txt').css('color','#148cf1');
+                            param.pageNo = 1;
+                            param.AttrClass = obj.data.title;
+                            list.get(url, param);
+                        }
+                    }
+                });
+                //初始属性列表
+                $('.layui-tree-checkedFirst').find('.layui-tree-txt').css('color','#148cf1');
+                param.AttrClass='物理属性';
+                list.get(url, param);
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var attrData=[];
+                    var next=true;
+                    var strformData={
+                        'token':token,
+                        'AssetsTypeId':typeid,
+                        'Attr':[]
+                    }
+                    $.each($('input[name=attrCheck]'),function(n,val){
+                        if($(val).val()==''){
+                            layer.msg('属性值不能为空', {
+                                icon: 5,
+                                time: 1000
+                            });
+                            next=false;
+                            return;
+                        }else{
+                            attrData.push({
+                                'AttributeId': $(val).attr('id'),
+                                'AttributeVal':$(val).val(),
+                            })
+                        }
+                    });
+                    if(!next)return false;
+                    if(attrData.length==0){
+                        layer.msg('无属性可提交！', {
+                            icon: 5,
+                            time: 1000
+                        });
+                        return;
+                    }
+                    strformData.Attr=attrData;
+                    list.info("CreateAssetsTypeAttrKey",strformData,function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        })
+        //选择一项
+        function chooseOne(obj){
+            var id=$(obj).data('id');
+            var number=$(obj).data('number');
+            var name=$(obj).data('name');
+            var type=$(obj).data('type');
+            var unit=$(obj).data('unit');
+
+            if(chooseid.length!=0){
+                var next=true;
+                $.each(chooseid,function(n,val){
+                    if(id==val){
+                        layer.msg('属性已存在', {
+                            icon: 5,
+                            time: 1000
+                        });
+                        next=false;
+                        return;
+                    }
+                })
+                if(!next)return false;
+            }
+            var html=`<tr>
+                            <td>
+                                <a title="移除" onclick="removeChoose(this)" data-id="`+id+`" href="javascript:;">
+                                    <i class="layui-icon">&#xe640;</i>
+                                </a>
+                            </td>
+                            <td>`+number+`</td>
+                            <td>`+name+`</td>
+                            <td>`+type+`</td>
+                            <td><input class="layui-input" name="attrCheck"  value="" id="`+id+`"/></td>
+                            <td>`+unit+`</td>
+                        </tr>`;
+            $('#chooseTable').append(html);
+            chooseid.push(id);
+            return chooseid;
+        }
+        //删除一项
+        function removeChoose(obj){
+            $(obj).parents('tr').remove();
+            chooseid.splice(chooseid.indexOf($(obj).data('id')),1);
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+
+</html>

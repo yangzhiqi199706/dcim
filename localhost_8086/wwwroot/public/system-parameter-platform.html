@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+  <div class="x-nav">
+    <span class="layui-breadcrumb">
+      <a>
+        <cite>系统配置->系统信息</cite>
+      </a>
+    </span>
+    <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+      <i class="layui-icon">&#xe666;</i>
+    </a>
+  </div>
+  <div class="layui-fluid">
+    <div class="layui-row layui-col-space15">
+      <div class="layui-col-md12">
+        <div class="layui-card">
+          <div class="layui-card-body">
+            <a class="layui-btn" href="system-parameter-platform.html">
+                平台设置
+            </a>
+            <a class="layui-btn layui-btn-primary" href="system-pushset-list.html">
+              推送配置
+          </a>
+            <a class="layui-btn layui-btn-primary" href="system-information-list.html">
+                系统信息
+            </a>
+            <a class="layui-btn layui-btn-primary" href="system-about-list.html">
+                关于我们
+            </a>
+        </div>
+          <form class="layui-form parambox">
+            <div class="text">平台设置</div>
+            <div class="layui-form-item">
+              <label class="layui-form-label">LOGO</label>
+              <div class="layui-input-inline">
+                <input type="text" id="FileImg" autocomplete="off" class="layui-input" readonly>
+                <input id="BaseImg" type="hidden" value="" name="logo">
+              </div>
+              <a class="layui-btn">
+                <input type="file" class="layui-btn" onchange="uploadImg(this)" accept="image/*" value="">
+                选择文件
+              </a>
+              <a class="layui-btn-warm layui-btn fancybox-view" href="" id="ViewImg">预览
+                <img src="" alt="">
+              </a>
+              <a class="layui-btn layui-btn" id="CleanImg" onclick="SaveImg(this)">上传LOGO</a>
+              <label class="x-red">建议尺寸：403px*50px</label>
+            </div>
+            <div class="layui-form-item" style="margin-top: 15px;">
+              <label class="layui-form-label">顶部标签</label>
+              <div class="layui-input-inline">
+                <select id="tabtype" name="tabtype" lay-filter="tabtype">
+                  <option value="more">多标签</option>
+                  <option value="small">单标签</option>
+                </select>
+              </div>
+            </div>
+          </form>
+          <form class="layui-form parambox" id="formNowProject">
+            <div class="text">项目配置</div>
+            <div class="layui-row">
+              <div class="layui-col-md5">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">关联项目</label>
+                  <div class="layui-input-inline">
+                    <select id="ProjectId" name="ProjectId" lay-filter="ProjectId">
+                      <option value="">请选择</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="layui-col-md7">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">项目密钥</label>
+                  <div class="layui-input-inline">
+                    <input type="text" id="ProjectKey" value="" name="ProjectKey" autocomplete="off"
+                      class="layui-input">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    var ProjectName = '';
+    $(function () {
+     
+      // list.info('PlatSendCloud',{},function(r){
+      //     $.post("http://192.168.1.76:8081/api.php/PlatSendSave", {
+      //         ProId:39,
+      //         list:JSON.stringify(r.data)
+      //     }, function (res) {
+      //     });
+      // })
+
+      $("#ViewImg,#CleanImg").hide();
+      list.info('GetLogoKey', {
+        token: token
+      }, function (r) {
+        layuiSelected("ProjectId", r.data[0].ProName);
+        if (r.data[0].logo) {
+          $('input[name=logo],#FileImg').val(r.data[0].logo);
+          $('#ViewImg').attr('href', imgUrl + r.data[0].logo);
+          $('#ViewImg img').attr('src', imgUrl + r.data[0].logo);
+          $("#ViewImg").show();
+          //预览图片
+          fnFancyBox('.fancybox-view');
+        }
+      })
+
+      layui.use(["form"], function () {
+        $ = layui.jquery;
+        var form = layui.form;
+
+        let type=localStorage.getItem('tabtype') || 'more';
+        let typetxt=type=='more'?'多标签':'单标签';
+        layuiSelected("tabtype",typetxt);
+        //监听tab
+        form.on("select(tabtype)", function (data) {
+          localStorage.setItem('tabtype',data.value);
+        })
+
+        $("#ProjectId").html('<option value="">请选择项目</option>');
+        // $.post("http://192.168.1.76:8081/api.php/GetProjectListKey", {
+        //   token: token,
+        //   ComboBox: 'all'
+        // }, function (res) {
+        //   res = JSON.parse(res);
+        //   var prohtml = "";
+        //   $.each(res.data, function (n, val) {
+        //     prohtml += "<option value=\"" + val.id + "\">" + val.ProjectName + "</option>";
+        //   });
+        //   $("#ProjectId").append(prohtml);
+        //   form.render("select");
+        //   //监听项目
+        //   form.on("select(ProjectId)", function (data) {
+        //     projectChange()
+        //     ProjectName = data.elem[data.elem.selectedIndex].text
+        //   })
+        //   //监听项目密钥
+        //   $('input[name=ProjectKey]').on('change', function (data) {
+        //     projectChange()
+        //   })
+        // });
+      })
+    })
+    function projectChange() {
+      var strformData = new FormData($("#formNowProject")[0]);
+      if (strformData.get('ProjectKey') && strformData.get('ProjectId')) {
+        // $.post("http://192.168.1.76:8081/api.php/CheckKey", {
+        //   token: token,
+        //   ProjectKey: strformData.get('ProjectKey'),
+        //   id: strformData.get('ProjectId'),
+        // }, function (res) {
+        //   if (JSON.parse(res).data) {
+        //     list.info('ChangeLogoKey', {
+        //       token: token,
+        //       ProjectKey: strformData.get('ProjectKey'),
+        //       ProId: strformData.get('ProjectId'),
+        //       ProName: ProjectName
+        //     }, function (r) {
+        //     })
+        //   } else {
+        //     layer.msg('验证失败', {
+        //       icon: 5,
+        //       time: 1000
+        //     });
+        //   }
+        // });
+      }
+    }
+    //图片
+    function SaveImg(obj) {
+      list.info('ChangeLogoKey', {
+        token: token,
+        logo: $('input[name=logo]').val()
+      }, function (r) {
+        layer.msg("LOGO已重置", {
+          icon: 1,
+          time: 1000
+        });
+        $(window.parent.document).find('#logo').css('background-image', 'url(' + imgUrl + $('input[name=logo]').val() + ')');
+      })
+    }
+  </script>
+</body>
+</html>

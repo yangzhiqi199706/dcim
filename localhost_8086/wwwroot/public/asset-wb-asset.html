@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jquery.qrcode.min.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <!-- <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择服务器</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择区域</option>
+                                </select>
+                            </div> -->
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AssetStatus" name="AssetStatus" lay-filter="AssetStatus">
+                                    <option value="">请选择资产状态</option>
+                                    <option value="I">在库</option>
+                                    <option value="W">待上架</option>
+                                    <option value="F">在架</option>
+                                    <option value="FR">在架维修</option>
+                                    <option value="IR">在库维修</option>
+                                    <option value="L">领用</option>
+                                    <option value="G">赠送</option>
+                                    <option value="Y">遗失</option>
+                                    <option value="R">报废</option>
+                                    <option value="DF">外送维修（在架）</option>
+                                    <option value="DI">外送维修（在库）</option>
+                                    <option value="O">待安装</option>
+                                    <option value="T">安装</option>
+                                    <option value="B">下架</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入资产描述" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" id="yes" lay-submit lay-filter="yes" type="button">确定绑定</button>
+                    </div>
+                    <form class="layui-form layui-card-body" id="AssetForm">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    {{if !list.MaintenanceId || list.MaintenanceId == 0 }}
+                                    <tr>
+                                        <td><input type="checkbox" id="{{list.id}}" name="AssetsId"  value="{{list.id}}" lay-skin="primary"></td>
+                                        <td>{{list.AssetsNumber}}</td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td>{{list.AssetsDescribe}}</td>
+                                    </tr>
+                                    {{/if}}
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                        
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetAssetsStoreListKey";
+        var form;
+        var id = GetString("id");
+        $(function(){
+            //初始化数据
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                //初始化数据
+                list.get(url, param,'',function(){
+                    form.render();
+                });
+                //服务器
+                // getServer(form,function(){
+                //     form.on("select(ServerCode)", function (data) {
+                //         getArea(form,data);
+                //     });
+                // });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    delete(param['ComboBox']);
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.AreaId = data.field.AreaId;
+                    param.AssetStatus = data.field.AssetStatus;
+                    list.get(url, param,'',function(){
+                        form.render();
+                    });
+                    return false;
+                });  
+                form.on("submit(yes)", function (data) {
+                    var AssetsId='';
+                    $.each($('input[name=AssetsId]:checked'),function(n,val){
+                        AssetsId+=$(val).val()+','
+                    })
+                    AssetsId=AssetsId.slice(0, -1);
+                    list.info('RelationMaintenanceKey',{
+                        token:token,
+                        id:id,
+                        AssetsId:AssetsId
+                    },function(){
+                        backToparent("绑定成功！");
+                    })
+                });  
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param,'',function(){
+                form.render();
+            });
+        }
+    </script>
+</body>
+
+</html>

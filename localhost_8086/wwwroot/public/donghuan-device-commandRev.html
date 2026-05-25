@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body mennav">
+                        <a class="layui-btn layui-btn-primary" href="">
+                            采集指令
+                        </a>
+                        <a class="layui-btn" href="">
+                            控制指令
+                        </a>
+                    </div>
+                    <!-- <div class="layui-card-body">
+                        <button class="layui-btn x-right" id="addCommand">
+                            新增命令
+                        </button>
+                    </div> -->
+                    <div class="layui-card-body">
+                        <table class="layui-table layui-form">
+                            <thead>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>采集指令</th>
+                                    <th>指令说明</th>
+                                    <th>采集状态</th>
+                                    <th >采集频率（秒）</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.Command}}</td>
+                                        <td>{{list.CommandDesc}}</td>
+                                        <td><input type="checkbox" name="state" {{if list.state=='1'}} checked {{/if}} lay-filter="state" lay-skin="switch" lay-text="开启|关闭" data-id="{{list.id}}"></td>
+                                        <td><input class="layui-input" name="CommandRate" value="{{list.CommandRate}}" id="{{list.id}}" onblur="setVal(this)" style="width: 120px;"/></td>
+                                        <td>
+                                        <!-- <a title="发送命令" onclick="CommandSend('{{list.DevID}}','{{list.Command}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe691;</i>
+                                            </a> -->
+                                            <a title="编辑" onclick="xadmin.open('编辑','donghuan-device-commandRev-edit.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe642;</i>
+                                            </a>
+                                            <!-- <a title="删除" onclick="x_admin_del('确认删除吗？','DelDeviceCommandKey',{{list.id}},this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a> -->
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetDeviceCommandListKey";
+        $(function () {
+            var id = GetString("id");
+            var code = GetString("code");
+            var linktype = GetString("linktype");
+            param.type = '';
+            param.DevID = id;
+            $('.mennav a').eq(1).attr('href', 'donghuan-device-command.html?code=' + code + '&id=' + id);
+            if(linktype!=3){
+                $('.mennav a').eq(0).attr('href', 'donghuan-device-commandRev.html?code=' + code + '&id=' + id);
+            }else{
+                $('.mennav a').eq(0).remove()
+            }
+            layui.use("form", function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //初始化数据
+                list.get(url, param, '', function (r) {
+                    form.render('checkbox');
+                    form.on('switch(state)', function (obj) {
+                        var state = obj.elem.checked;
+                        var changeparam = {
+                            token: token,
+                            id: $(obj.elem).attr('data-id')
+                        }
+                        changeparam.state = state ? 1 : 0;
+                        list.info('ChangeDeviceCommandKey', changeparam, function () { })
+                    });
+                })
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+        //设置频率
+        function setVal(obj){
+            list.info("ChangeDeviceCommandKey", {
+                id:$(obj).attr('id'),
+                token:token,
+                CommandRate:$(obj).val()
+            }, function (r) {});
+        }
+    </script>
+</body>
+
+</html>

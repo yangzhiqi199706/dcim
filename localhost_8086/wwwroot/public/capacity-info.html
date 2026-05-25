@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script language="javascript" src="js/echarts.js"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>容量管理->容量概况</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                                <button class="layui-btn" lay-submit lay-filter="import" type="button" onclick="displayexport('down','capacitytable-list','容量概况')" id="down">导出</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <div>
+                            <span>图例：</span>
+                            <ul class="view-tips">
+                                <li>
+                                    <label style="background-color:#00FF00;"></label>
+                                    <span>L1</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#FFFF00;"></label>
+                                    <span>L2</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#FF9600;"></label>
+                                    <span>L3</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#FF0A0A;"></label>
+                                    <span>L4</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="capacity-info" id="info">
+                            <script type="text/html" id="infotemplate">
+                                {{if data.length!=0}} {{each data as list i}}
+                                <div class="capacity-infolist">
+                                    <text>
+                                        {{if list.type=='u'}}
+                                        U位：
+                                        {{else if list.type=='w'}}
+                                        承重：
+                                        {{else if list.type=='nt'}}
+                                        网口：
+                                        {{else if list.type=='sp'}}
+                                        光口：
+                                        {{else if list.type=='p'}}
+                                        功率：
+                                        {{else if list.type=='jp'}}
+                                        电源插口：
+                                        {{else if list.type=='ups'}}
+                                        UPS容量：
+                                        {{else if list.type=='cold'}}
+                                        制冷量：
+                                        {{/if}}
+                                    </text>
+                                    <div class="capacity-total">
+                                        <div class="capacity-have" style="width:{{if list.pre<=100}}{{list.pre}}{{else}}0{{/if}}%;background-color:
+                                        {{if list.pre<=50}}
+                                        #00FF00
+                                        {{else if list.pre<=75 && list.pre>50}}
+                                        #FFFF00
+                                        {{else if list.pre<=90  && list.pre>75}}
+                                        #FF9600
+                                        {{else if list.pre<=100  && list.pre>90}}
+                                        #FF0A0A
+                                        {{else}}
+                                        #00FF00
+                                        {{/if}}
+                                        "></div>
+                                        <span>{{if list.pre<=100}}{{list.pre}}{{else}}0{{/if}}%（{{list.use}}
+                                            {{if list.type=='u'}}
+                                            U
+                                            {{else if list.type=='w'}}
+                                            Kg
+                                            {{else if list.type=='p' || list.type=='cold'  || list.type=='ups' }}
+                                            W
+                                            {{else}}
+                                            个
+                                            {{/if}}
+                                            ）</span>
+                                    </div>
+                                </div>
+                                {{/each}}
+                                {{/if}}
+                            </script>
+                        </div>
+                        <div class="con-nav">
+                            <a class="layui-btn">列表展示</a>
+                            <a class="layui-btn layui-btn-primary">图表展示</a>
+                        </div>
+                        <table class="layui-table" id="capacitytable-list">
+                            <thead>
+                                <tr>
+                                    <th>机柜列编号</th>
+                                    <th>空间总量(U)</th>
+                                    <th>已用容量(U)</th>
+                                    <th>剩余容量(U)</th>
+                                    <th>额定功率(W)</th>
+                                    <th>已用功率(W)</th>
+                                    <th>剩余功率(W)</th>
+                                    <th>额定电源插口(个)</th>
+                                    <th>已用电源插口(个)</th>
+                                    <th>剩余电源插口(个)</th>
+                                    <th>额定网口(个)</th>
+                                    <th>已用网口(个)</th>
+                                    <th>剩余网口(个)</th>
+                                    <th>额定光口(个)</th>
+                                    <th>已用光口(个)</th>
+                                    <th>剩余光口(个)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list">
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td>{{list.column}}</td>
+                                        <td>{{list.RatedU}}</td>
+                                        <td>{{list.UsedU}}</td>
+                                        <td>{{list.RatedU-list.UsedU}}</td>
+                                        <td>{{list.RatedPower}}</td>
+                                        <td>{{list.UsedPower}}</td>
+                                        <td>{{list.RatedPower-list.UsedPower}}</td>
+                                        <td>{{list.RatedJackPort}}</td>
+                                        <td>{{list.UsedJackPort}}</td>
+                                        <td>{{list.RatedJackPort-list.UsedJackPort}}</td>
+                                        <td>{{list.RatedNetworkPort}}</td>
+                                        <td>{{list.UsedNetworkPort}}</td>
+                                        <td>{{list.RatedNetworkPort-list.UsedNetworkPort}}</td>
+                                        <td>{{list.RatedSmoothPort}}</td>
+                                        <td>{{list.UsedSmoothPort}}</td>
+                                        <td>{{list.RatedSmoothPort-list.UsedSmoothPort}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="capacity-chart">
+                            <div>
+                                <span>机柜列容量统计</span>
+                                <div id="Uchart"> </div>
+                            </div>
+                            <div>
+                                <span>机柜列功率统计</span>
+                                <div id="Pchart"> </div>
+                            </div>
+                            <div>
+                                <span>机柜列承重统计</span>
+                                <div id="Wchart"> </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            $('.con-nav a').click(function () {
+                $(this).removeClass('layui-btn-primary').siblings().addClass('layui-btn-primary');
+                if ($(this).index() == 0) {
+                    $('#capacitytable-list').show();
+                    $('#capacity-chart').hide();
+                } else {
+                    $('#capacitytable-list').hide();
+                    $('#capacity-chart').show();
+                }
+            }).first().click();
+            //参数
+            var dataparam = {
+                token: token,
+                ServerCode: '',
+                AreaId: ''
+            }
+            //统计
+            GetData(dataparam);
+            function GetData(dataparam) {
+                list.info('GetCapacityInfoKey', dataparam, function (r) {
+
+                    var title = [];
+                    var udata1 = [];
+                    var udata2 = [];
+                    var pdata1 = [];
+                    var pdata2 = [];
+                    var wdata1 = [];
+                    var wdata2 = [];
+                    var column = '';
+                    var utotal = 0, uuse = 0;
+                    var wtotal = 0, wuse = 0;
+                    var nttotal = 0, ntuse = 0;
+                    var spotal = 0, spuse = 0;
+                    var ptotal = 0, puse = 0;
+                    var jptotal = 0, jpuse = 0;
+                    var newdata = {
+                        data: []
+                    }
+                    var infodata = {
+                        data: []
+                    }
+                    var info = [];
+                    $.each(r.data, function (n, val) {
+                        if (val['column'] != column) {
+                            if (n != 0) {
+                                newdata.data.push(info);
+                                title.push(info['column']);
+                                udata1.push(info['UsedU']);
+                                udata2.push(info['RatedU'] - info['UsedU']);
+                                pdata1.push(info['UsedPower']);
+                                pdata2.push(info['RatedPower'] - info['UsedPower']);
+                                wdata1.push(info['UsedWeight']);
+                                wdata2.push(info['RatedWeight'] - info['UsedWeight']);
+
+                                utotal += info['RatedU']; uuse += info['UsedU'];
+                                wtotal += info['RatedWeight']; wuse += info['UsedWeight'];
+                                nttotal += info['RatedNetworkPort']; ntuse += info['UsedNetworkPort'];
+                                spotal += info['RatedSmoothPort']; spuse += info['UsedSmoothPort'];
+                                ptotal += info['RatedPower']; puse += info['UsedPower'];
+                                jptotal += info['RatedJackPort']; jpuse += info['UsedJackPort'];
+                                info = [];
+                            }
+                            info['column'] = val['column'];
+                            info['RatedPower'] = val['RatedPower'];
+                            info['RatedJackPort'] = val['RatedJackPort'];
+                            info['RatedNetworkPort'] = val['RatedNetworkPort'];
+                            info['RatedSmoothPort'] = val['RatedSmoothPort'];
+                            info['RatedU'] = val['RatedU'];
+                            info['RatedWeight'] = val['RatedWeight'];
+                            info['UsedPower'] = val['UsedPower'];
+                            info['UsedJackPort'] = val['UsedJackPort'];
+                            info['UsedNetworkPort'] = val['UsedNetworkPort'];
+                            info['UsedSmoothPort'] = val['UsedSmoothPort'];
+                            info['UsedU'] = val['UsedU'];
+                            info['UsedWeight'] = val['UsedWeight'];
+                            column = val['column'];
+                        } else {
+                            info['column'] = val['column'];
+                            info['RatedPower'] = parseFloat(val['RatedPower']) + parseFloat(info['RatedPower']);
+                            info['RatedJackPort'] = parseFloat(val['RatedJackPort']) + parseFloat(info['RatedJackPort']);
+                            info['RatedNetworkPort'] = parseFloat(val['RatedNetworkPort'] ) + parseFloat( info['RatedNetworkPort']);
+                            info['RatedSmoothPort'] = parseFloat(val['RatedSmoothPort'] ) + parseFloat( info['RatedSmoothPort']);
+                            info['RatedU'] = parseFloat(val['RatedU']) + parseFloat(info['RatedU']);
+                            info['RatedWeight'] = parseFloat(val['RatedWeight'] ) + parseFloat( info['RatedWeight']);
+                            info['UsedPower'] = parseFloat(val['UsedPower'] ) + parseFloat( info['UsedPower']);
+                            info['UsedJackPort'] = parseFloat(val['UsedJackPort'] ) + parseFloat( info['UsedJackPort']);
+                            info['UsedNetworkPort'] = parseFloat(val['UsedNetworkPort'] ) + parseFloat( info['UsedNetworkPort']);
+                            info['UsedSmoothPort'] = parseFloat(val['UsedSmoothPort'] ) + parseFloat( info['UsedSmoothPort']);
+                            info['UsedU'] = parseFloat(val['UsedU'] ) + parseFloat( info['UsedU']);
+                            info['UsedWeight'] = parseFloat(val['UsedWeight'] ) + parseFloat( info['UsedWeight']);
+                        }
+                        if (n == r.data.length - 1) {
+                            newdata.data.push(info);
+                            title.push(info['column']);
+                            udata1.push(info['UsedU']);
+                            udata2.push(info['RatedU'] - info['UsedU']);
+                            pdata1.push(info['UsedPower']);
+                            pdata2.push(info['RatedPower'] - info['UsedPower']);
+                            wdata1.push(info['UsedWeight']);
+                            wdata2.push(info['RatedWeight'] - info['UsedWeight']);
+
+                            utotal += info['RatedU']; uuse += info['UsedU'];
+                            wtotal += info['RatedWeight']; wuse += info['UsedWeight'];
+                            nttotal += info['RatedNetworkPort']; ntuse += info['UsedNetworkPort'];
+                            spotal += info['RatedSmoothPort']; spuse += info['UsedSmoothPort'];
+                            ptotal += info['RatedPower']; puse += info['UsedPower'];
+                            jptotal += info['RatedJackPort']; jpuse += info['UsedJackPort'];
+
+                            infodata.data.push({ 'total': utotal, 'use': uuse, 'pre': (((utotal==0?0:uuse) / (utotal==0?1:utotal)) * 100).toFixed(2), 'type': 'u' });
+                            infodata.data.push({ 'total': wtotal, 'use': wuse, 'pre': (((wtotal==0?0:wuse) / (wtotal==0?1:wtotal)) * 100).toFixed(2), 'type': 'w' });
+                            infodata.data.push({ 'total': nttotal, 'use': ntuse, 'pre': (((nttotal==0?0:ntuse) / (nttotal==0?1:nttotal)) * 100).toFixed(2), 'type': 'nt' });
+                            infodata.data.push({ 'total': spotal, 'use': spuse, 'pre': (((spotal==0?0:spuse) / (spotal==0?1:spotal)) * 100).toFixed(2), 'type': 'sp' });
+                            infodata.data.push({ 'total': ptotal, 'use': puse, 'pre': (((ptotal==0?0:puse) / (ptotal==0?1:ptotal)) * 100).toFixed(2), 'type': 'p' });
+                            infodata.data.push({ 'total': jptotal, 'use': jpuse, 'pre': (((jptotal==0?0:jpuse) / (jptotal==0?1:jptotal)) * 100).toFixed(2), 'type': 'jp' });
+                            infodata.data.push({ 'total': 1, 'use': 0, 'pre': 0, 'type': 'ups' });
+                            infodata.data.push({ 'total': 1, 'use': 0, 'pre': 0, 'type': 'cold' });
+                        }
+                    });
+
+                    console.log(infodata);
+
+                    var html = template("listtemplate", newdata);
+                    $("#list").html(html);
+                    var infodatahtml = template("infotemplate", infodata);
+                    $("#info").html(infodatahtml);
+
+                    var UchartDom = document.getElementById('Uchart');
+                    var Uchart = echarts.init(UchartDom);
+                    var Uchartoption = setChart(title, ['已用容量', '剩余容量'], udata1, '已用容量', udata2, '剩余容量');
+                    Uchart.setOption(Uchartoption);
+
+                    var PchartDom = document.getElementById('Pchart');
+                    var Pchart = echarts.init(PchartDom);
+                    var Pchartoption = setChart(title, ['已用功率', '剩余功率'], pdata1, '已用功率', pdata2, '剩余功率');
+                    Pchart.setOption(Pchartoption);
+
+                    var WchartDom = document.getElementById('Wchart');
+                    var Wchart = echarts.init(WchartDom);
+                    var Wchartoption = setChart(title, ['已用承重', '剩余承重'], wdata1, '已用承重', wdata2, '剩余承重');
+                    Wchart.setOption(Wchartoption);
+                });
+            };
+            //设置报表
+            function setChart(title, legendtitle, data1, data1title, data2, data2title) {
+                var chartoption = {
+                    xAxis: [{
+                        type: 'category',
+                        data: title,
+                        axisLine: {
+                            lineStyle: {
+                                color: '#1898ED'
+                            }
+                        },
+                        axisLabel: {
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '13'
+                            },
+                        }
+                    },
+                    ],
+                    yAxis: [{
+                        type: 'value',
+                        axisLabel: {
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '13'
+                            },
+                        },
+                        splitLine: {
+                            lineStyle: {
+                                color: 'rgba(24, 152, 237, 0.17）',
+                                type: 'dashed'
+                            }
+                        }
+                    },
+                    ],
+                    legend: {
+                        textStyle: {
+                            color:'#A2CAE1',
+                            fontSize:'11',
+                            lineHeight: 15
+                        },
+                        data: legendtitle,
+                        itemWidth: 12,
+                        itemHeight: 12
+                    },
+                    grid: {
+                        x: 65,
+                        y: 40,
+                        x2: 35,
+                        y2: 30
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    series: [
+
+                        {
+                            data: data1,
+                            stack: 'one',
+                            type: 'bar',
+                            barWidth: 20,
+                            name: data1title,
+                            color: '#3783FF',
+                        },
+                        {
+                            data: data2,
+                            type: 'bar',
+                            barWidth: 20,
+                            name: data2title,
+                            stack: 'one',
+                            color: '#EEEFF4',
+                        }
+                    ]
+                };
+                return chartoption;
+            }
+
+            layui.use(["form", "tree"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //服务器
+                getServer(form, function (r) {
+                    form.on("select(ServerCode)", function (data) {
+                        getArea(form, data);
+                    });
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    dataparam.ServerCode = data.field.ServerCode;
+                    dataparam.AreaId = data.field.AreaId;
+                    GetData(dataparam);
+                    return false;
+                });
+            });
+        })
+
+    </script>
+</body>
+
+</html>

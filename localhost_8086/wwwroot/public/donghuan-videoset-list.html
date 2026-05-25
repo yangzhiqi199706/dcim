@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入配置描述" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>配置名称</th>
+                                    <!-- <th>配置项</th> -->
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.SetName}}</td>
+                                        <!-- <td>{{list.SetDesc}}</td> -->
+                                        <td>
+                                            <a title="删除" onclick="x_admin_del('确认删除吗？','DelCameraSettingKey','{{list.id}}',this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetCameraSettingListKey";
+        $(function(){
+            //初始化数据
+            list.get(url, param, dealdata);
+            layui.use("form", function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    list.get(url, param, dealdata);
+                    return false;
+                });
+            });
+        })
+        //数据处理
+        function dealdata(r){   
+            // $.each(r.data.info,function(n,val){
+            //     let SetDesc = '';
+            //     if(val.SetDesc){
+            //         let SetDescArr = JSON.parse(val.SetDesc);
+            //         $.each(SetDescArr,function(x,y){
+            //             SetDesc+=y.name+'、';
+            //         })
+            //     }
+            //     val.SetDesc = SetDesc;
+            // })
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param, dealdata);
+        }
+    </script>
+</body>
+
+</html>

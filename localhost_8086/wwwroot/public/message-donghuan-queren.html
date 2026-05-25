@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">禁止电话告警</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="phoneEnabeld" lay-skin="switch" lay-text="ON|OFF" checked>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">禁止短信告警</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="smsEnabeld" lay-skin="switch" lay-text="ON|OFF" checked>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">禁止邮件告警</label>
+                    <div class="layui-form-lineheight">
+                        <input type="checkbox" title="" name="mailEnabeld" lay-skin="switch" lay-text="ON|OFF" checked>
+                    </div>
+                </div>
+                <!-- <div class="layui-form-item">
+                    <label class="layui-form-label">禁止微信告警</label>
+                    <div>
+                        <input type="checkbox" title="" name="mailEnabeld" lay-skin="switch" lay-text="ON|OFF" checked>
+                    </div>
+                </div> -->
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+               
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData={
+                        token:token,
+                        eventId:id,
+                        dealWay:'2',
+                        phoneEnabeld:data.field.phoneEnabeld=='on'?-1:1,
+                        smsEnabeld:data.field.smsEnabeld=='on'?-1:1,
+                        mailEnabeld:data.field.mailEnabeld=='on'?-1:1,
+                    }
+                    list.info("CheckAlarmKey", strformData, function (r) {
+                        backToparent("告警已确认！");
+                    });
+                })
+            });
+        })
+    </script>
+</body>
+
+</html>

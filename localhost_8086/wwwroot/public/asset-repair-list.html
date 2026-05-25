@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>资产管理->其他业务->维修管理</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入维修编号、资产编号" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="RepairType" name="RepairType" lay-filter="RepairType">
+                                    <option value="">维修类型</option>
+                                    <option value="IR">在库维修</option>
+                                    <option value="DI">外送维修（在库）</option>
+                                    <option value="FR">在架维修</option>
+                                    <option value="DF">外送维修（在架）</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="RepairStatus" name="RepairStatus" lay-filter="RepairStatus">
+                                    <option value="">维修状态</option>
+                                    <option value="false">待维修</option>
+                                    <option value="true">维修完成</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>维修编号</th>
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                    <th>维修类型</th>
+                                    <th>故障描述</th>
+                                    <th>负责人</th>
+                                    <th>维修日期</th>
+                                    <th>维修状态</th>
+                                    <th>完成时间</th>
+                                    <th>维修结果</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr> 
+                                        <td>{{list.RepairNumber}}</td>
+                                        <td>{{list.AssetsNumber}}</td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td>{{list.AssetsDescribe}}</td>
+                                        <td>{{if list.RepairType=='IR'}}在库维修{{else if list.RepairType=='DI'}}外送维修（在库）{{else if list.RepairType=='FR'}}在架维修{{else if list.RepairType=='DF'}}外送维修（在架）{{/if}}</td>
+                                        <td>{{list.FaultDescribe}}</td>
+                                        <td>{{list.PersonName}}</td>
+                                        <td>{{list.RepairTime}}</td>
+                                        <td>{{if list.RepairStatus=='false'}}待维修{{else}}维修完成{{/if}}</td>
+                                        <td>{{list.FinishTime}}</td>
+                                        <td>{{list.RepairResult}}</td>
+                                        <td>
+                                            {{if list.FaultImg}}
+                                            <a title="浏览图片" class="fancybox-view" href="{{list.FaultImg}}">
+                                                <i class="layui-icon">&#xe64a;</i>
+                                                <img src="{{list.FaultImg}}" alt="" style="display:none;">
+                                            </a>
+                                            {{/if}}
+                                            {{if list.RepairStatus=='false'}}
+                                            <a title="维修完成" onclick="xadmin.open('维修完成',
+                                            'asset-repair-complete.html','','','{{list.id}}&AssetsNumber='+encodeURI(encodeURI('{{list.AssetsNumber}}'))+'&BrandModel='+encodeURI(encodeURI('{{list.BrandModel}}')))" 
+                                            href="javascript:;">
+                                                <i class="layui-icon">&#x1005;</i>
+                                            </a>
+                                            {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetRepairPlanKey";
+        param.startDateTime='';
+        param.endDateTime='';
+        $(function(){
+            list.get(url, param,dealdata);
+            var id=GetString('id');
+            layui.use(["form","tree"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.RepairStatus = data.field.RepairStatus;
+                    param.RepairType = data.field.RepairType;
+                    list.get(url, param, dealdata);
+                    return false;
+                });   
+            });
+            //预览图片
+            fnFancyBox('.fancybox-view');
+        })
+        //数据处理
+        function dealdata(r){
+            $.each(r.data.info,function(n,val){
+                if(val.FaultImg && val.FaultImg.indexOf('http')<0){
+                    val.FaultImg=imgUrl+val.FaultImg;
+                }
+            });
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+</html>

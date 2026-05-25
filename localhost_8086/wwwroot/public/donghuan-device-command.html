@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body mennav">
+                        <a class="layui-btn" href="">
+                            采集指令
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="">
+                            控制指令
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <button class="layui-btn x-right" id="addCommand">
+                            新增命令
+                        </button>
+                        <button class="layui-btn x-right" id="importCommand"
+                            style="margin-right: 10px;margin-left: 5px;">
+                            命令导入
+                        </button>
+                        <a href="/upfiletpl/command.xls" download="" class="x-right" style="margin-top: 7px;">《下载模版》</a>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>设备名称</th>
+                                    <th>命令ID</th>
+                                    <th>控制命令</th>
+                                    <th>命令说明</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.id}}</td>
+                                        <td>{{list.Command}}</td>
+                                        <td>{{list.CommandDesc}}</td>
+                                        <td>
+                                            <a title="发送命令" onclick="CommandSend('{{list.DevID}}','{{list.Command}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe691;</i>
+                                            </a>
+                                            <a title="编辑" onclick="xadmin.open('编辑','donghuan-device-command-edit.html','','','{{list.id}}&linktype={{linktype}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe642;</i>
+                                            </a>
+                                            <a title="删除" onclick="x_admin_del('确认删除吗？','DelDeviceCommandKey','{{list.id}}',this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetDeviceCommandListKey";
+        var id = GetString("id");
+        var code = GetString("code");
+        var linktype = GetString("linktype");
+        $(function () {
+            layui.use(["form", "upload"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var upload = layui.upload;
+
+                param.type = '2';
+                param.DevID = id;
+
+                $('.mennav a').eq(1).attr('href', 'donghuan-device-command.html?code=' + code + '&id=' + id + '&linktype=' + linktype);
+                if (linktype != 3) {
+                    $('.mennav a').eq(0).attr('href', 'donghuan-device-commandRev.html?code=' + code + '&id=' + id + '&linktype=' + linktype);
+                } else {
+                    $('.mennav a').eq(0).remove()
+                }
+                //初始化数据
+                list.get(url, param, dealdata, function (r) {
+                    $('#addCommand').click(function () {
+                        xadmin.open('新增命令', 'donghuan-device-command-add.html?id=' + id + '&code=' + code + '&linktype=' + linktype);
+                    })
+
+                    //命令导入  这里导入接口需要修改  增加extra_fields
+                    upDataPtl(upload, {
+                        "table": "dcim-devicecommand",
+                        "primary_key": "Command",
+                        "primary_field_name": "Command",
+                        "mappings": [],
+                        "extra_fields": {
+                            "DevID": id,
+                            "CommandType": 2//指令类型1读取2写入3其它
+                        }
+                    }, () => {
+                        list.get(url, param, dealdata);
+                    }, '#importCommand')
+
+                });
+
+            })
+        })
+        //数据处理
+        function dealdata(r) {
+            r.linktype = linktype;
+        }
+        //发送指令
+        function CommandSend(DevID, Command) {
+            layer.confirm('确认发送此控制命令', function (index) {
+                let paramCommand = {
+                    token: token,
+                    DevID: DevID,
+                    Command: Command,
+                    RecvData: '',
+                    SendState: '0'
+                }
+                list.info('GetDeviceDetailKey', {
+                    id: DevID,
+                    token: token
+                }, function (res) {
+                    let onlycode = res.data.OnlyCode;
+                    let ServerCode = res.data.ServerCode;
+                    if (onlycode) {
+                        paramCommand.RecvData = '已发送';
+                        paramCommand.SendState = '1';
+                        list.info('GetServerListKey', {
+                            token: token,
+                            ComboBox: 'all'
+                        }, function (ress) {
+                            let serveripindex = ress.data.findIndex(v => v.ServerCode === ServerCode)
+                            let sendip = ress.data[serveripindex]['ServerIP']
+                            const url = 'http://' + sendip + ':' + ajaxPort + '/CreateDeviceCommandSendKey';
+                            const data = {
+                                'DevID': onlycode,
+                                'Command': Command
+                            };
+                            $.post(url, data, function (r) { })
+                        })
+                    }
+                    list.info('CreateDeviceCommandSendKey', paramCommand, function () {
+                        layer.msg('已发送', {
+                            icon: 6,
+                            time: 1000
+                        })
+                    })
+                    layer.close(index);
+                })
+
+            });
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param, dealdata);
+        }
+    </script>
+</body>
+
+</html>

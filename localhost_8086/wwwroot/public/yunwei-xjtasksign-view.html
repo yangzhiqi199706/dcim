@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/public.dcimnew.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        table tr th,
+        table tr td {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        .table-input {
+            height: 32px;
+            line-height: 32px;
+            width: 100%;
+            border: 1px solid #e6e6e6;
+            border-radius: 2px;
+            padding: 0 8px;
+            box-sizing: border-box;
+        }
+
+        .table-select {
+            height: 32px;
+            line-height: 32px;
+            width: 100%;
+            border: 1px solid #e6e6e6;
+            border-radius: 2px;
+            background: #fff;
+            padding: 0 6px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body" style="padding: 15px 30px; ">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th colspan="6">巡检签到表<span id="reporttime"></span></th>
+                                </tr>
+                                <tr>
+                                    <th>设备ID</th>
+                                    <th>设备名称</th>
+                                    <th>区域</th>
+                                    <th>状态</th>
+                                    <th>告警情况</th>
+                                    <th>巡检状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr data-detail-id="{{list.id}}">
+                                        <td>{{list.DeviceIdShow}}</td>
+                                        <td>{{list.DeviceNameShow}}</td>
+                                        <td>{{list.AreaNameShow}}</td>
+                                        <td>
+                                            {{if editable}}
+                                            <select class="table-select status-select">
+                                                <option value="未知" {{if list.DeviceStatusValue=='未知'}}selected{{/if}}>未知</option>
+                                                <option value="在线" {{if list.DeviceStatusValue=='在线'}}selected{{/if}}>在线</option>
+                                                <option value="离线" {{if list.DeviceStatusValue=='离线'}}selected{{/if}}>离线</option>
+                                            </select>
+                                            {{else}}
+                                            {{list.DeviceStatusText}}
+                                            {{/if}}
+                                        </td>
+                                        <td>
+                                            {{if editable}}
+                                            <input type="text" class="table-input alarm-input" value="{{list.AlarmStatusInput}}" />
+                                            {{else}}
+                                            {{list.AlarmStatusText}}
+                                            {{/if}}
+                                        </td>
+                                        <td>
+                                            {{if editable}}
+                                            <select class="table-select sign-select">
+                                                <option value="0" {{if list.DeviceSignStatusValue=='0'}}selected{{/if}}>未巡检</option>
+                                                <option value="1" {{if list.DeviceSignStatusValue=='1'}}selected{{/if}}>已巡检</option>
+                                            </select>
+                                            {{else}}
+                                            {{list.DeviceSignStatusText}}
+                                            {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                    <tr>
+                                        <td colspan="6" style="text-align: right!important;padding-right: 30px;">签到人员：{{person}}</td>
+                                    </tr>
+                                    {{if showDate}}
+                                    <tr>
+                                        <td colspan="6" style="text-align: right!important;padding-right: 30px;">巡检日期：{{time}}</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="saveWrap" style="text-align: center; margin-top: 16px; display: none;">
+                            <button class="layui-btn" id="saveBtn" type="button">确认签到</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var signId = "";
+        var mainInfo = {};
+        var editable = false;
+        var rowsCache = [];
+
+        function normalizeDeviceStatus(v) {
+            var s = (v === undefined || v === null) ? '' : (v + '').trim();
+            if (s === '0' || s === '离线') return '离线';
+            if (s === '1' || s === '在线') return '在线';
+            if (!s || s === '-') return '未知';
+            return s;
+        }
+
+        function parseStatusText(v) {
+            return normalizeDeviceStatus(v);
+        }
+
+        function parseSignStatusText(v) {
+            return (v + '') === '1' ? '已巡检' : '未巡检';
+        }
+
+        function pickValue(row, keys) {
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                if (row[key] !== undefined && row[key] !== null && (row[key] + '').trim() !== '') {
+                    return row[key];
+                }
+            }
+            var lowerMap = {};
+            for (var k in row) {
+                if (Object.prototype.hasOwnProperty.call(row, k)) {
+                    lowerMap[k.toLowerCase()] = row[k];
+                }
+            }
+            for (var j = 0; j < keys.length; j++) {
+                var lk = keys[j].toLowerCase();
+                if (lowerMap[lk] !== undefined && lowerMap[lk] !== null && (lowerMap[lk] + '').trim() !== '') {
+                    return lowerMap[lk];
+                }
+            }
+            return '';
+        }
+
+        function normalizeRows(rows) {
+            rows = rows || [];
+            $.each(rows, function (n, row) {
+                var deviceIdVal = pickValue(row, ['DeviceId', 'DeviceID', 'deviceId', 'device_id', 'deviceid']);
+                var deviceNameVal = pickValue(row, ['DeviceName', 'deviceName', 'device_name', 'Devicename', 'devicename']);
+                var areaVal = pickValue(row, ['AreaName', 'areaName', 'area_name', 'Area', 'areaname', 'AreaId', 'areaId', 'area_id']);
+                row.DeviceIdShow = deviceIdVal !== '' ? deviceIdVal : '-';
+                row.DeviceNameShow = deviceNameVal !== '' ? deviceNameVal : '-';
+                row.AreaNameShow = areaVal !== '' ? areaVal : '-';
+                row.DeviceStatusValue = normalizeDeviceStatus(row.DeviceStatus);
+                row.DeviceStatusText = parseStatusText(row.DeviceStatus);
+                row.AlarmStatusInput = row.AlarmStatus ? row.AlarmStatus : '';
+                row.AlarmStatusText = row.AlarmStatus ? row.AlarmStatus : '无';
+                row.DeviceSignStatusValue = (row.DeviceSignStatus + '') === '1' ? '1' : '0';
+                row.DeviceSignStatusText = parseSignStatusText(row.DeviceSignStatusValue);
+            });
+            return rows;
+        }
+
+        function renderRows() {
+            var showDate = !editable;
+            var showTime = showDate ? (mainInfo.update_time ? mainInfo.update_time : (mainInfo.SignTime ? mainInfo.SignTime : '-')) : '';
+            var tplData = {
+                editable: editable,
+                data: rowsCache,
+                person: mainInfo.SignPerson ? mainInfo.SignPerson : '-',
+                showDate: showDate,
+                time: showTime
+            };
+            $('tbody').html(template('listtemplate', tplData));
+            if (editable) {
+                $('#saveWrap').show();
+            } else {
+                $('#saveWrap').hide();
+            }
+        }
+
+        function collectEditableRows() {
+            var rows = [];
+            $('tr[data-detail-id]').each(function () {
+                var $tr = $(this);
+                var detailId = $tr.attr('data-detail-id');
+                rows.push({
+                    id: detailId,
+                    DeviceStatus: $tr.find('.status-select').val() || '未知',
+                    AlarmStatus: ($tr.find('.alarm-input').val() || '').trim(),
+                    DeviceSignStatus: $tr.find('.sign-select').val() || '0'
+                });
+            });
+            return rows;
+        }
+
+        function saveDetailRows(rows, idx, done) {
+            if (idx >= rows.length) {
+                done();
+                return;
+            }
+            var one = rows[idx];
+            dcimNewApi.post('/dcim-xjtasksign-device/update/' + one.id, {
+                DeviceStatus: one.DeviceStatus,
+                AlarmStatus: one.AlarmStatus,
+                DeviceSignStatus: one.DeviceSignStatus
+            }, function () {
+                saveDetailRows(rows, idx + 1, done);
+            });
+        }
+
+        function submitStatus() {
+            var rows = collectEditableRows();
+            if (!rows.length) {
+                layer.msg('暂无可保存数据', { icon: 5, time: 1200 });
+                return;
+            }
+            $('#saveBtn').prop('disabled', true).addClass('layui-btn-disabled');
+            saveDetailRows(rows, 0, function () {
+                dcimNewApi.post('/dcim-xjtasksign/update/' + signId, {
+                    SignStatus: 1
+                }, function () {
+                    layer.msg('保存成功', { icon: 6, time: 1000 }, function () {
+                        window.location.reload();
+                    });
+                });
+            });
+        }
+
+        $(function () {
+            signId = GetString("id");
+            var reporttime = GetString("reporttime");
+            if (reporttime) {
+                $('#reporttime').html(reporttime);
+            }
+            if (!signId) {
+                layer.msg('参数错误：缺少id', { icon: 5, time: 1200 });
+                return;
+            }
+
+            dcimNewApi.get('/dcim-xjtasksign/' + signId, {}, function (mainRes) {
+                mainInfo = mainRes.data || {};
+                editable = (mainInfo.SignStatus + '') === '0';
+                if (!reporttime && mainInfo.ReportTime) {
+                    $('#reporttime').html(mainInfo.ReportTime);
+                }
+
+                dcimNewApi.filter('/dcim-xjtasksign-device', {
+                    SignId: signId
+                }, 5000, 1, function (res) {
+                    var rows = [];
+                    if (res && res.data) {
+                        rows = $.isArray(res.data.info) ? res.data.info : ($.isArray(res.data) ? res.data : []);
+                        if (!rows.length && res.data.data && $.isArray(res.data.data.info)) {
+                            rows = res.data.data.info;
+                        }
+                    }
+                    rowsCache = normalizeRows(rows);
+                    renderRows();
+                });
+            });
+
+            $('#saveBtn').on('click', function () {
+                layer.confirm('确认提交本次签到结果吗？', { icon: 3, title: '二次确认' }, function (index) {
+                    layer.close(index);
+                    submitStatus();
+                });
+            });
+        });
+
+        function pagechange(curr) {
+        }
+    </script>
+</body>
+
+</html>

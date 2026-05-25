@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">值班日志</label>
+                    <div class="layui-input-block">
+                        <textarea id="LogContext" name="LogContext" class="layui-textarea" placeholder=""></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var LogContext = decodeURI(GetString("LogContext"));
+            $('#LogContext').html(LogContext);
+        })
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">计划名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="WHPlanName" value="" name="WHPlanName" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">完成期限(天)<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="WHComplateDays" value="" name="WHComplateDays" autocomplete="off" lay-verify="required"
+                            class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">派发周期<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="DistributeCycle" name="DistributeCycle" lay-filter="DistributeCycle" lay-verify="required">
+                            <option value="year">年</option>
+                            <option value="month">月</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        派发时间<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SendTime" value="" name="DistributeTime" lay-verify="required"
+                            autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" id="SendOpen">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">关联设备<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="DeviceId" value="" name="DeviceId" lay-verify="required"
+                            autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择设备','choose-device.html?inputid=DeviceId&value='+$('#DeviceId').val())">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维护负责人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PersonName" value="" name="WHEmpName" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="EmpId" value="" name="WHEmpId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=person')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">周期性维护<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="WHCycle" name="WHCycle" lay-verify="required" lay-filter="WHCycle">
+                            <option value="1">启用</option>
+                            <option value="-1">禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维护内容<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <textarea name="WHContent" id="WHContent" class="layui-textarea" lay-verify="required"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">备注</label>
+                    <div class="layui-input-block">
+                        <textarea name="remark" id="remark" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //派发周期
+                $('#SendOpen').click(function(){
+                    xadmin.open('选择时间','choose-year.html')
+                })
+				form.on("select(DistributeCycle)", function (data) {
+                    $('#SendTime').val('');
+                    var url='';
+                    if(data.value=='year'){
+                        url='choose-year';
+                    }else{
+                        url='choose-time';
+                    }
+                    $('#SendOpen').unbind('click').click(function(){
+                        xadmin.open('选择时间',url+'.html')
+                    })
+                });
+                //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateWHPlanKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">合同名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="MaintenanceName" value="" name="MaintenanceName" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">合同编号<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="MaintenanceNumber" value="" name="MaintenanceNumber" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保类型<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="MaintenanceType" name="MaintenanceType" lay-verify="required">
+                            <option value="次服务">次服务</option>
+                            <option value="月服务">月服务</option>
+                            <option value="季服务">季服务</option>
+                            <option value="年服务">年服务</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">供应商<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="SupplierId" name="SupplierId" lay-verify="required">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">签订人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SignPerson" value="" name="SignPerson" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">签订日期<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="SignTime" value="" name="SignTime" autocomplete="off" lay-verify="required" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保期限(月)<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="MaintenanceMonth" value="" name="MaintenanceMonth" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保起始日期<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="StartTime" value="" name="StartTime" autocomplete="off" lay-verify="required" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保联系人</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="MaintenanceTelName" value="" name="MaintenanceTelName" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保电话</label>
+                    <div class="layui-input-inline">
+                        <input type="phone" id="MaintenanceTel" value="" name="MaintenanceTel" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">承保类型<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="AcceptType" name="AcceptType" lay-verify="required">
+                            <option value="原厂商承包">原厂商承包</option>
+                            <option value="第三方承包">第三方承包</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item layui-form-text">
+                    <label class="layui-form-label">服务内容<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入内容" id="MaintenanceCon" name="MaintenanceCon"  lay-verify="required"  class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">附件</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="FileImg" value="" autocomplete="off" class="layui-input" readonly>
+                        <input id="BaseImg" type="hidden" value="" name="MaintenanceFile" >
+                    </div>
+                    <a class="layui-btn">
+                        <input type="file" class="layui-btn" onchange="uploadImg(this)" accept="image/*" value="">
+                        选择文件
+                    </a>
+                    <a class="layui-btn-warm layui-btn fancybox-view" href="" id="ViewImg">预览
+                        <img src="" alt="">
+                    </a>
+                    <a class="layui-btn-danger layui-btn" id="CleanImg" onclick="CleanImg(this)">清空</a>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            layui.use(["form",'laydate'], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#SignTime' 
+                });
+                laydate.render({
+                    elem: '#StartTime' 
+                });
+                getSupplier(form);
+                $('#ViewImg,#CleanImg').hide();
+                //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateMaintenanceKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        });
+        //选择文件
+        function uploadFile(obj){
+            var file=obj.files;
+            var name=file[0].name;
+            $('#Filefile').val(name);
+        }
+    </script>
+</body>
+</html>

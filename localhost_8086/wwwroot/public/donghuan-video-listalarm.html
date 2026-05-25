@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jessibuca.js"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <div class="video-num">
+                            <span>分屏：</span>
+                            <img data-check="video-1-check" data-img="video-1" data-id="1"
+                                src="images/video-1-check.png" />
+                            <img data-check="video-2-check" data-img="video-2" data-id="4" src="images/video-2.png" />
+                            <img data-check="video-3-check" data-img="video-3" data-id="9" src="images/video-3.png" />
+                        </div>
+                        <div class="video-list video-list-one">
+                            <div id="video1-1"></div>
+                            <!-- <video class="video-js" controls preload="auto" id="my-video">
+                                <source src="https://d2zihajmogu5jn.cloudfront.net/bipbop-advanced/bipbop_16x9_variant.m3u8" type="application/x-mpegURL">
+                            </video> -->
+                        </div>
+                        <div class="video-list video-list-four">
+                            <div id="video4-1"></div>
+                            <div id="video4-2"></div>
+                            <div id="video4-3"></div>
+                            <div id="video4-4"></div>
+                        </div>
+                        <div class="video-list video-list-nine">
+                            <div id="video9-1"></div>
+                            <div id="video9-2"></div>
+                            <div id="video9-3"></div>
+                            <div id="video9-4"></div>
+                            <div id="video9-5"></div>
+                            <div id="video9-6"></div>
+                            <div id="video9-7"></div>
+                            <div id="video9-8"></div>
+                            <div id="video9-9"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function () {
+            let treedata = new Array();
+
+            var showOperateBtns = true; // 是否显示按钮
+            var forceNoOffscreen = true; //
+            var playList = [];
+            var videonum = 0;
+            var videoindex = 0;
+            var id = GetString("id").indexOf(',') > -1 ? GetString("id").split(',') : [GetString("id")];
+            $.ajaxSettings.async = false;
+            //获取本地摄像头
+            // list.info('GetCameraListKey', {
+            //     token: token,
+            //     ComboBox: 'all'
+            // }, function (r) {
+            // $.getJSON("../js/camera.json", function (data) {
+            //     treedata = [];
+            //     if (data && data.length > 0) {
+            //         $.each(data, function (m, n) {
+            //             let findthis = id.findIndex(v => v == n.id);
+            //             if (findthis > -1) {
+            //                 treedata.push({
+            //                     title: n.CameraName,
+            //                     id: n.id,
+            //                     online: n.CameraStatus,
+            //                     other: 1,
+            //                     url: n.CameraFlow
+            //                 })
+            //             }
+            //         })
+            //     } else {
+                    getDoorInfo('video', {
+                        addr: videoUrl,
+                        isapi: 'api/device/query/devices?page=1&count=100',
+                        format: 'json'
+                    }, function (r) {
+                        $.each(r.data.list, function (m, n) {
+                            var rdata = {
+                                title: n.name,
+                                id: n.deviceId,
+                                online: n.online,
+                                other: 1,
+                                children: []
+                            };
+                            var channelurl = 'api/device/query/tree/' + n.deviceId + '?page=1&count=100&parentId=' + n.deviceId + '&onlyCatalog=false';
+                            getDoorInfo('video', {
+                                addr: videoUrl,
+                                isapi: channelurl,
+                                format: 'json'
+                            }, function (re) {
+                                if (re.data.list.length != 0) {
+                                    $.each(re.data.list, function (x, y) {
+                                        var redata = {
+                                            title: y.name,
+                                            id: y.id,
+                                            online: y.basicData.address.indexOf('0.0.0.0') > -1 ? 0 : 1,
+                                            other: n.deviceId
+                                        };
+                                        rdata.children.push(redata);
+                                    });
+                                }
+                            });
+                            treedata.push(rdata);
+                        });
+                    })
+            //     }
+            // })
+
+            $.ajaxSettings.async = true;
+            //树形菜单
+            layui.use(["form", "tree"], function () {
+                $ = layui.jquery;
+                var tree = layui.tree;
+                //监听提交
+                tree.render({
+                    elem: "#tree",
+                    data: treedata,
+                    click: function (obj) {
+                        if (obj.data.url) {//如果是本地摄像头，将记录有推流地址
+                            let player = playList[videoindex];
+                            player && player.play(obj.data.url).then(() => {
+                            }).catch((e) => {
+                                console.error(e);
+                            });
+                        } else {
+                            if (!obj.data.children) {
+                                if (obj.data.online == 0) {
+                                    layer.msg("设备离线，不支持点播！", {
+                                        icon: 5,
+                                        time: 2000
+                                    });
+                                    return false;
+                                }
+                                $('.layui-tree-txt').removeAttr('style');
+                                $(obj.elem).find('.layui-tree-txt').css('color', '#148cf1');
+                                var videourl = 'api/play/start/' + obj.data.other + '/' + obj.data.id;
+                                getDoorInfo('video', {
+                                    addr: videoUrl,
+                                    isapi: videourl,
+                                    format: 'json'
+                                }, function (res) {
+                                    if (res.code == 0) {
+                                        let player = playList[videoindex];
+                                        if (res.data.ws_flv) {
+                                            player && player.play(res.data.ws_flv).then(() => {
+                                            }).catch((e) => {
+                                                console.error(e);
+                                            });
+
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+
+            $('.video-num img').click(function () {
+                $.each($('.video-num img'), function (n, val) {
+                    $(val).attr('src', 'images/' + $(val).attr('data-img') + '.png');
+                })
+                $(this).attr('src', 'images/' + $(this).attr('data-check') + '.png');
+                if (videonum != 0) { destroyVideo(videonum); }
+                videonum = $(this).attr('data-id');
+                switch ($(this).attr('data-id')) {
+                    case '1':
+                        $('.video-list-one').show().children('div').eq(0).addClass('video-js-check');
+                        $('.video-list-four,.video-list-nine').hide();
+                        setVideoWin(1);
+                        break;
+                    case '4':
+                        $('.video-list-four').show().children('div').eq(0).addClass('video-js-check');
+                        $('.video-list-one,.video-list-nine').hide();
+                        setVideoWin(4);
+                        break;
+                    case '9':
+                        $('.video-list-nine').show().children('div').eq(0).addClass('video-js-check');
+                        $('.video-list-four,.video-list-one').hide();
+                        setVideoWin(9);
+                        break;
+                }
+            }).first().click();
+
+            $('.video-list>div').click(function () {
+                $(this).addClass('video-js-check').siblings().removeClass('video-js-check');
+                videoindex = $(this).index();
+            });
+
+            //创建播放器
+            function create(num, id) {
+                var $container = document.getElementById('video' + num + '-' + id);
+
+                var jessibuca = new Jessibuca({
+                    container: $container,
+                    videoBuffer: 0.2, // 缓存时长
+                    isResize: false,
+                    text: "",
+                    loadingText: "加载中",
+                    debug: true,
+                    showBandwidth: showOperateBtns, // 显示网速
+                    operateBtns: {
+                        fullscreen: showOperateBtns,
+                        screenshot: showOperateBtns,
+                        play: showOperateBtns,
+                        audio: showOperateBtns,
+                    },
+                    forceNoOffscreen: forceNoOffscreen,
+                    isNotMute: false,
+                },);
+
+                jessibuca.onLog = msg => console.error(msg);
+                jessibuca.onRecord = (status) => console.log('onRecord', status);
+                jessibuca.onPause = () => console.log('onPause');
+                jessibuca.onPlay = () => console.log('onPlay');
+                jessibuca.onFullscreen = msg => console.log('onFullscreen', msg);
+                jessibuca.onMute = msg => console.log('onMute', msg);
+                playList.push(jessibuca);
+            }
+            //根据需求创建多个播放器
+            function setVideoWin(len) {
+                for (let i = 0; i < len; i++) {
+                    create(videonum, i + 1);
+                }
+            }
+            //摧毁所有播放器
+            function destroyVideo(len) {
+                for (let i = 0; i < len; i++) {
+                    let player = playList[i];
+                    player && player.destroy()
+                }
+                playList = [];
+            }
+
+        })
+    </script>
+</body>
+
+</html>

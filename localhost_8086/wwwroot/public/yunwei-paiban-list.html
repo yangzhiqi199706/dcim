@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script language="javascript" src="js/echarts.js"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->配置->值班计划->排班计划</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="month" class="layui-input" placeholder="年月">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <!-- <button class="layui-btn x-right" id="add">生成</button> -->
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table" id="table-list">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>早班</th>
+                                    <th>中班</th>
+                                    <th>晚班</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{list.OndutyYm}}-{{list.OndutyDay}}</td>
+                                        <td>{{list.MorningEmpName}}</td>
+                                        <td>{{list.MiddleEmpName}}</td>
+                                        <td>{{list.EveningEmpName}}</td>
+                                        <td>
+                                        {{if list.edit}}
+                                            <a title="编辑" onclick="xadmin.open('编辑','yunwei-paiban-edit.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe642;</i>
+                                            </a>
+                                        {{else}}
+                                            -
+                                        {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetPBListKey";
+        var form;
+        $(function(){
+            var myDate = new Date;
+            var year = myDate.getFullYear(); //获取当前年
+            var mon = (myDate.getMonth() + 1)<10?'0'+(myDate.getMonth() + 1):myDate.getMonth() + 1; //获取当前月
+            param.OndutyYm=year+'-'+mon;
+            $('#month').val(param.OndutyYm);
+
+            list.get(url,param,dealdata,createPB);
+
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#month',
+                    type: 'month'
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.OndutyYm=$('#month').val();
+                    list.get(url,param,dealdata,createPB)
+                    return false;
+                });    
+            });
+        })
+        //生成处理
+        function createPB(r){
+            if(r.data.info.length==0){
+                list.info('CreatePBKey',{
+                    token:token,
+                    OndutyYm:$('#month').val()
+                },function(){
+                    list.get(url,param,dealdata);
+                })
+            }
+        }
+        //数据处理
+        function dealdata(r){
+            if(r.data.info.length!=0){
+                var now=getDateTime().split(' ')[0].replace(/-/g,'');
+                $.each(r.data.info,function(n,val){
+                    var time=val.OndutyYm.split('-')[0]+val.OndutyYm.split('-')[1]+val.OndutyDay;
+                    if(time>now){
+                        val.edit=true;
+                    }else{
+                        val.edit=false;
+                    }
+                })
+            }
+        }
+         //分页回调
+         function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param,dealdata);
+        }
+    </script>
+</body>
+</html>

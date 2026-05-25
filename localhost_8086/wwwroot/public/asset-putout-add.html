@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">出库类型<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="PutoutWay" name="PutoutWay" lay-verify="required" lay-filter="PutoutWay">
+                            <option value="">请选择</option>
+                            <option value="W" id="putw">上架</option>
+                            <option value="O" id="anzhuang">安装</option>
+                            <option value="B">借用</option>
+                            <option value="L">领用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">出库时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PutoutTime" value="" name="PutoutTime" autocomplete="off" lay-verify="required" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属服务器<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属区域<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item" id="B">
+                    <label class="layui-form-label">部门</label>
+                    <div class="layui-input-inline">
+                        <select id="DeptId" name="DeptId" lay-filter="DeptId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item" id="B">
+                    <label class="layui-form-label">领用人/借用人</label>
+                    <div class="layui-input-inline">
+                        <select id="EmpId" name="EmpId" lay-filter="EmpId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item" id="L">
+                    <label class="layui-form-label">预计归还时间</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PlanReturnTime" value="" name="PlanReturnTime" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            var id = GetString("id");
+            // var type =  decodeURI(GetString("type"));
+            var type =  GetString("type");
+            console.log(type)
+            layui.use(["form",'laydate'], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#PutoutTime' 
+                });
+                laydate.render({
+                    elem: '#PlanReturnTime' 
+                });
+                if(type=='2'){
+                    $('#putw').attr('disabled',true);
+                    form.render();
+                }
+                if(type=='1'){
+                    $('#anzhuang').attr('disabled',true);
+                    form.render();
+                }
+                var PutoutWay='';
+                //上架，出库 选择出库时间、区域
+                //领用 选择出库时间、领用人
+                //借用 选择出库时间、借用人、归还时间
+                form.on("select(PutoutWay)", function (data) {
+                    PutoutWay=data.value;
+                    switch(data.value){
+                        case 'W':
+                        case 'O':
+                            $('#L,#B').hide();
+                            break;
+                        case 'B':
+                            $('#L,#B').show();
+                            break;
+                        case 'L':
+                            $('#L').hide();
+                            $('#B').show();
+                            break;
+                    }
+                })
+                //服务器
+                getServer(form,function(){
+                    form.on("select(ServerCode)", function (data) {
+                        getArea(form,data,function(){
+                            form.on("select(AreaId)", function (data) {
+                                getDept(form,data);
+                                form.on("select(DeptId)",function(data){
+                                    getEmp(form,data)
+                                })
+                            });
+                        });
+                    });
+                });
+                //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    strformData.append("id", id);
+                    if(PutoutWay!='B')strformData.delete("PlanReturnTime");
+                    list.form("AssetsStorePutoutKey", strformData, function (r) {
+                        backToparent("已出库");
+                    });
+                })
+            });
+        });
+    </script>
+</body>
+</html>

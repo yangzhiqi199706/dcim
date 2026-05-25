@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="WBPerson" value="" name="WBPerson" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">联系电话<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="WBtel" value="" name="WBtel" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">供应商<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="SupplierId" name="SupplierId" lay-filter="SupplierId" lay-verify="required">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="WBTime" value="" name="WBTime" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">响应速度评分<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="WBResponseSpeed" value="" name="WBResponseSpeed" lay-verify="required"
+                            autocomplete="off" class="layui-input" max="5" min="0" oninput="if(value>5)value=5;if(value<0)value=0">
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                       （最高5分）
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保质量评分<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="WBQa" value="" name="WBQa" lay-verify="required" autocomplete="off"
+                            class="layui-input" max="5" min="0" oninput="if(value>5)value=5;if(value<0)value=0">
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        （最高5分）
+                     </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">经手人<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PersonName" value="" lay-verify="required" name="HandlerEmpName"  autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="EmpId" value="" lay-verify="required" name="HandlerEmpId" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=person')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">维保内容<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <textarea name="WBContent" id="WBContent" class="layui-textarea"
+                            lay-verify="required"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">处理情况<span class="x-red">*</span></label>
+                    <div class="layui-input-block">
+                        <textarea name="WBHandle" id="WBHandle" class="layui-textarea" lay-verify="required"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">备注</label>
+                    <div class="layui-input-block">
+                        <textarea name="remark" id="remark" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">附件</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="FileImg" value="" autocomplete="off" class="layui-input" readonly>
+                        <input id="BaseImg" type="hidden" value="" name="WBFile" >
+                    </div>
+                    <a class="layui-btn">
+                        <input type="file" class="layui-btn" onchange="uploadImg(this)" accept="image/*" value="">
+                        选择文件
+                    </a>
+                    <a class="layui-btn-warm layui-btn fancybox-view" href="" id="ViewImg">预览
+                        <img src="" alt="">
+                    </a>
+                    <a class="layui-btn-danger layui-btn" id="CleanImg" onclick="CleanImg(this)">清空</a>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#WBTime', //指定元素
+                    type:'datetime'
+                });
+                $('#ViewImg,#CleanImg').hide();
+                //供应商
+                getSupplier(form);
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateWBKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

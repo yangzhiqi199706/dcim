@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label"> 厂商<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <select id="CompanyId" name="CompanyId" lay-verify="required" lay-filter="CompanyId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('添加厂商','asset-company-add.html')">新增</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        品牌<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="BrandId" name="BrandId" lay-verify="required" lay-filter="BrandId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('添加品牌','asset-brandnew-add.html?company='+encodeURI(encodeURI($('#CompanyId').find('option:selected')[0].innerText)))">新增</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">资产类型<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="AssetsTypeName" value="" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                        <input type="hidden" id="AssetsTypeId" value="" name="AssetsTypeId" lay-verify="required" autocomplete="off" class="layui-input" readonly>
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择资产类型','choose-asset-type.html')">选择</a>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">型号<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="BrandModel" value="" name="BrandModel" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">质保时长（月）<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="ModelQa" value="" name="ModelQa" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">报废年限（年）<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="ModelScrap" value="" name="ModelScrap" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">前面板图</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="FileImg" autocomplete="off" class="layui-input" readonly>
+                        <input id="BaseImg" type="hidden" value="" name="ModelFrontImg" >
+                    </div>
+                    <a class="layui-btn">
+                        <input type="file" class="layui-btn" onchange="uploadImg(this)" accept="image/*" value="">
+                        选择文件
+                    </a>
+                    <a class="layui-btn-warm layui-btn fancybox-view" href="" id="ViewImg">预览
+                        <img src="" alt="">
+                    </a>
+                    <a class="layui-btn-danger layui-btn" id="CleanImg" onclick="CleanImg(this)">清空</a>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">后面板图</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="FileImg" autocomplete="off" class="layui-input" readonly>
+                        <input id="BaseImg" type="hidden" value="" name="ModelAfterImg" >
+                    </div>
+                    <a class="layui-btn">
+                        <input type="file" class="layui-btn" onchange="uploadImg(this)" accept="image/*" value="">
+                        选择文件
+                    </a>
+                    <a class="layui-btn-warm layui-btn fancybox-view" href="" id="ViewImg">预览
+                        <img src="" alt="">
+                    </a>
+                    <a class="layui-btn-danger layui-btn" id="CleanImg" onclick="CleanImg(this)">清空</a>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">全景图</label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="FileImg" autocomplete="off" class="layui-input" readonly>
+                        <input id="BaseImg" type="hidden" value="" name="ModelAllImg" >
+                    </div>
+                    <a class="layui-btn">
+                        <input type="file" class="layui-btn" onchange="uploadImg(this)" accept="image/*" value="">
+                        选择文件
+                    </a>
+                    <a class="layui-btn-warm layui-btn fancybox-view" href="" id="ViewImg">预览
+                        <img src="" alt="">
+                    </a>
+                    <a class="layui-btn-danger layui-btn" id="CleanImg" onclick="CleanImg(this)">清空</a>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">3D模型ID</label>
+                    <div class="layui-input-inline">
+                        <input type="number" id="ThrDModelId" value="" name="ThrDModelId" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+
+            $('#ViewImg,#CleanImg').hide();
+            
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //厂商
+                param.ComboBox = "all";
+                list.info("GetCompanyListKey", param, function (res) {
+                    var comhtml = "<option value=''>请选择</option>";
+                    $.each(res.data, function (n, val) {
+                        comhtml += "<option value=\"" + val.id + "\">" + val.CompanyName + "</option>";
+                    });
+                    $("#CompanyId").html(comhtml);
+                    form.render("select");
+                    form.on("select(CompanyId)", function (data) {
+                        param.CompanyId=data.value;
+                        list.info("GetBrandListKey", param, function (res) {
+                            var brandhtml = "<option value=''>请选择</option>";
+                            $.each(res.data, function (n, val) {
+                                brandhtml += "<option value=\"" + val.id + "\">" + val.BrandName + "</option>";
+                            });
+                            $("#BrandId").html(brandhtml);
+                            form.render("select");
+                        });
+                    })
+                });
+                 //监听提交
+				form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateBrandModelKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                });
+            });
+        });
+        
+    </script>
+</body>
+
+</html>

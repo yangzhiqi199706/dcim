@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">
+                            所属服务器<span class="x-red">*</span>
+                        </label>
+                        <div class="layui-input-inline">
+                            <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">
+                            所属区域<span class="x-red">*</span>
+                        </label>
+                        <div class="layui-input-inline">
+                            <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                                <option value="">请选择</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">机柜列<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="column" value="{{data.column}}" name="column" lay-verify="required" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">机柜</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="position" value="{{data.position}}" name="position" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">机柜安装</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="AssetsTypeName" value="{{data.AssetsTypeName}}{{data.AssetsNumber}}" autocomplete="off" class="layui-input" readonly>
+                            <input type="hidden" id="AssetsId" value="{{data.AssetsId}}" name="AssetsId" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择安装资产','asset-cabinet-install.html?id={{data.id}}&areaid='+$('#AreaId').val())">选择</a>
+                        </div>
+                        {{if data.AssetsId && data.AssetsId!=0}}
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn layui-btn-danger " id="remove">解除绑定</a>
+                        </div>
+                        {{/if}}
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">关联功率ID</label>
+                        <div class="layui-input-inline">
+                            <textarea placeholder="" readonly id="ParamId" name="ParamId" class="layui-textarea">{{data.ParamId}}</textarea>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-choose.html?inputid=ParamId&one=true&value='+encodeURI(encodeURI($('#ParamId').val())))">选择参数</a>
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">
+                            <a class="layui-btn" onclick="xadmin.open('选择参数','report-tableparam-chooseparam.html?inputid=ParamId&value='+encodeURI(encodeURI($('#ParamId').val())))">选择自定义参数</a>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"></label>
+                        <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                    </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+
+            //获取详情
+            list.info("GetCabinetDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    //服务器
+                    getServer(form, function () {
+                        //继成上个接口
+                        layuiSelected("ServerCode", r.data.ServerName);
+                        form.on("select(ServerCode)", function (data) {
+                            param.ServerCode = data.value;
+                            getArea(form, data);
+                        });
+                    });
+                    getArea(form, { value: r.data.ServerCode }, function (res) {
+                        //继成上个接口
+                        layuiSelected("AreaId", r.data.AreaName);
+                    });
+
+                    //监听提交
+                    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("ChangeCabinetKey", strformData, function (r) {
+                            backToparent("修改成功");
+                        });
+                    });
+
+                    $('#remove').click(function () {
+                        layer.confirm('解除绑定U位将全部清除，确认解绑？', function (index) {
+                            list.info('RemoveCabinetU', {
+                                token: token,
+                                id: id,
+                            }, function (r) {
+                                layer.close(index);
+                                $('#AssetsTypeName').val('');
+                                $('#AssetsId').val('');
+                            })
+                        });
+                    })
+                });
+            });
+
+        })
+    </script>
+</body>
+
+</html>

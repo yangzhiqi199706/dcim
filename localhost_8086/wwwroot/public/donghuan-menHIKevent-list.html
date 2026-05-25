@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .mennav {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body mennav">
+                        <a class="layui-btn layui-btn-primary">
+                            用户管理
+                        </a>
+                        <a class="layui-btn">
+                            事件管理
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入工号" name="employeeNoString">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入姓名" name="name">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入卡号" name="cardNo">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="startTime" name="startTime" class="layui-input"
+                                    placeholder="开始日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="endTime" name="endTime" class="layui-input" placeholder="结束日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th width="80">序号</th>
+                                    <th>工号</th>
+                                    <th>姓名</th>
+                                    <th>卡号</th>
+                                    <th>事件类型</th>
+                                    <th>事件时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if totalMatches>0}} {{each InfoList as list i}}
+                                    <tr>
+                                        <td>{{i+1}}</td>
+                                        <td>{{if list.employeeNoString}}{{list.employeeNoString}}{{else}}-{{/if}}</td>
+                                        <td>{{if list.name}}{{list.name}}{{else}}-{{/if}}</td>
+                                        <td>{{if list.cardNo}}{{list.cardNo}}{{else}}-{{/if}}</td>
+                                        <td>{{list.majorName}}</td>
+                                        <td>{{list.time}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var ip = GetString("ip");
+        var port = GetString("port");
+        var user = GetString("user");
+        var password = GetString("password");
+        var type = GetString("type");
+        var srcdata, eventlist;
+        $(function () {
+            if (!type) {
+                $('.mennav').show();
+            }
+            eventlist = [
+                { 'major': '0x1', 'minor': '0x404', 'name': '设备防拆报警' },
+                { 'major': '0x1', 'minor': '0x405', 'name': '设备防拆恢复' },
+                { 'major': '0x1', 'minor': '0x406', 'name': '读卡器防拆报警' },
+                { 'major': '0x1', 'minor': '0x407', 'name': '读卡器防拆恢复' },
+                { 'major': '0x1', 'minor': '0x408', 'name': '事件输入报警' },
+                { 'major': '0x1', 'minor': '0x409', 'name': '事件输入恢复' },
+                { 'major': '0x1', 'minor': '0x40a', 'name': '胁迫报警' },
+                { 'major': '0x1', 'minor': '0x40b', 'name': '离线事件满 90%报警' },
+                { 'major': '0x1', 'minor': '0x40c', 'name': '卡号认证失败超次报警' },
+                { 'major': '0x1', 'minor': '0x40d', 'name': 'SD 卡存储满报警' },
+                { 'major': '0x1', 'minor': '0x40f', 'name': '门控安全模块防拆报警' },
+                { 'major': '0x1', 'minor': '0x410', 'name': '门控安全模块防拆恢复' },
+                { 'major': '0x2', 'minor': '0x27', 'name': '网络断开' },
+                { 'major': '0x2', 'minor': '0x400', 'name': '设备上电启动' },
+                { 'major': '0x2', 'minor': '0x407', 'name': '网络恢复' },
+                { 'major': '0x2', 'minor': '0x408', 'name': 'FLASH 读写异常' },
+                { 'major': '0x2', 'minor': '0x409', 'name': '读卡器掉线' },
+                { 'major': '0x2', 'minor': '0x40a', 'name': '读卡器掉线恢复' },
+                { 'major': '0x2', 'minor': '0x40f', 'name': '门控安全模块掉线' },
+                { 'major': '0x2', 'minor': '0x410', 'name': '门控安全模块在线' },
+                { 'major': '0x2', 'minor': '0x41d', 'name': '身份证阅读器未连接' },
+                { 'major': '0x2', 'minor': '0x41e', 'name': '身份证阅读器连接恢复' },
+                { 'major': '0x2', 'minor': '0x423', 'name': 'COM 口未连接' },
+                { 'major': '0x2', 'minor': '0x424', 'name': 'COM 口连接恢复' },
+                { 'major': '0x2', 'minor': '0x426', 'name': '人证设备在线' },
+                { 'major': '0x2', 'minor': '0x427', 'name': '人证设备离线' },
+                { 'major': '0x2', 'minor': '0x428', 'name': '本地登录锁定' },
+                { 'major': '0x2', 'minor': '0x429', 'name': '本地登录解锁' },
+                { 'major': '0x3', 'minor': '0x50', 'name': '本地登陆' },
+                { 'major': '0x3', 'minor': '0x5a', 'name': '本地升级' },
+                { 'major': '0x3', 'minor': '0x70', 'name': '远程登录' },
+                { 'major': '0x3', 'minor': '0x71', 'name': '远程注销登陆' },
+                { 'major': '0x3', 'minor': '0x79', 'name': '远程布防' },
+                { 'major': '0x3', 'minor': '0x7a', 'name': '远程撤防' },
+                { 'major': '0x3', 'minor': '0x7b', 'name': '远程重启' },
+                { 'major': '0x3', 'minor': '0x7e', 'name': '远程升级' },
+                { 'major': '0x3', 'minor': '0x86', 'name': '远程导出配置文件' },
+                { 'major': '0x3', 'minor': '0x87', 'name': '远程导入配置文件' },
+                { 'major': '0x3', 'minor': '0x400', 'name': '远程开门' },
+                { 'major': '0x3', 'minor': '0x401', 'name': '远程关门(受控)' },
+                { 'major': '0x3', 'minor': '0x402', 'name': '远程常开(自由)' },
+                { 'major': '0x3', 'minor': '0x403', 'name': '远程常关(禁用)' },
+                { 'major': '0x3', 'minor': '0x404', 'name': '远程手动校时' },
+                { 'major': '0x3', 'minor': '0x405', 'name': 'NTP 自动校时' },
+                { 'major': '0x3', 'minor': '0x406', 'name': '远程清空卡号' },
+                { 'major': '0x3', 'minor': '0x407', 'name': '远程恢复默认参数' },
+                { 'major': '0x3', 'minor': '0x40a', 'name': '本地恢复默认参数' },
+                { 'major': '0x3', 'minor': '0x40b', 'name': '远程抓拍' },
+                { 'major': '0x3', 'minor': '0x40c', 'name': '修改网络中心参数配置' },
+                { 'major': '0x3', 'minor': '0x40e', 'name': '修改中心组参数配置' },
+                { 'major': '0x3', 'minor': '0x40f', 'name': '解除码输入' },
+                { 'major': '0x3', 'minor': '0x419', 'name': '远程实时布防' },
+                { 'major': '0x3', 'minor': '0x41a', 'name': '远程实时撤防' },
+                { 'major': '0x5', 'minor': '0x01', 'name': '合法卡认证通过' },
+                { 'major': '0x5', 'minor': '0x02', 'name': '刷卡加密码认证通过' },
+                { 'major': '0x5', 'minor': '0x03', 'name': '刷卡加密码认证失败' },
+                { 'major': '0x5', 'minor': '0x04', 'name': '数卡加密码认证超时' },
+                { 'major': '0x5', 'minor': '0x05', 'name': '刷卡加密码超次' },
+                { 'major': '0x5', 'minor': '0x06', 'name': '未分配权限' },
+                { 'major': '0x5', 'minor': '0x07', 'name': '无效时段' },
+                { 'major': '0x5', 'minor': '0x08', 'name': '卡号过期' },
+                { 'major': '0x5', 'minor': '0x09', 'name': '无此卡号' },
+                { 'major': '0x5', 'minor': '0x0a', 'name': '反潜回认证失败' },
+                { 'major': '0x5', 'minor': '0x0c', 'name': '卡不属于多重认证群组' },
+                { 'major': '0x5', 'minor': '0x0d', 'name': '卡不在多重认证时间段内' },
+                { 'major': '0x5', 'minor': '0x0e', 'name': '多重认证模式超级权限认证失败' },
+                { 'major': '0x5', 'minor': '0x0f', 'name': '多重认证模式远程认证失败' },
+                { 'major': '0x5', 'minor': '0x10', 'name': '多重认证成功' },
+                { 'major': '0x5', 'minor': '0x11', 'name': '首卡开门开始' },
+                { 'major': '0x5', 'minor': '0x12', 'name': '首卡开门结束' },
+                { 'major': '0x5', 'minor': '0x13', 'name': '常开状态开始' },
+                { 'major': '0x5', 'minor': '0x14', 'name': '常开状态结束' },
+                { 'major': '0x5', 'minor': '0x15', 'name': '门锁打开' },
+                { 'major': '0x5', 'minor': '0x16', 'name': '门锁关闭' },
+                { 'major': '0x5', 'minor': '0x17', 'name': '开门按钮打开' },
+                { 'major': '0x5', 'minor': '0x18', 'name': '开门按钮放开' },
+                { 'major': '0x5', 'minor': '0x19', 'name': '正常开门（门磁）' },
+                { 'major': '0x5', 'minor': '0x1a', 'name': '正常关门（门磁）' },
+                { 'major': '0x5', 'minor': '0x1b', 'name': '门异常打开（门磁）' },
+                { 'major': '0x5', 'minor': '0x1b', 'name': '门异常打开（门磁）' },
+                { 'major': '0x5', 'minor': '0x1c', 'name': '门打开超时（门磁）' },
+                { 'major': '0x5', 'minor': '0x1d', 'name': '报警输出打开' },
+                { 'major': '0x5', 'minor': '0x1e', 'name': '报警输出关闭' },
+                { 'major': '0x5', 'minor': '0x1f', 'name': '常关状态开始' },
+                { 'major': '0x5', 'minor': '0x20', 'name': '常关状态结束' },
+                { 'major': '0x5', 'minor': '0x21', 'name': '多重多重认证需要远程开' },
+                { 'major': '0x5', 'minor': '0x22', 'name': '多重认证超级密码认证成功事件' },
+                { 'major': '0x5', 'minor': '0x23', 'name': '多重认证重复认证事件' },
+                { 'major': '0x5', 'minor': '0x24', 'name': '多重认证重复认证事件' },
+                { 'major': '0x5', 'minor': '0x25', 'name': '门铃响' },
+                { 'major': '0x5', 'minor': '0x26', 'name': '指纹比对通过' },
+                { 'major': '0x5', 'minor': '0x27', 'name': '指纹比对失败' },
+                { 'major': '0x5', 'minor': '0x28', 'name': '刷卡加指纹认证通过' },
+                { 'major': '0x5', 'minor': '0x29', 'name': '刷卡加指纹认证失败' },
+                { 'major': '0x5', 'minor': '0x2a', 'name': '刷卡加指纹认证超时' },
+                { 'major': '0x5', 'minor': '0x2b', 'name': '刷卡加指纹加密码认证通过' },
+                { 'major': '0x5', 'minor': '0x2c', 'name': '刷卡加指纹加密码认证失败' },
+                { 'major': '0x5', 'minor': '0x2d', 'name': '刷卡加指纹加密码认证超时' },
+                { 'major': '0x5', 'minor': '0x2e', 'name': '指纹加密码认证通过' },
+                { 'major': '0x5', 'minor': '0x2f', 'name': '指纹加密码认证失败' },
+                { 'major': '0x5', 'minor': '0x30', 'name': '指纹加密码认证超时' },
+                { 'major': '0x5', 'minor': '0x31', 'name': '指纹不存在' },
+                { 'major': '0x5', 'minor': '0x33', 'name': '呼叫中心事件' },
+                { 'major': '0x5', 'minor': '0x36', 'name': '人脸加指纹认证通过' },
+                { 'major': '0x5', 'minor': '0x37', 'name': '人脸加指纹认证失败' },
+                { 'major': '0x5', 'minor': '0x38', 'name': '人脸加指纹认证超时' },
+                { 'major': '0x5', 'minor': '0x39', 'name': '人脸加密码认证通过' },
+                { 'major': '0x5', 'minor': '0x3a', 'name': '人脸加密码认证失败' },
+                { 'major': '0x5', 'minor': '0x3b', 'name': '人脸加密码认证超时' },
+                { 'major': '0x5', 'minor': '0x3c', 'name': '人脸加刷卡认证通过' },
+                { 'major': '0x5', 'minor': '0x3d', 'name': '人脸加刷卡认证失败' },
+                { 'major': '0x5', 'minor': '0x3e', 'name': '人脸加刷卡认证超时' },
+                { 'major': '0x5', 'minor': '0x3f', 'name': '人脸加密码加指纹认证通过' },
+                { 'major': '0x5', 'minor': '0x40', 'name': '人脸加密码加指纹认证失败' },
+                { 'major': '0x5', 'minor': '0x41', 'name': '人脸加密码加指纹认证超时' },
+                { 'major': '0x5', 'minor': '0x42', 'name': '人脸加刷卡加指纹认证通过' },
+                { 'major': '0x5', 'minor': '0x43', 'name': '人脸加刷卡加指纹认证失败' },
+                { 'major': '0x5', 'minor': '0x44', 'name': '人脸加刷卡加指纹认证超时' },
+                { 'major': '0x5', 'minor': '0x45', 'name': '工号加指纹认证通过' },
+                { 'major': '0x5', 'minor': '0x46', 'name': '工号加指纹认证失败' },
+                { 'major': '0x5', 'minor': '0x47', 'name': '工号加指纹认证超时' },
+                { 'major': '0x5', 'minor': '0x48', 'name': '工号加指纹加密码认证通过' },
+                { 'major': '0x5', 'minor': '0x49', 'name': '工号加指纹加密码认证失败' },
+                { 'major': '0x5', 'minor': '0x4a', 'name': '工号加指纹加密码认证超时' },
+                { 'major': '0x5', 'minor': '0x4b', 'name': '人脸认证通过' },
+                { 'major': '0x5', 'minor': '0x4c', 'name': '人脸认证失败' },
+                { 'major': '0x5', 'minor': '0x4d', 'name': '工号加人脸认证通过' },
+                { 'major': '0x5', 'minor': '0x4e', 'name': '工号加人脸认证失败' },
+                { 'major': '0x5', 'minor': '0x4f', 'name': '工号加人脸认证超时' },
+                { 'major': '0x5', 'minor': '0x50', 'name': '人脸抓拍失败' },
+                { 'major': '0x5', 'minor': '0x51', 'name': '首卡授权开始' },
+                { 'major': '0x5', 'minor': '0x52', 'name': '首卡授权结束' },
+                { 'major': '0x5', 'minor': '0x65', 'name': '工号加密码认证通过' },
+                { 'major': '0x5', 'minor': '0x66', 'name': '工号加密码认证失败' },
+                { 'major': '0x5', 'minor': '0x67', 'name': '工号加密码认证超时' },
+                { 'major': '0x5', 'minor': '0x68', 'name': '真人检测失败' },
+                { 'major': '0x5', 'minor': '0x69', 'name': '人证比对通过' },
+                { 'major': '0x5', 'minor': '0x70', 'name': '人证比对失败' },
+                { 'major': '0x5', 'minor': '0x71', 'name': '禁止名单事件' },
+                { 'major': '0x5', 'minor': '0xb5', 'name': '密码认证通过' },
+                { 'major': '0x5', 'minor': '0x97', 'name': '密码不匹配' },
+                { 'major': '0x3', 'minor': '0x137', 'name': '远程登录锁定' },
+                { 'major': '0x3', 'minor': '0xf0', 'name': '本地激活设备' }
+            ];
+            //获取设备信息
+            var devid = '';
+            getDoorInfo('hik', {
+                addr: ip + ':' + port,
+                user: user,
+                password: password,
+                isapi: 'ISAPI/System/deviceInfo',
+                method: 'GET',
+                format: 'XML',
+                data: ''
+            }, function (res) {
+
+                devid = $(res).find('deviceID').text().trim();
+
+                if ($('.mennav')) {
+                    $('.mennav a').eq(0).attr('href', 'donghuan-menHIKcus-list.html?ip=' + ip + '&port=' + port + '&user=' + user + '&password=' + password);
+                    $('.mennav a').eq(1).attr('href', 'donghuan-menHIKevent-list.html?ip=' + ip + '&port=' + port + '&user=' + user + '&password=' + password);
+                }
+
+                //搜索
+                layui.use(["form", 'laydate'], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    var laydate = layui.laydate;
+                    let now=new Date();
+
+                    laydate.render({
+                        elem: '#startTime',
+                        type: 'datetime',
+                        format: 'yyyy-MM-dd HH:mm:ss',
+                        value: new Date(now - 1000 * 60 * 60 * 24 * 1), // 指定值
+                    });
+                    laydate.render({
+                        elem: '#endTime',
+                        type: 'datetime',
+                        format: 'yyyy-MM-dd HH:mm:ss',
+                        value: now, // 指定值
+                    });
+
+                    //事件列
+                    srcdata = {
+                        "AcsEventCond": {
+                            "searchID": devid,
+                            "searchResultPosition": 0,
+                            "maxResults": 24,
+                            "major": 0,
+                            "minor": 0,
+                            "timeReverseOrder": true,
+                            "isAttendanceInfo": true,
+                            "startTime":getDateTime(new Date(now - 1000 * 60 * 60 * 24 * 1)),
+                            "endTime":getDateTime()
+                        }
+                    }
+
+                    getEvent(srcdata)
+
+                    //监听提交
+                    form.on("submit(search)", function (data) {
+                        srcdata.AcsEventCond.searchResultPosition = 0;
+                        if(data.field.employeeNoString){
+                            srcdata.AcsEventCond.employeeNoString = data.field.employeeNoString;
+                        }else{
+                            delete srcdata.AcsEventCond.employeeNoString;
+                        }
+                        if(data.field.name){
+                            srcdata.AcsEventCond.name = data.field.name;
+                        }else{
+                            delete srcdata.AcsEventCond.name;
+                        }
+                        if(data.field.cardNo){
+                            srcdata.AcsEventCond.cardNo = data.field.cardNo;
+                        }else{
+                            delete srcdata.AcsEventCond.cardNo;
+                        }
+                        srcdata.AcsEventCond.startTime = data.field.startTime.replace(' ','T')+'+08:00';
+                        srcdata.AcsEventCond.endTime = data.field.endTime.replace(' ','T')+'+08:00';
+                        getEvent(srcdata);
+                        return false;
+                    });
+                });
+
+            })
+
+
+        })
+
+        //获取事件列表
+        function getEvent(srcdata) {
+            getDoorInfo('hik', {
+                addr: ip + ':' + port,
+                user: user,
+                password: password,
+                isapi: 'ISAPI/AccessControl/AcsEvent',
+                method: 'POST',
+                format: 'json',
+                data: JSON.stringify(srcdata)
+            }, function (res) {
+                if (res.AcsEvent.totalMatches > 0) {
+                    $.each(res.AcsEvent.InfoList, function (n, val) {
+                        let minorName = '0x' + (val.minor.toString(16).length < 2 ? '0' + val.minor.toString(16) : val.minor.toString(16));
+                        let majorName = '0x' + val.major.toString(16);
+                        let index = eventlist.findIndex(v => v.minor == minorName && v.major == majorName);
+                        if (index > -1) {
+                            val.majorName = eventlist[index].name;
+                        } else {
+                            val.majorName = '[' + val.major + ']' + val.minor
+                        }
+                    })
+                }
+
+                var html = template('listtemplate', res.AcsEvent);
+                $('tbody').html(html);
+
+                if (srcdata.AcsEventCond.searchResultPosition == 0) {
+                    x_admin_page(res.AcsEvent.totalMatches, srcdata.AcsEventCond.maxResults, pagechange);
+                }
+            })
+        }
+
+        //分页回调
+        function pagechange(curr) {
+            srcdata.AcsEventCond.searchResultPosition = (curr - 1) * srcdata.AcsEventCond.maxResults;
+            getEvent(srcdata);
+        }
+        function getDateTime(timeStr) {
+            var time = timeStr ? timeStr : new Date();
+            var y = time.getFullYear();
+            var m = time.getMonth() + 1;
+            m = m < 10 ? ("0" + m) : m;
+            var d = time.getDate();
+            d = d < 10 ? ("0" + d) : d;
+            var h = time.getHours();
+            h = h < 10 ? ("0" + h) : h;
+            var minute = time.getMinutes();
+            minute = minute < 10 ? ("0" + minute) : minute;
+            var second = time.getSeconds();
+            second = second < 10 ? ("0" + second) : second;
+            return y + "-" + m + "-" + d + "T" + h + ":" + minute + ":" + second +'+08:00';
+        }
+
+    </script>
+</body>
+
+</html>

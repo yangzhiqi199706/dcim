@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        转派执行人<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PersonName" value="" name="ExecuteEmpName" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                        <input type="hidden" id="EmpId" value="" name="ExecuteEmpId" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                    <div class="layui-form-mid layui-word-aux">
+                        <a class="layui-btn" onclick="xadmin.open('选择人员','choose-person.html?type=person')">选择</a>
+                    </div>
+                </div>
+        </div>
+        <div>
+            <div class="layui-form-item">
+                <label class="layui-form-label"></label>
+                <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+
+            </div>
+        </div>
+        </form>
+    </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    strformData.append("Lsh", id);
+                    list.form("GetTransferEmpKey", strformData, function (r) {
+                        backToparent("转派成功");
+                    });
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

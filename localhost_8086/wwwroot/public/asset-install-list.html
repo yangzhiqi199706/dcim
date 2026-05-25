@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jquery.qrcode.min.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>资产管理->资产管理->设施管理</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入资产描述" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" onclick="xadmin.open('安装','asset-install-add.html')">
+                            <i class="layui-icon"></i>安装
+                        </button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>所属服务器</th>
+                                    <th>所属区域</th>
+                                    <th>关联机柜</th>
+                                    <th>安装位置</th>
+                                    <th>安装时间</th>
+                                    <!-- <th>动环关联</th> -->
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                    <th>管理部门</th>
+                                    <th>管理人员</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.ServerName}}</td>
+                                        <td>{{list.AreaName}}</td>
+                                        <td>{{list.position}}</td>
+                                        <td>{{list.InstallLocation}}</td>
+                                        <td>{{list.create_time}}</td>
+                                        <!-- <td></td> -->
+                                        <td>{{list.AssetsNumber}}</td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td>{{list.AssetsDescribe}}</td>
+                                        <td>{{list.DeptName}}</td>
+                                        <td>{{list.PersonName}}</td>
+                                        <td>
+                                            <a title="移除" onclick="xadmin.open('移除回库','asset-return-add.html','','','{{list.id}}&AssetsId={{list.AssetsId}}&type=remove')" href="javascript:;">
+                                                <i class="layui-icon">&#xe601;</i>
+                                            </a>
+                                            <a title="生成二维码" id="img{{list.id}}" download="设施-{{list.AssetsTypeName}}-{{list.BrandModel}}" href="{{list.ewm}}" class="fancybox-view">
+                                                <i class="layui-icon">&#xe857;</i>
+                                                <div id="{{list.id}}" style="display:none"></div>
+                                            </a>
+                                            <a title="处置" onclick="xadmin.open('处置','asset-handle-add.html','','','{{list.id}}&AssetsId={{list.AssetsId}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe64d;</i>
+                                            </a>
+                                            <a title="关联机柜" onclick="xadmin.open('关联机柜','asset-install-cabinet.html','','','{{list.id}}&ServerCode={{list.ServerCode}}&AreaId={{list.AreaId}}&ServerName='+encodeURI(encodeURI('{{list.ServerName}}'))+'&AreaName='+encodeURI(encodeURI('{{list.AreaName}}')))" href="javascript:;">
+                                                <i class="layui-icon">&#xe64c;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetInstallAssetsListKey";
+        $(function(){
+            //初始化数据
+            list.get(url, param,'',function(r){
+                dealEwm(r)
+            });
+            layui.use(["form","tree"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                 //服务器
+                 getServer(form,function(){
+                    form.on("select(ServerCode)", function (data) {
+                        param.ServerCode=data.value;
+                        param.ComboBox = "all";
+                        getArea(form,data,function(){
+                            form.on("select(AreaId)", function (data) {
+                                param.AreaId=data.value;
+                            })
+                        });
+                    });
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    delete(param['ComboBox']);
+                    list.get(url, param,'',function(r){
+                        dealEwm(r)
+                    });
+                    return false;
+                });  
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            delete(param['ComboBox']);
+            list.get(url, param,'',function(r){
+                dealEwm(r)
+            });
+        }
+         //ewm
+        function dealEwm(r){
+            $.each(r.data.info,function(n,val){
+                var data='资产编号:'+val.AssetsNumber+',资产类型:'+val.AssetsTypeName+',型号:'+val.BrandModel+',资产描述:'+val.AssetsDescribe+',安装位置:'+val.InstallLocation+',安装时间:'+val.create_time+',管理部门:'+val.DeptName+',管理人员:'+val.PersonName+',维修时间:'+val.RepairTime;
+                var qrcode = $('#'+val.id).qrcode({
+                    width: 128,
+                    height: 128,
+                    text: toUtf8(data)
+                });
+                var canvas=$('#'+val.id).find("canvas")[0];
+                $('#img'+val.id).attr("href",canvas.toDataURL('image/jpeg'));
+            })
+        }
+    </script>
+</body>
+</html>

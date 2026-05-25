@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jquery.qrcode.min.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->工具钥匙管理->工具管理</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入工具名称" name="search" autocomplete="off">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ToolStatus" name="ToolStatus" lay-filter="PlanStatus">
+                                    <option value="">工具状态</option>
+                                    <option value="正常">正常</option>
+                                    <option value="报废">报废</option>
+                                    <option value="丢失">丢失</option>
+                                </select>
+                            </div>
+                            <text>入库时间:</text>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" name="startDateTime" id="startDateTime" placeholder="开始时间">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" name="endDateTime" id="endDateTime" placeholder="结束时间">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+
+                        <button class="layui-btn x-right" onclick="xadmin.open('添加工具','yunwei-tool-add.html')">
+                            <i class="layui-icon"></i>添加工具
+                        </button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>工具编号</th>
+                                    <th>工具名称</th>
+                                    <th>规格</th>
+                                    <th>状态</th>
+                                    <th>入库时间</th>
+                                    <th>存放位置</th>
+                                    <th>备注</th>
+                                    <th>借用状态</th>
+                                    <th>借用人</th>
+                                    <th>联系电话</th>
+                                    <th>借用时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.ToolNumber}}</td>
+                                        <td>{{list.ToolName}}</td>
+                                        <td>{{list.ToolSpec}}</td>
+                                        <td>{{list.ToolStatus}}</td>
+                                        <td>{{list.PutinTime}}</td>
+                                        <td>{{list.ToolLocation}}</td>
+                                        <td>{{list.remark}}</td>
+                                        <td>{{list.ToolRecordStatus}}</td>
+                                        <td>{{list.LendPerson}}</td>
+                                        <td>{{list.LendTel}}</td>
+                                        <td>{{list.LendTime}}</td>
+                                        <td>
+                                            {{if list.ToolRecordStatus=='未借出'}}
+                                            <a title="编辑" onclick="xadmin.open('编辑','yunwei-tool-edit.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe642;</i>
+                                            </a>
+                                            {{/if}}
+                                            {{if list.ToolRecordStatus=='未借出' && list.ToolStatus=='正常'}}
+                                            <a title="借用" onclick="xadmin.open('借用','yunwei-tool-out.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe601;</i>
+                                            </a>
+                                            {{/if}}
+                                            {{if list.ToolRecordStatus=='借出'}}
+                                            <a title="归还" onclick="xadmin.open('归还','yunwei-tool-return.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe681;</i>
+                                            </a>
+                                            {{/if}}
+                                            {{if list.ToolRecordStatus!='借出'}}
+                                            <a title="删除" onclick="x_admin_del('确认删除吗？','DelToolKey','{{list.id}}',this)" href="javascript:;">
+                                                <i class="layui-icon">&#xe640;</i>
+                                            </a>
+                                            {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetToolListKey";
+        $(function () {
+            //初始化数据
+            param.startDateTime = '';
+            param.endDateTime = '';
+            list.get(url, param);
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#startDateTime' //指定元素
+                });
+                laydate.render({
+                    elem: '#endDateTime' //指定元素
+                });
+
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    param.ToolStatus = data.field.ToolStatus;
+                    list.get(url, param);
+                    return false;
+                });
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+
+</html>

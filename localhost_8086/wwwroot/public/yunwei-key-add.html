@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">钥匙编号<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="KeyNumber" value="" name="KeyNumber" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">钥匙名称<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="KeyName" value="" name="KeyName" lay-verify="required" autocomplete="off"
+                            class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        状态
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="KeyStatus" value="" name="KeyStatus" lay-filter="ServerCode">
+                            <option value="正常">正常</option>
+                            <option value="报废">报废</option>
+                            <option value="丢失">丢失</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">入库时间<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="PutinTime" value="" name="PutinTime" lay-verify="required"
+                            autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">备注</label>
+                    <div class="layui-input-block">
+                        <textarea id="remark" name="remark" value="" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem: '#PutinTime', //指定元素
+                    type: 'datetime',
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateKeyKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                })
+            });
+        })
+    </script>
+</body>
+
+</html>

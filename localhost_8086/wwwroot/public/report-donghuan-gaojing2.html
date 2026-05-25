@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/echarts.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        #changeChart {
+            height: 280px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->告警统计</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing.html">
+                            总表
+                        </a>
+                        <a class="layui-btn" href="report-donghuan-gaojing2.html">
+                            等级统计表
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing3.html">
+                            区域统计表
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing4.html">
+                            设备统计表
+                        </a>
+                        <a class="layui-btn layui-btn-primary" href="report-donghuan-gaojing5.html">
+                            日期统计表
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="radio" name="type" lay-filter="type" value="year" title="年" checked>
+                                <input type="radio" name="type" lay-filter="type" value="month" title="月">
+                                <input type="radio" name="type" lay-filter="type" value="auto" title="自定义">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="year" name="year" class="layui-input" placeholder="年">
+                                <input type="text" id="month" name="month" class="layui-input" placeholder="年月"
+                                    style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="startDateTime" name="startDateTime" class="layui-input"
+                                    placeholder="开始日期" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" id="endDateTime" name="endDateTime" class="layui-input"
+                                    placeholder="结束日期" style="display:none;">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn search x-right"type="button" onclick="displayexport('down','numTable','告警数量统计');exportlist(this,'ExportAlarmParamDetailKey')" id="down">导出</button>
+                    </div>
+                    <div class="layui-card-body">
+                        <div class="massage-box massage-box-md" style="clear: both;">
+                            <div class="capacity-statistics-title">等级告警占比</div>
+                            <div id="alarmChart" class="massage-chart"></div>
+                        </div>
+                        <div class="massage-box massage-box-md9">
+                            <div class="capacity-statistics-title">等级告警数量</div>
+                            <div id="changeChart" class="massage-chart"></div>
+                        </div>
+                        <div class="two-left1">
+                            <div class="capacity-statistics-title">告警数量统计</div>
+                            <table class="layui-table " id="numTable">
+                                <thead>
+                                    <tr>
+                                        <th>等级</th>
+                                        <th>告警数量</th>
+                                        <th>百分比</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="list" class="chooseTable">
+                                    <script type="text/html" id="listtpltemplate">
+                                        {{if data.length!=0}} {{each data as list i}}
+                                        <tr>
+                                            <td>{{list.LevelName}}</td>
+                                            <td>{{list.LevelNumber}}</td>
+                                            <td>{{((list.LevelNumber/total)*100).toFixed(2)}}%</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="two-left1 massage-box-md9">
+                            <div class="capacity-statistics-title">告警详细信息</div>
+                            <table class="layui-table" id="detailTable">
+                                <thead>
+                                    <tr>
+                                        <th>事件来源</th>
+                                        <th>事件名称</th>
+                                        <th>事件等级</th>
+                                        <th>值</th>
+                                        <th>产生时间</th>
+                                        <th>解除时间</th>
+                                        <th>解除描述</th>
+                                        <th>确认人</th>
+                                        <th>确认时间</th>
+                                        <th>工单情况</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>{{list.DeviceName}}</td>
+                                            <td>{{if list.TextMessage}}{{list.TextMessage.split(',')[2]}}{{else}}{{list.TypeName}}{{/if}}</td>
+                                            <td>{{list.LevelName}}</td>
+                                            <td>{{list.ParamValue}}</td>
+                                            <!-- <td>{{list.create_time}}</td> -->
+                                            <td>{{if list.TextMessage}}
+                                                {{list.create_time.split('-')[0]}}-{{(list.TextMessage.split(',')[4]).replace('月','-').replace('日',' ')}}
+                                                {{else}}
+                                                {{list.update_time}}
+                                                {{/if}}
+                                            </td>
+                                            <td>{{list.CancelTime}}</td>
+                                            <td>{{list.CancelDesc}}</td>
+                                            <td>{{list.ConfirmUserName}}</td>
+                                            <td>{{list.ConfirmTime}}</td>
+                                            <td>
+                                                {{if list.OrderNumber}}已派单{{else}}未派单{{/if}}
+                                            </td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetRealAlarmsKey";
+        $(function () {
+            //参数
+            var dataparam = {
+                token: token,
+                ServerCode: '',
+                startDateTime: new Date().getFullYear() + '-01-01 00:00:00',
+                endDateTime: new Date().getFullYear() + '-12-31 23:59:59',
+                type: 'level'
+            }
+            param.ServerCode = '';
+            param.startDateTime = new Date().getFullYear() + '-01-01 00:00:00';
+            param.endDateTime = new Date().getFullYear() + '-12-31 23:59:59';
+            //统计
+            GetData(param, dataparam);
+            function GetData(param, dataparam) {
+
+                list.get(url, param);
+
+                list.info('GroupAlarmStatisticKey', dataparam, function (r) {
+
+                    var alarmtitle = [];
+                    var alarmdata = [];
+                    var changetitle = [];
+                    var changedata = [];
+                    var total = 0;
+                    $.each(r.data, function (n, val) {
+                        alarmtitle.push({ 'name': val['LevelName'], 'icon': 'circle' });
+                        alarmdata.push({ 'value': val['LevelNumber'], 'name': val['LevelName'] });
+                        changetitle.push(val['LevelName']);
+                        changedata.push(val['LevelNumber']);
+                        total += parseInt(val['LevelNumber']);
+                    });
+                    r.total = total == 0 ? 1 : total;
+
+                    var html = template("listtpltemplate", r);
+                    $("#list").html(html);
+
+                    var alarmChartDom = document.getElementById('alarmChart');
+                    var alarmChart = echarts.init(alarmChartDom);
+                    var alarmChartoption = {
+                        legend: {
+                            orient: 'vertical',
+                            data: alarmtitle,
+                            right: 0,
+                            top: 55,
+                            itemWidth: 6,
+                            itemHeight: 6,
+                            textStyle: {
+                                color: '#A2CAE1',
+                                fontSize: '11',
+                                lineHeight: 15,
+                            },
+                            formatter: function (name) {
+                                var total = 0;
+                                var tarValue = 0;
+                                for (var i = 0, l = alarmdata.length; i < l; i++) {
+                                    total += parseInt(alarmdata[i].value);
+                                    if (alarmdata[i].name == name) {
+                                        tarValue = alarmdata[i].value;
+                                    }
+                                }
+                                total = total == 0 ? 1 : total;
+                                var p = (tarValue / total * 100).toFixed(2);
+                                return name + ' ' + p + '%';
+                            }
+                        },
+                        color: ['#35DFFC', '#3783FF', '#FFCC37', '#FF9000', '#F96055'],
+                        series: [
+                            {
+                                name: '等级告警占比',
+                                type: 'pie',
+                                radius: ['65%', '90%'],
+                                top: 25,
+                                left: -80,
+                                bottom: 0,
+                                itemStyle: {
+                                    shadowColor: 'rgba(225, 229, 255, 0.69)',
+                                    shadowBlur: 16
+                                }, label: {
+                                    show: false,
+                                    position: 'center',
+                                    textStyle: {
+                                        color:'#ffffff',
+                                        fontSize:'14',
+                                        lineHeight: 15
+                                    },
+                                },
+                                emphasis: {
+                                    label: {
+                                        show: true,
+                                        fontSize: '14.3',
+                                        fontWeight: 'bold',
+                                        formatter: '{b}：{c}'
+                                    }
+                                },
+                                data: alarmdata
+                            }
+                        ]
+                    };
+                    alarmChartoption && alarmChart.setOption(alarmChartoption);
+
+                    var changeChartDom = document.getElementById('changeChart');
+                    var changeChart = echarts.init(changeChartDom);
+                    var changeChartoption = {
+                        xAxis: {
+                            type: 'category',
+                            data: changetitle,
+                            axisLine: {
+                                show: true,
+                                lineStyle: {
+                                    type: 'solid',
+                                    color: '#1898ED',
+                                    width: '1'
+                                }
+                            },
+                            axisLabel: {
+                                interval: 0,
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            axisLabel: {
+                                textStyle: {
+                                    color: '#A2CAE1',
+                                    fontSize: '13'
+                                },
+
+                            },
+                            splitLine: {
+                                lineStyle: {
+                                    color: 'rgba(24, 152, 237, 0.17）',
+                                    type: 'dashed'
+                                }
+                            },
+                        },
+                        grid: {
+                            x: 40,
+                            y: 20,
+                            x2: 25,
+                            y2: 30
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'shadow'
+                            }
+                        },
+                        series: [{
+                            data: changedata,
+                            label: {
+                                show: true,
+                                position: 'top'
+                            },
+                            type: 'bar',
+                            barWidth: 20,
+                            showBackground: true,
+                            backgroundStyle: {
+                                color: '#F4F8FB'
+                            },
+                        }]
+                    };
+                    changeChartoption && changeChart.setOption(changeChartoption);
+                })
+            }
+
+            layui.use(["form", "laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                var month = new Date().getMonth() + 1;
+                month = (month < 10 ? "0" + month : month);
+                var firstMonth = new Date().getFullYear() + '-' + month;
+                laydate.render({
+                    elem: '#month',
+                    type: 'month',
+                    value: firstMonth
+                });
+                laydate.render({
+                    elem: '#year',
+                    type: 'year',
+                    value: new Date().getFullYear()
+                });
+                laydate.render({
+                    elem: '#startDateTime'
+                });
+                laydate.render({
+                    elem: '#endDateTime'
+                });
+                form.render();
+                var type = 'year';
+                //监听提交
+                form.on("radio(type)", function (data) {
+                    if (data.value == 'year') {
+                        $('#year').show();
+                        $('#month,#startDateTime,#endDateTime').hide();
+                        type = 'year';
+                    } else if (data.value == 'month') {
+                        $('#year,#startDateTime,#endDateTime').hide();
+                        $('#month').show();
+                        type = 'month';
+                    } else {
+                        $('#startDateTime,#endDateTime').show();
+                        $('#year,#month').hide();
+                        type = 'auto';
+                    }
+                    return false;
+                });
+                //服务器
+                getServer(form);
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    dataparam.ServerCode = param.ServerCode = data.field.ServerCode;
+                    let start, end;
+                    if (type == 'year') {
+                        start = data.field.year + '-01-01 00:00:00';
+                        end = data.field.year + '-12-31 23:59:59';
+                    } else if (type == 'month') {
+                        start = data.field.month + '-01 00:00:00';
+                        let endday = '31';
+                        let year = data.field.month.split('-')[0];
+                        let month = data.field.month.split('-')[1];
+                        switch (month) {
+                            case '04':
+                            case '06':
+                            case '09':
+                            case '11': endday = 30; break;
+                            case '02':
+                                if (year % 4 == 0) {
+                                    if (year % 100 == 0) {
+                                        endday = year % 400 == 0 ? 29 : 28;
+                                    } else {
+                                        endday = 29;
+                                    }
+                                } else {
+                                    endday = 28;
+                                }
+                                break;
+                        }
+                        end = data.field.month + '-' + endday + ' 23:59:59';
+                    } else {
+                        start = data.field.startDateTime;
+                        end = data.field.endDateTime;
+                    }
+                    dataparam.startDateTime = param.startDateTime = start;
+                    dataparam.endDateTime = param.endDateTime = end;
+                    param.pageNo = 1;
+                    delete (param['ComboBox']);
+                    GetData(param, dataparam);
+                    return false;
+                });
+            });
+        })
+        //导出数据模板
+        //obj 操作 a对象
+        function exportlist(obj,url){
+            var html='<a href='+ajaxUrl+url+'?token='+token;
+                if(param.ServerCode)html+='&ServerCode='+param.ServerCode;
+                if(param.startDateTime)html+='&startDateTime='+ (Date.parse(param.startDateTime)/1000)
+                if(param.endDateTime)html+='&endDateTime='+ (Date.parse(param.endDateTime)/1000);
+                html+=' id="exportlist"></a>';
+            $(obj).parent().append(html);
+            $('#exportlist')[0].click();
+            setTimeout(function(){
+                $('#exportlist').remove();
+            },3000);
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            delete (param['ComboBox']);
+            list.get(url, param); 
+        }
+    </script>
+</body>
+
+</html>

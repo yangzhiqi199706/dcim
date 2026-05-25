@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        @keyframes redwinkBackground {
+            0% {
+                background-color: #ff0000;
+            }
+
+            50% {
+                background-color: #eeaeae;
+            }
+
+            100% {
+                background-color: #ff0000;
+            }
+        }
+
+        @keyframes bluewinkBackground {
+            0% {
+                background-color: #216FEC;
+            }
+
+            50% {
+                background-color: #9a99f0;
+            }
+
+            100% {
+                background-color: #216FEC;
+            }
+        }
+
+        .redwink {
+            animation: redwinkBackground 1s infinite;
+        }
+
+        .bluewink {
+            animation: bluewinkBackground 1s infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="ServerCode" name="ServerCode" lay-filter="ServerCode">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="AreaId" name="AreaId" lay-filter="AreaId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="column" name="column" lay-filter="column">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <select id="CabinetId" name="CabinetId" lay-filter="CabinetId">
+                                    <option value="">请选择</option>
+                                </select>
+                            </div>
+
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                            <div>
+                                <span>待上架资产设置管理人员，起始U位进行上架。管理部门：</span>
+                                <div class="layui-inline layui-show-xs-block">
+                                    <select id="DeptId" name="DeptId" lay-filter="DeptId">
+                                        <option value="">请选择</option>
+                                    </select>
+                                </div>
+                                <span>管理人员：</span>
+                                <div class="layui-inline layui-show-xs-block">
+                                    <select id="EmpId" name="EmpId" lay-filter="EmpId">
+                                        <option value="">请选择</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="layui-card-body">
+                        <ul id="tree" class="view-box">
+                            <script type="text/html" id="utemplate">
+                                {{each data as list i}}
+                                    <li>
+                                        <div>{{list.ULocation}}</div>
+                                        <div  id="u{{data.length - i}}" class="mid" style="{{if list.UStatus}}background-color:#222;{{/if}}">{{if list.UId || list.GatewayId}}{{list.UTag}}{{else}}{{list.AssetsNumber}}{{/if}}</div>
+                                        <div class="last" style="
+                                            {{if list.UStatus=='在架位'}}
+                                                background-color:#3A913D;
+                                            {{else if list.UStatus=='预占位'}}
+                                                background-color:#216FEC;
+                                            {{else if list.UStatus=='维修位'}}
+                                                background-color:#FF0003;
+                                            {{else if list.UStatus=='上架中'}}
+                                                background-color:#109978;
+                                            {{else if list.UStatus=='下架中'}}
+                                                background-color:#C817CB;
+                                            {{else if list.UStatus=='禁用位'}}
+                                                background-color:#454543;
+                                            {{else if list.UStatus=='标签丢失'}}
+                                                background-color:#A00304;
+                                            {{else if list.UStatus=='信息不一致'}}
+                                                background-color:#A0CA1A;
+                                            {{else if list.UStatus=='已出租'}}
+                                                background-color:#4D4DFF;
+                                            {{/if}}
+                                        "></div>
+                                        <div class="last last2 {{if list.UdeviceStatus=='2'}}
+                                            bluewink
+                                        {{else if list.UdeviceStatus=='3'}}
+                                            redwink
+                                        {{/if}}
+                                        " style="
+                                            {{if list.UdeviceStatus=='0'}}
+                                                background-color:#216FEC;
+                                            {{else if list.UdeviceStatus=='1'}}
+                                                background-color:#FF0000;
+                                            {{/if}}
+                                        " ></div>
+                                    </li>
+                                {{/each}}
+                            </script>
+                        </ul>
+                        <table class="layui-table layui-col-tree">
+                            <span style="color:#fff">图例：</span>
+                            <ul class="view-tips">
+                                <li>
+                                    <label style="background-color:#3A913D;"></label>
+                                    <span>在架位</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#216FEC;"></label>
+                                    <span>预占位</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#FF0003;"></label>
+                                    <span>维修位</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#109978;"></label>
+                                    <span>上架中</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#C817CB;"></label>
+                                    <span>下架中</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#454543;"></label>
+                                    <span>禁用位</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#A0CA1A;"></label>
+                                    <span>信息不一致</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#4D4DFF;"></label>
+                                    <span>已出租</span>
+                                </li>
+                            </ul>
+                            <br />
+                            <span class="last2" style="color:#fff">状态图例：</span>
+                            <ul class="view-tips last2">
+                                <li>
+                                    <label style="background-color:#216FEC;"></label>
+                                    <span>上架</span>
+                                </li>
+                                <li>
+                                    <label style="background-color:#FF0000;"></label>
+                                    <span>异常下架</span>
+                                </li>
+                                <li>
+                                    <label class="bluewink"></label>
+                                    <span>预上架</span>
+                                </li>
+                                <li>
+                                    <label class="redwink"></label>
+                                    <span>预下架</span>
+                                </li>
+                            </ul>
+                            <button class="layui-btn x-right" onclick="chooseAll()">上架</button>
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                    <th>U高</th>
+                                    <th>起始U位</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr> 
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td><input class="layui-input" type="text" name="AssetsNumber{{list.id}}" value="{{list.AssetsNumber}}"/></td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td><input class="layui-input" type="text" name="AssetsDescribe{{list.id}}" value="{{list.AssetsDescribe}}"/></td>
+                                        <td>{{list.AttributeVal}}</td>
+                                        <td><input class="layui-input" id="{{list.id}}" type="number" name="ULocation" value="" data-id="{{list.id}}" data-assetsid="{{list.AssetsId}}" data-UHigh="{{list.AttributeVal}}"/></td>
+                                        <td>
+                                            <!-- <a title="上架" data-id="{{list.id}}" data-assetsid="{{list.AssetsId}}" data-UHigh="{{list.AttributeVal}}" onclick="chooseOne(this)"  href="javascript:;">
+                                                <i class="layui-icon">&#xe646;</i>
+                                            </a> -->
+                                            <a title="私有属性" onclick="xadmin.open('私有属性','asset-private-add.html','','','{{list.AssetsId}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe716;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/dealUIdStatus.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        //请求地址
+        var url = "GetAssetsPutoutListKey";
+        var form;
+        var ServerCode, ServerName, AreaId, AreaName, column, position, DeptId, DeptName, PersonName;
+        var ulen = 0;//机柜容量
+        var uparr = [];//需要上架的资产数组
+        let UId = '';//是否U位资产
+        let GatewayId = '';//网关id
+        let devAddress = '';
+        let allCabinet = [];
+        ServerCode = GetString("ServerCode");
+        ServerName = decodeURI(GetString("ServerName"));
+        AreaId = GetString("AreaId");
+        AreaName = decodeURI(GetString("AreaName"));
+        column = decodeURI(GetString("column"));
+        position = decodeURI(GetString("position"));
+        DeptId = GetString("DeptId");
+        DeptName = decodeURI(GetString("DeptName"));
+        PersonName = decodeURI(GetString("PersonName"));
+
+        //查询设备的串联地址
+        function searchDevAddress(GatewayId){
+            list.info("GetDeviceDetailKey", {
+                token: token,
+                id: GatewayId
+            }, function (r) {
+                devAddress = r.data.DeviceAddress;
+            })
+        }
+
+        $(function () {
+            layui.use(["form", "tree"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                //服务器
+                getServer(form, function (r) {
+                    //继成上个接口
+                    layuiSelected("ServerCode", ServerName ? ServerName : r.data[0].ServerName);
+                    ServerCode = ServerCode ? ServerCode : r.data[0].id;
+                    form.on("select(ServerCode)", function (data) {
+                        param.ComboBox = 'all';
+                        getArea(form, data);
+                    });
+                    getArea(form, { value: ServerCode }, function (re) {
+                        //继成上个接口
+                        if (re.data.length == 0) { return; }
+                        layuiSelected("AreaId", AreaName ? AreaName : re.data[0].AreaName);
+                        AreaId = AreaId ? AreaId : re.data[0].id;
+                        form.on("select(AreaId)", function (data) {
+                            param.ComboBox = 'all';
+                            getColumn(form, data);
+                            getDept(form, data);
+                            form.on("select(column)", function (data) {
+                                param.ComboBox = 'all';
+                                getAssetCabinet(form, data, dealGetAssetCabinet);
+                            });
+                            form.on("select(DeptId)", function (data) {
+                                param.ComboBox = 'all';
+                                getEmp(form, data);
+                            });
+                        });
+                        getColumn(form, { value: AreaId }, function (res) {
+                            //继成上个接口
+                            if (res.data.length == 0) { return; }
+                            layuiSelected("column", column ? column : res.data[0].column);
+                            column = column ? column : res.data[0].column;
+                            form.on("select(column)", function (data) {
+                                param.ComboBox = 'all';
+                                getAssetCabinet(form, data, dealGetAssetCabinet);
+                            });
+                            getAssetCabinet(form, { value: column }, dealGetAssetCabinet);
+                        });
+                        getDept(form, { value: AreaId }, function (res) {
+                            //继成上个接口
+                            if (res.data.length == 0) { return; }
+                            layuiSelected("DeptId", DeptName ? DeptName : res.data[0].DeptName);
+                            DeptId = DeptId ? DeptId : res.data[0].id;
+                            form.on("select(DeptId)", function (data) {
+                                param.ComboBox = 'all';
+                                getEmp(form, data);
+                            });
+                            getEmp(form, { value: DeptId }, function (ress) {
+                                //继成上个接口
+                                if (ress.data.length == 0) { return; }
+                                layuiSelected("EmpId", PersonName ? PersonName : ress.data[0].PersonName);
+                            });
+                        });
+                    });
+                });
+                //机柜回调函数
+                function dealGetAssetCabinet(ress) {
+                    //继成上个接口
+                    UId = '';
+                    GatewayId = '';
+                    devAddress = '';
+                    allCabinet = [];
+                    if (ress.data.length == 0) { return; }
+                    UId = ress.data[0].UId;
+                    GatewayId = ress.data[0].GatewayId;
+                    searchDevAddress(GatewayId);
+                    allCabinet = ress.data;
+                    layuiSelected("CabinetId", position ? position : ress.data[0].position);
+                    delete (param['ComboBox']);
+                    //初始化数据
+                    param.PutoutWay = 'W';
+                    param.PutoutStatus = 'false';
+                    list.get(url, param, '', setStartU);
+                    console.log(UId)
+                    console.log(GatewayId)
+                    getU();
+                    form.on("select(CabinetId)", function (data) {
+                        let finduid = allCabinet.findIndex(v => v.id == data.value);
+                        if (finduid > -1) {
+                            UId = ress.data[finduid]['UId']
+                            GatewayId = ress.data[finduid]['GatewayId']
+                            searchDevAddress(GatewayId);
+                        } else {
+                            UId = '';
+                            GatewayId = '';
+                            devAddress = '';
+                        }
+                    });
+                }
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    delete (param['ComboBox']);
+                    param.PutoutWay = 'W';
+                    param.PutoutStatus = 'false';
+                    list.get(url, param, '', setStartU)
+                    getU();
+                    return false;
+                });
+            });
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            delete (param['ComboBox']);
+            list.get(url, param, '', setStartU);
+        }
+        //获取U位状态
+        function getU() {
+            list.info('GetCabinetUKey', {
+                token: token,
+                id: $('#CabinetId').val()
+            }, function (r) {
+                r.data = r.data.reverse();
+                var lists = template("utemplate", r);
+                ulen = r.data.length;
+                $("#tree").html(lists);
+                if (UId || GatewayId) {
+                    $('.last2').css('display', 'inline-block');
+                    $('.view-box .mid').css('width', 'calc(100% - 60px)');
+                } else {
+                    $('.last2').hide();
+                }
+            })
+        }
+        //监听U位填写动态设置U位的上架示例
+        function setStartU(r) {
+            $('input[name=ULocation]').change(function () {
+                var $this = $(this);
+                var start = $this.val();
+                var high = $this.attr('data-UHigh');
+                var total = parseInt(start) + parseInt(high);
+                var id = $this.attr('data-id');
+                var havechangestatus = true;//是否改变对应U位的style
+                if (start > ulen) {
+                    layer.msg('起始U位超出机柜容量！', {
+                        icon: 5,
+                        time: 1000
+                    });
+                    $this.val(' ');
+                    return false;
+                }
+                if (start < 1) {
+                    layer.msg('起始U位不能小于0！', {
+                        icon: 5,
+                        time: 1000
+                    });
+                    $this.val(' ');
+                    return false;
+                }
+                for (var i = start; i < total; i++) {//判断U位是否合理
+                    if ($('#u' + i).css('background-color') == 'rgb(34, 34, 34)' && $('#u' + i).attr('class') != 'u' + id) {
+                        havechangestatus = false;
+                        layer.msg('部分U位被暂用，请重新选择起始U位', {
+                            icon: 5,
+                            time: 1000
+                        });
+                        $this.val(' ');
+                        $('.u' + id).css('background-color', '#02090B').removeClass('u' + id);//填写错误清除U位
+                        return false;
+                    }
+                }
+                $('.u' + id).css('background-color', '#02090B').removeClass('u' + id);//重复变更没有资产的起始U位
+                if (havechangestatus) {//判断通过，给指定位置变更颜色
+                    for (var i = start; i < total; i++) {
+                        $('#u' + i).css('background-color', '#222').addClass('u' + id);
+                    }
+                    uparr.push(id);
+                }
+            })
+        }
+        //单个上架
+        function chooseOne(obj) {
+            if (!$('#EmpId').val()) {
+                layer.msg('请选择管理人员', {
+                    icon: 5,
+                    time: 1000
+                });
+                return false;
+            }
+            layer.confirm('确认上架此资产？', function (index) {
+                list.info('CreateGroundingAssetsKey', {
+                    token: token,
+                    AssetsDescribe: $('input[name=AssetsDescribe' + $(obj).data('id') + ']').val(),
+                    AssetsNumber: $('input[name=AssetsNumber' + $(obj).data('id') + ']').val(),
+                    AssetsId: $(obj).attr('data-assetsid'),
+                    PutoutId: $(obj).attr('data-id'),
+                    CabinetId: $('#CabinetId').val(),
+                    ULocation: $('#' + $(obj).data('id')).val(),
+                    EmpId: $('#EmpId').val(),
+                    UHigh: $(obj).attr('data-UHigh'),
+                }, function (r) {
+                    //上上架时 如果是U位资产发送u位控制命令  根据U高判断发送命令
+                    if (UId || GatewayId) {
+                        let ustart = $('#' + $(obj).data('id')).val();
+                        let uend = parseInt($('#' + $(obj).data('id')).val()) + parseInt($(obj).attr('data-UHigh'));
+                        for (i = ustart; i < uend; i++) {
+                            if (UId){
+                                setUStatus(UId, i, '0',true)
+                            }else if(GatewayId){
+                                setUposStatus(GatewayId, i, '0', devAddress, $('#CabinetId').val(),true);//控制变更
+                            }
+                            
+                        }
+                    }
+                    layer.msg("已上架", {
+                        icon: 6,
+                        time: 1000
+                    }, function () {
+                        list.get(url, param, '', setStartU)
+                        getU();
+                    });
+                })
+            });
+        }
+        //批量上架
+        function chooseAll() {
+            if (!$('#EmpId').val()) {
+                layer.msg('请选择管理人员', {
+                    icon: 5,
+                    time: 1000
+                });
+                return false;
+            }
+            layer.confirm('确认上架这些资产？', function (index) {
+                console.log(uparr)
+                $.each(uparr, function (n, val) {
+                    list.info('CreateGroundingAssetsKey', {
+                        token: token,
+                        AssetsDescribe: $('input[name=AssetsDescribe' + val + ']').val(),
+                        AssetsNumber: $('input[name=AssetsNumber' + val + ']').val(),
+                        AssetsId: $('#' + val).attr('data-assetsid'),
+                        PutoutId: $('#' + val).attr('data-id'),
+                        CabinetId: $('#CabinetId').val(),
+                        ULocation: $('#' + val).val(),
+                        EmpId: $('#EmpId').val(),
+                        UHigh: $('#' + val).attr('data-UHigh'),
+                    }, function (r) {
+                        //上上架时 如果是U位资产发送u位控制命令  根据U高判断发送命令
+                        if (UId || GatewayId) {
+                            let ustart = $('#' + val).val();
+                            let uend = parseInt($('#' + val).val()) + parseInt($('#' + val).attr('data-UHigh'));
+                            for (i = ustart; i < uend; i++) {
+                                if (UId){
+                                    setUStatus(UId, i, '0',true)
+                                }else if(GatewayId){
+                                    setUposStatus(GatewayId, i, '0', devAddress, $('#CabinetId').val(),true);//控制变更
+                                }
+                            }
+                        }
+                        if (n + 1 == uparr.length) {
+                            layer.msg("已上架", {
+                                icon: 6,
+                                time: 1000
+                            }, function () {
+                                list.get(url, param, '', setStartU)
+                                getU();
+                            });
+                        }
+                    })
+                })
+            })
+        }
+    </script>
+</body>
+
+</html>

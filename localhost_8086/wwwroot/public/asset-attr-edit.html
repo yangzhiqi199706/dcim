@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">属性名称<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="AttrName" value="{{data.AttrName}}" name="AttrName" lay-verify="required" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">属性编号</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="AttrNumber" value="{{data.AttrNumber}}" name="AttrNumber" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">属性分类<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <select id="AttrClass" name="AttrClass" lay-verify="required">
+                                <option value="物理属性" {{if data.AttrClass=='物理属性'}}selected{{/if}}>物理属性</option>
+                                <option value="功耗属性" {{if data.AttrClass=='功耗属性'}}selected{{/if}}>功耗属性</option>
+                                <option value="端口属性" {{if data.AttrClass=='端口属性'}}selected{{/if}}>端口属性</option>
+                                <option value="私有属性" {{if data.AttrClass=='私有属性'}}selected{{/if}}>私有属性</option>
+                                <option value="硬件属性" {{if data.AttrClass=='硬件属性'}}selected{{/if}}>硬件属性</option>
+                                <option value="操作系统" {{if data.AttrClass=='操作系统'}}selected{{/if}}>操作系统</option>
+                                <option value="其它" {{if data.AttrClass=='其它'}}selected{{/if}}>其它</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">数据类型<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <select id="DataType" name="DataType" lay-verify="required">
+                                <option value="字符型" {{if data.DataType=='字符型'}}selected{{/if}}>字符型</option>
+                                <option value="整型" {{if data.DataType=='整型'}}selected{{/if}}>整型</option>
+                                <option value="浮点型" {{if data.DataType=='浮点型'}}selected{{/if}}>浮点型</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">属性单位</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="AttrUnit" value="{{data.AttrUnit}}" name="AttrUnit" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"></label>
+                        <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                    </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            var id = GetString("id");
+
+            //获取详情
+            list.info("GetAssetsAttrDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    form.render('select');
+                     //监听提交
+				    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("id", id);
+                        list.form("ChangeAssetsAttrKey", strformData, function (r) {
+                            backToparent("修改成功");
+                        });
+                    });
+                });
+            });	
+        });
+    </script>
+</body>
+</html>

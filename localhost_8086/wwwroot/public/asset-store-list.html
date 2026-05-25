@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <script src="js/jquery.qrcode.min.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>资产管理->资产管理->库存管理</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input class="layui-input" placeholder="请输入资产编号、资产描述" name="search">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" onclick="xadmin.open('添加资产','asset-store-add.html')">
+                            <i class="layui-icon"></i>添加资产
+                        </button>
+                        <button class="layui-btn x-right" style="margin-right: 10px;" type="button"
+                            onclick="x_admin_dealall(dealAll)">批量出库</button>
+                        <a class="layui-btn x-right" id="importBtn">
+                            导入资产
+                        </a>
+                        <a href="/upfiletpl/asset.xls" download="" class="importTpl x-right"
+                            style="margin-top: 7px;">《下载模版》</a>
+                    </div>
+                    <div class="layui-card-body">
+                        <div id="tree"></div>
+                        <table class="layui-table layui-col-tree layui-form">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="checkall" lay-filter="checkall" lay-skin="primary">
+                                    </th>
+                                    <th>资产编号</th>
+                                    <th>资产类型</th>
+                                    <th>型号</th>
+                                    <th>资产描述</th>
+                                    <th>资产条ID</th>
+                                    <th>网关ID</th>
+                                    <th>仓库位置</th>
+                                    <th>管理部门</th>
+                                    <th>管理人员</th>
+                                    <th>供应商</th>
+                                    <th>登记人</th>
+                                    <th>登记时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.length!=0}} {{each data as list i}}
+                                    <tr>
+                                        <td width="70">
+                                            <!-- <input type="checkbox" value="{{list.id}}" name="id"  lay-filter="checkone" lay-skin="primary" data-param="{{if list.UHigh}}{{list.UHigh}}{{else}}0{{/if}}" data-parent="{{list.AssetsParentTypeName}}"> -->
+                                            <input type="checkbox" value="{{list.id}}" name="id"  lay-filter="checkone" lay-skin="primary" data-param="{{if list.UHigh}}1{{else}}0{{/if}}" data-parent="{{if list.UNum}}1{{else}}0{{/if}}">
+                                        </td>
+                                        <td>{{list.AssetsNumber}}</td>
+                                        <td>{{list.AssetsTypeName}}</td>
+                                        <td>{{list.BrandModel}}</td>
+                                        <td>{{list.AssetsDescribe}}</td>
+                                        <td>{{list.UId}}</td>
+                                        <td>{{list.GatewayId}}</td>
+                                        <td>{{list.StoreLocationName}}</td>
+                                        <td>{{list.DeptName}}</td>
+                                        <td>{{list.PersonName}}</td>
+                                        <td>{{list.SupplierName}}</td>
+                                        <td>{{list.CreateEmpName}}</td>
+                                        <td>{{list.create_time}}</td>
+                                        <td>
+                                            <a title="编辑" onclick="xadmin.open('编辑','asset-store-edit.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe642;</i>
+                                            </a>
+                                            <a title="出库" onclick="xadmin.open('出库','asset-putout-add.html','','','{{list.id}}&type='+encodeURI(encodeURI('{{list.AssetsParentTypeName}}'))+'')" href="javascript:;">
+                                                <i class="layui-icon">&#xe681;</i>
+                                            </a>
+                                            <a title="私有属性" onclick="xadmin.open('私有属性','asset-private-add.html','','','{{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe716;</i>
+                                            </a>
+                                            <a title="生成二维码" id="img{{list.id}}" download="库存-{{list.AssetsTypeName}}-{{list.BrandModel}}" href="{{list.ewm}}" class="fancybox-view">
+                                                <i class="layui-icon">&#xe857;</i>
+                                                <div id="{{list.id}}" style="display:none"></div>
+                                            </a>
+                                            <a title="维修登记" onclick="xadmin.open('维修登记','asset-repair-add.html','','','{{list.id}}&type=1&AssetsId={{list.id}}&BrandModel='+encodeURI(encodeURI('{{list.BrandModel}}'))+'&AssetsNumber='+encodeURI(encodeURI('{{list.AssetsNumber}}')))" href="javascript:;">
+                                                <i class="layui-icon">&#xe631;</i>
+                                            </a>
+                                            <a title="处置" onclick="xadmin.open('处置','asset-handle-add.html','','','{{list.id}}&AssetsId={{list.id}}')" href="javascript:;">
+                                                <i class="layui-icon">&#xe64d;</i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetAssetsStoreListKey";
+        var form;
+        $(function () {
+            param.AssetStatus = 'I';
+            param.ComboBox = "all";
+            //类型树形列表
+            list.info('GetAssetsTypeListKey', param, function (r) {
+                var data = [];
+                //按pid排序
+                r.data.sort(function (a, b) {
+                    if (parseInt(a.AssetsTypeParentId) < parseInt(b.AssetsTypeParentId)) {
+                        return -1;
+                    } else if (parseInt(a.AssetsTypeParentId) == parseInt(b.AssetsTypeParentId)) {
+                        return 0;
+                    } else {
+                        return 1;
+                    }
+                });
+                //树形数据
+                var firstthrchild = -1;
+                $.each(r.data, function (n, val) {
+                    if (val.AssetsTypeParentId == 0 && val.AssetsTypeName != '备品备件') {
+                        var newdata = {
+                            title: val.AssetsTypeName,
+                            id: val.id,
+                            spread: false,
+                            other: 1,
+                            children: []
+                        }
+                        data.push(newdata);
+                    } else {
+                        $.each(data, function (x, y) {
+                            if (y.id == val.AssetsTypeParentId && val.AssetsTypeName != '备品备件') {
+                                y.children.push({
+                                    title: val.AssetsTypeName,
+                                    id: val.id,
+                                    spread: false,
+                                    other: 2,
+                                    children: []
+                                })
+                            } else {
+                                if (y.children.length != 0) {
+                                    $.each(y.children, function (m, l) {
+                                        if (l.id == val.AssetsTypeParentId && val.AssetsTypeName != '备品备件') {
+                                            l.children.push({
+                                                title: val.AssetsTypeName,
+                                                id: val.id,
+                                                spread: false,
+                                                other: 3
+                                            })
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+                })
+                layui.use(["form", "tree", "upload"], function () {
+                    $ = layui.jquery;
+                    form = layui.form;
+                    var tree = layui.tree;
+
+                    var upload = layui.upload;
+
+                    //导入资产
+                    upDataPtl(upload, {
+                        "table": "dcim-asset",
+                        "primary_key": "",
+                        "primary_field_name": "",
+                        "mappings": [
+                            {
+                                "excel_field": "ModelId",
+                                "lookup_table": "dcim-brandmodel",
+                                "lookup_field": "BrandModel",
+                                "lookup_value": "id"
+                            },
+                            {
+                                "excel_field": "StoreLocationId",
+                                "lookup_table": "dcim-store",
+                                "lookup_field": "StoreLocationName",
+                                "lookup_value": "id"
+                            },
+                            {
+                                "excel_field": "EmpId",
+                                "lookup_table": "dcim-person",
+                                "lookup_field": "PersonName",
+                                "lookup_value": "id"
+                            },
+                            {
+                                "excel_field": "SupplierId",
+                                "lookup_table": "dcim-supplier",
+                                "lookup_field": "SupplierName",
+                                "lookup_value": "id"
+                            },
+                            {
+                                "excel_field": "GatewayId",
+                                "lookup_table": "dcim-device",
+                                "lookup_field": "DeviceName",
+                                "lookup_value": "id"
+                            },
+                            {
+                                "excel_field": "RentId",
+                                "lookup_table": "dcim-tenant",
+                                "lookup_field": "TenantName",
+                                "lookup_value": "id"
+                            }
+                        ]
+                    }, () => {
+                        getData()
+                    }, '#importBtn')
+
+                    getData();
+
+                    tree.render({
+                        elem: "#tree",
+                        data: data,
+                        id: 'treeId',
+                        click: function (obj) {
+                            if (obj.data.other == 3) {
+                                $('.layui-tree-txt').removeAttr('style');
+                                $(obj.elem).find('.layui-tree-txt').css('color', '#148cf1');
+                                //属性列表
+                                param.AssetsTypeId = obj.data.id;
+                                getData()
+                            }
+                        }
+                    });
+                    //监听提交
+                    form.on("submit(search)", function (data) {
+                        param.search = data.field.search;
+                        getData()
+                        return false;
+                    });
+                });
+            });
+        })
+        //获取初始化数据
+        function getData() {
+            //初始化数据
+            list.info(url, param, function (r) {
+                var html = template("listtemplate", r);
+                $("table tbody").html(html);
+                dealEwm(r);
+                checkall(form);
+            });
+        }
+        //生成二维码
+        function dealEwm(r) {
+            $.each(r.data, function (n, val) {
+                var data = '资产编号:' + val.AssetsNumber + ',资产类型:' + val.AssetsTypeName + ',型号:' + val.BrandModel + ',资产描述:' + val.AssetsDescribe + ',仓库位置:' + val.StoreLocationName + ',管理部门:' + val.DeptName + ',管理人员:' + val.PersonName + ',供应商:' + val.SupplierName;
+                var qrcode = $('#' + val.id).qrcode({
+                    width: 128,
+                    height: 128,
+                    text: toUtf8(data)
+                });
+                var canvas = $('#' + val.id).find("canvas")[0];
+                $('#img' + val.id).attr("href", canvas.toDataURL('image/jpeg'));
+            })
+        }
+        //批量出库
+        function dealAll(id, param, par) {
+            // var arr = param;
+            // var newArr = [];
+            // for (var i = 0; i < arr.length; i++) {
+            //     if (arr.indexOf(arr[i]) == i) {
+            //         newArr.push(arr[i]);
+            //     }
+            //     if(arr.length==i+1){
+            //         if(newArr.length>1){
+            //             layer.msg("只能批量出库同出库类型的资产！", {
+            //                 icon: 5,
+            //                 time: 2000
+            //             });
+            //             return false;
+            //         }
+            //         xadmin.open('出库','asset-putout-add.html','','',id+'&type='+encodeURI(encodeURI(par.toString())))
+            //     }
+            // }
+            var haveu = false;
+            var nothaveu = false;
+            var havecu = false;
+            var nothavecu = false;
+            var type = 0;//0出库类型不限制  1 出库类型为上架  2出库类型安装
+            console.log(param)
+            console.log(par)
+            if (param.indexOf('0') > -1) {//0 不具有U高不能上架
+                nothaveu = true;
+            }
+            if (param.indexOf('1') > -1) {//1 具有U高能上架
+                haveu = true;
+            }
+            if (par.indexOf('0') > -1) {//0 不具有机柜容量不能安装
+                nothavecu = true;
+            }
+            if (par.indexOf('1') > -1) {//1 具有机柜容量能安装
+                havecu = true;
+            }
+            console.log(nothaveu);
+            console.log(haveu);
+            if (nothaveu && haveu) {
+                layer.msg("只能批量出库同出库类型的资产！", {
+                    icon: 5,
+                    time: 2000
+                });
+                return false;
+            }
+            if (nothavecu && havecu) {
+                layer.msg("只能批量出库同出库类型的资产！", {
+                    icon: 5,
+                    time: 2000
+                });
+                return false;
+            }
+            if (haveu) {//u高和机柜容量不会重复存在
+                type = 1;
+            }
+            if (havecu) {
+                type = 2;
+            }
+            console.log(type);
+            xadmin.open('出库', 'asset-putout-add.html', '', '', id + '&type=' + type)
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="" title="无" lay-filter="set" checked>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="AssetsNumber" title="资产编号" lay-filter="set">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="AssetsDescribe" title="资产描述" lay-filter="set">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="BrandModel" title="品牌型号" lay-filter="set">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="ip" title="IP地址" lay-filter="set">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="order" title="序列号" lay-filter="set">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <div class="layui-input-block">
+                        <input type="radio" name="set" value="UTag" title="U位标签" lay-filter="set">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        var form;
+        var setconType = localStorage.getItem("setconType");
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                form = layui.form;
+                $('#old').show();
+                $('#new').hide();
+             
+                //获取原位置
+                form.on('radio(pos)', function (data) {
+                    if (data.value == 'old') {
+                        $('#old').show();
+                        $('#new').hide();
+                    } else {
+                        $('#old').hide();
+                        $('#new').show();
+                    }
+                });
+                if(setconType){
+                    $(`:radio[name=set][value="${setconType}"]`).attr("checked","true");
+                    form.render('radio');
+                }
+                //仓库
+                getStoreLocation(form);
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    localStorage.setItem("setconType", strformData.get("set"));
+                    var index = parent.layer.getFrameIndex(window.name);
+                    parent.getType();
+                    parent.layer.close(index);
+                    // list.form("CreateAssetsStoreKey", strformData, function (r) {
+                    //     backToparent("添加成功");
+                    // });
+                })
+            });
+        });
+        function render() {
+            form.render();
+        }
+    </script>
+</body>
+
+</html>

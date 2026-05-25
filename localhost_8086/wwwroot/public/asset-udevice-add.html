@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">U位服务IP<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="UIP" value="" name="UIP" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">服务端口<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="UPort" value="" name="UPort" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">U位设备地址<span class="x-red">*</span></label>
+                    <div class="layui-input-inline">
+                        <input type="text" id="UAddress" value="" name="UAddress" lay-verify="required" autocomplete="off" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属服务器<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="ServerCode" name="ServerCode" lay-verify="required" lay-filter="ServerCode">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所属区域<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="AreaId" name="AreaId" lay-verify="required" lay-filter="AreaId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所在机柜列<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="column" name="column" lay-verify="required" lay-filter="column">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        所在机柜<span class="x-red">*</span>
+                    </label>
+                    <div class="layui-input-inline">
+                        <select id="CabinetId" name="CabinetId" lay-verify="required" lay-filter="CabinetId">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        U位条方向
+                    </label>
+                    <div class="layui-input-block">
+                        <input type="radio" name="UDirection" value="updown" title="从上往下" checked>
+                        <input type="radio" name="UDirection" value="downup" title="从下往上">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">
+                        描述
+                    </label>
+                    <div class="layui-input-block">
+                        <textarea placeholder="请输入内容" id="UDescribe" name="UDescribe" class="layui-textarea"></textarea>
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label"></label>
+                    <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //服务器
+                getServer(form,function(){
+                    form.on("select(ServerCode)", function (data) {
+                        getArea(form,data);
+                        form.on("select(AreaId)", function (rdata) {
+                            getColumn(form,rdata);
+                            form.on("select(column)", function (redata) {
+                                getCabinet(form,redata);
+                            });
+                        });
+                    });
+                });
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    list.form("CreateUDeviceKey", strformData, function (r) {
+                        backToparent("添加成功");
+                    });
+                });
+            });
+        })
+    </script>
+</body>
+
+</html>

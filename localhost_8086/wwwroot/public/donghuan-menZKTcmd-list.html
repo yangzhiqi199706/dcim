@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        .mennav .layui-btn:first-child,#open{display: none;}
+        .mennav .layui-btn{transition:none;-webkit-transition:none;}
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body mennav">
+                        <a class="layui-btn layui-btn-primary">
+                            用户管理
+                        </a>
+                        <a class="layui-btn layui-btn-primary">
+                            考勤记录
+                        </a>
+                        <a class="layui-btn layui-btn-primary">
+                            操作记录
+                        </a>
+                        <a class="layui-btn">
+                            控制记录
+                        </a>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" name="startDateTime" id="startDateTime" class="layui-input" placeholder="开始日期" >
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <input type="text" name="endDateTime" id="endDateTime" class="layui-input" placeholder="结束日期">
+                            </div>
+                            <div class="layui-inline layui-show-xs-block">
+                                <button class="layui-btn search" lay-submit lay-filter="search" type="button">
+                                    <i class="layui-icon">&#xe615;</i>
+                                </button>
+                            </div>
+                        </form>
+                        <button class="layui-btn x-right" type="button" id="open">远程开门</button>
+                    </div>
+                    <div class="layui-card-body">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>用户名</th>
+                                    <th>门禁卡号</th>
+                                    <th>门名称</th>
+                                    <th>动作</th>
+                                    <th>结果</th>
+                                    <th>记录时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <script type="text/html" id="listtemplate">
+                                    {{if data.info.length!=0}} {{each data.info as list i}}
+                                    <tr>
+                                        <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                        <td>{{list.EmpName}}</td>
+                                        <td>{{list.IdCard}}</td>
+                                        <td>{{list.DeviceName}}</td>
+                                        <td>{{list.DevAction}}</td>
+                                        <td>{{list.Result}}</td>
+                                        <td>{{list.create_time}}</td>
+                                    </tr>
+                                    {{/each}} {{else}}
+                                    <tr>
+                                        <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                    </tr>
+                                    {{/if}}
+                                </script>
+                            </tbody>
+                        </table>
+                        <div id="bottomPaging"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var id = GetString("id");
+        var SN = GetString("SerialNumber");
+        var url = "GetDoorZktCmdListKey";
+        var type = GetString("type");
+        $(function () {
+            if(type && type=='record'){
+                $('.mennav a').eq(1).attr('href','donghuan-menZKTatt-list.html?id='+id+'&SerialNumber='+SN+'&type='+type).css('marginLeft',0);;
+                $('.mennav a').eq(2).attr('href','donghuan-menZKToper-list.html?id='+id+'&SerialNumber='+SN+'&type='+type);
+                $('.mennav a').eq(3).attr('href','donghuan-menZKTcmd-list.html?id='+id+'&SerialNumber='+SN+'&type='+type);
+            }else{
+                $('#open').show();
+                $('.mennav a').eq(0).attr('href','donghuan-menZKTcus-list.html?id='+id+'&SerialNumber='+SN).css('display','inline-block');
+                $('.mennav a').eq(1).attr('href','donghuan-menZKTatt-list.html?id='+id+'&SerialNumber='+SN);
+                $('.mennav a').eq(2).attr('href','donghuan-menZKToper-list.html?id='+id+'&SerialNumber='+SN);
+                $('.mennav a').eq(3).attr('href','donghuan-menZKTcmd-list.html?id='+id+'&SerialNumber='+SN);
+            }
+            //获取列表数据
+            param.DevID=id;
+            list.get(url, param,dealdata);
+            
+            //远程开门
+            $('#open').click(function(){
+                list.info('CreateDoorZktCmdKey',{
+                    token:token,
+                    DevID:id,
+                    DevAction:1
+                },function(res){
+                    //通知同步数据
+                    list.info('ChangeDoorParamKey', {
+                        token: token,
+                        SN: SN,
+                        cmd: res.data.id
+                    }, function (res) {
+                        layer.msg("等待响应！", {
+                            icon: 1,
+                            time: 4000
+                        }, function () {
+                            setTimeout(function () {
+                                param.pageNo = 1;
+                                list.get(url, param,dealdata);
+                            }, 100)
+                        });
+                    })
+                })
+            })
+
+            //搜索
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({ 
+                    elem: '#startDateTime',
+                    type:'datetime'
+                });
+                laydate.render({ 
+                    elem: '#endDateTime',
+                    type:'datetime'
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    list.get(url, param,dealdata);
+                    return false;
+                });
+            });
+            
+        })
+        function dealdata(r){
+            $.each(r.data.info,function(n,val){
+                switch (val.DevAction) {
+                    case '1':val.DevAction='开门';break;
+                    case '2':val.DevAction='关门';break;
+                    case '3':val.DevAction='常开';break;
+                    case '4':val.DevAction='常关';break;
+                }
+                if(val.Result=='0'){
+                    val.Result='控制成功'
+                }else if(val.Result==null){
+                    val.Result='等待响应'
+                }else{
+                    val.Result='控制失败'
+                }
+            })
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param,dealdata);
+        }
+
+    </script>
+</body>
+
+</html>

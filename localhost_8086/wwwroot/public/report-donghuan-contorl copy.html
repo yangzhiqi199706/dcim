@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->控制记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>日期范围</text>
+                                <input type="text" id="startDateTime" name="startDateTime" class="layui-input" placeholder="开始日期" >
+                                <input type="text" id="endDateTime" name="endDateTime" class="layui-input" placeholder="结束日期">
+                                <text>关键词</text>
+                                <input  type="text" name="search"  placeholder="输入命令、响应关键字" autocomplete="off" class="layui-input">
+                                <div class="two-search">
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">搜索</button>
+                                    <button class="layui-btn" type="button" onclick="exportlist(this,'ExportDeviceCommandSendKey')">导出</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-right-big">
+                            <table class="layui-table" id="ctltable">
+                                <thead>
+                                    <tr>
+                                        <th>编号</th>
+                                        <th>控制时间</th>
+                                        <th>控制设备</th>
+                                        <th>指令ID</th>
+                                        <th>指令名称</th>
+                                        <th>控制指令</th>
+                                        <th>操作者</th>
+                                        <th>响应信息</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>{{(data.page.p-1)*15+(i+1)}}</td>
+                                            <td>{{list.create_time}}</td>
+                                            <td>{{list.DeviceName}}</td>
+                                            <td>{{list.ComId}}</td>
+                                            <td>{{list.ComDesc}}</td>
+                                            <td>{{list.Command}}</td>
+                                            <td>{{list.CreateEmpName}}</td>
+                                            <td>{{list.RecvData}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetDeviceCommandSendListKey";
+        $(function(){
+            //初始化数据
+            list.get(url, param);
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+
+                laydate.render({ 
+                    elem: '#startDateTime',
+                    type:'datetime'
+                });
+                laydate.render({ 
+                    elem: '#endDateTime',
+                    type:'datetime'
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    list.get(url, param);
+                    return false;
+                });  
+            });
+        })
+        //导出数据模板
+        //obj 操作 a对象
+        function exportlist(obj,url){
+            var html='<a href='+ajaxUrl+url+'?token='+token;
+                if(param.search)html+='&search='+param.search;
+                if(param.startDateTime)html+='&startDateTime='+ (Date.parse(param.startDateTime)/1000)
+                if(param.endDateTime)html+='&endDateTime='+ (Date.parse(param.endDateTime)/1000);
+                html+=' id="exportlist"></a>';
+            $(obj).parent().append(html);
+
+            $('#exportlist')[0].click();
+            setTimeout(function(){
+                $('#exportlist').remove();
+            },3000);
+        }
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+</html>

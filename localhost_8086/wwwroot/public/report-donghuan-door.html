@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+    <style>
+        #doortable{display: none;}
+    </style>
+</head>
+
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>报表->动环监控->门禁记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <form class="layui-form layui-col-space5">
+                            <select id="DeviceName" name="DeviceName" lay-filter="DeviceName">
+                            </select>
+                        </form>
+                    </div>
+                    <div class="layui-card-body"  id="doortable">
+                        <table class="layui-table">
+                            <thead>
+                                <tr>
+                                    <th>编号</th>
+                                    <th>用户名</th>
+                                    <th>门禁卡号</th>
+                                    <th>门名称</th>
+                                    <th>动作</th>
+                                    <th>结果</th>
+                                    <th>记录时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" style="text-align: center;">暂无相关数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <iframe src="" frameborder="0"
+                        style="border: none;height:calc(100vh - 107px);margin:0 -15px;width:calc(100% + 10px)"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <script>
+        $(function () {
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                //门禁设备
+                list.info("GetDeviceListKey", {
+                    token: token,
+                    ClassName: "门禁",
+                    ComboBox: 'all'
+                }, function (res) {
+                    let html = '';
+                    $.each(res.data, function (n, val) {
+                        if (n == 0) {
+                            html += "<option selected value=\"" + val.id + "\" data-code=\"" + val.ProtocolCode + "\" data-ip=\"" + val.DeviceIP + "\" data-port=\"" + val.DevicePort + "\" data-user=\"" + val.account + "\" data-password=\"" + val.password + "\" data-SerialNumber=\"" + val.SerialNumber + "\">" + val.DeviceName + "</option>";
+                        } else {
+                            html += "<option value=\"" + val.id + "\" data-code=\"" + val.ProtocolCode + "\" data-ip=\"" + val.DeviceIP + "\" data-port=\"" + val.DevicePort + "\" data-user=\"" + val.account + "\" data-password=\"" + val.password + "\" data-SerialNumber=\"" + val.SerialNumber + "\">" + val.DeviceName + "</option>";
+                        }
+                    });
+                    $("#DeviceName").html(html);
+                    form.render();
+                    if(res.data.length!=0){
+                        setUrl(0, res.data[0].id);
+                    }else{
+                        $('#doortable').show();
+                        $('iframe').hide();
+                    }
+                    form.on("select(DeviceName)", function (data) {
+                        setUrl(data.elem.selectedIndex,data.value);
+                    })
+                    function setUrl(index, id) {
+                        let selectedOption = $('#DeviceName option')[index];
+                        let code = selectedOption.getAttribute('data-code');//协议编码
+                        let ip = selectedOption.getAttribute('data-ip');//ip
+                        let port = selectedOption.getAttribute('data-port');//port
+                        let user = selectedOption.getAttribute('data-user');//user
+                        let password = selectedOption.getAttribute('data-password');//password
+                        let SerialNumber = selectedOption.getAttribute('data-SerialNumber');//SerialNumber
+                        let doorurl = '';
+                        // if (code == '14001' || (code == '14002' && SerialNumber) || (code == '14005' && SerialNumber)) {//海康
+                        //     doorurl = 'donghuan-menHIKevent-list.html?id=' + id + '&ip=' + ip + '&port=' + port + '&user=' + user + '&password=' + password + '&type=record';
+                        // }
+                        if (code == '14001' || (code == '14002' && SerialNumber) || (code == '14005' && SerialNumber)) {//中控
+                            doorurl = 'donghuan-menAtt-list.html?id=' + id + '&SerialNumber=' + SerialNumber + '&code='+code+'&type=record';
+                        }
+                        if (code == '14003') {//大华
+                            doorurl = 'donghuan-menDAHUA-list.html?id=' + id + '&ip=' + ip + '&port=' + port + '&user=' + user + '&password=' + password + '&type=record';
+                        }
+                        if (code == '14004') {//安达凯
+                            doorurl = 'donghuan-menAndakai-list.html?id=' + id +'&type=record';
+                        }
+                        // if (code == '14005' && SerialNumber) {//掌静脉
+                        //     doorurl = 'donghuan-menZKTZatt-list.html?id=' + id + '&ip=' + ip + '&port=' + port + '&user=' + user + '&password=' + password + '&type=record';
+                        // }
+                        $('iframe').attr('src', doorurl);
+                    }
+                })
+
+            });
+        })
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+
+<body>
+    <div class="layui-card-body">
+        <a class="layui-btn" href="javascript:;" onclick="location.href='yunwei-xjtask-check.html?id='+GetString('id')">
+            巡检总览
+        </a>
+        <a class="layui-btn layui-btn-primary" href="javascript:;" onclick="location.href='yunwei-xjtask-checkdetail.html?id='+GetString('id')">
+            巡检详情
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">巡检任务名称</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="XJTaskName" value="{{data.XJTaskName}}" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">巡检计划名称</label>
+                        <div class="layui-input-inline">
+                            <div class="layui-input-inline">
+                                <input type="text" id="XJModelName" value="{{data.XJModelName}}" autocomplete="off" class="layui-input" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">巡检人</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="PersonName" value="{{data.XJEmpName}}" autocomplete="off" class="layui-input" readonly>
+                            <input type="hidden" id="EmpId" value="{{data.XJEmpId}}" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">计划完成时间</label>
+                        <div class="layui-input-inline">
+                            <input type="text" id="XJPlanComplateTime" value="{{data.XJPlanComplateTime}}" autocomplete="off" class="layui-input" readonly>
+                        </div>
+                    </div>
+                    {{if data.XJDescribe}}
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">描述</label>
+                        <div class="layui-input-block">
+                            <textarea id="XJDescribe" class="layui-textarea" autocomplete="off" readonly>{{data.XJDescribe}}</textarea>
+                        </div>
+                    </div>
+                    {{/if}}
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">巡检确认结果<span class="x-red">*</span></label>
+                        <div class="layui-input-inline">
+                            <select id="AnalysisResult" name="AnalysisResult" lay-filter="AnalysisResult" lay-verify="required">
+                                <option value="正常">正常</option>
+                                <option value="基本正常">基本正常</option>
+                                <option value="合格">合格</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">备注</label>
+                        <div class="layui-input-block">
+                            <textarea name="Remark" id="Remark" class="layui-textarea" autocomplete="off"></textarea>
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"></label>
+                        <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                    </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function () {
+            var id = GetString("id");
+            //获取详情
+            list.info("GetXJTaskDetailKey", {
+                token: token,
+                id: id
+            }, function (r) {
+                var html = template("detail", r);
+                $("#formNow").html(html);
+                layui.use(["form"], function () {
+                    $ = layui.jquery;
+                    var form = layui.form;
+                    form.render();
+                    form.on("submit(submit)", function (data) {
+                        var strformData = new FormData($("#formNow")[0]);
+                        strformData.append("token", token);
+                        strformData.append("TaskId", id);
+                        strformData.append("Status", "完成");
+                        list.form("ConfirmXJTaskKey", strformData, function (r) {
+                            backToparent("确认成功");
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="layui-fluid">
+        <div class="layui-row">
+            <form class="layui-form" method="post" enctype="multipart/form-data" id="formNow">
+                <script type="text/html" id="detail">
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">U位</label>
+                        
+                        <div class="layui-input-inline">
+                            {{each data as list i}}
+                            <input type="checkbox" name="PreUPosition" value="{{list}}" title="{{list}}" lay-skin="primary">
+                            {{/each}}
+                        </div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label"></label>
+                        <button class="layui-btn" id="submit" lay-submit lay-filter="submit" type="button">确定</button>
+                    </div>
+                </script>
+            </form>
+        </div>
+    </div>
+    <div class="wait">
+        <img src="images/time.gif" alt="">
+    </div>
+    <script>
+        $(function(){
+            var id = GetString("id");
+            var pre = GetString("pre");
+            var arr=[];
+            
+            layui.use(["form"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                arr.data=pre.split(',');
+                 var html = template("detail", arr);
+                 $("#formNow").html(html);
+                 form.render();
+
+                //监听提交
+                form.on("submit(submit)", function (data) {
+                    var strformData = new FormData($("#formNow")[0]);
+                    strformData.append("token", token);
+                    strformData.append("id", id);
+                    strformData.append("UPosition", strformData.getAll('PreUPosition'));
+                    list.form("ReleasePreemptionKey", strformData, function (r) {
+                        backToparent("修改成功");
+                    });
+                });
+            });
+            
+        });
+    </script>
+</body>
+</html>

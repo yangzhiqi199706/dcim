@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="js/head.js" type="text/javascript" charset="utf-8"></script>
+</head>
+<body>
+    <div class="x-nav">
+        <span class="layui-breadcrumb">
+            <a>
+                <cite>运维管理->记录查询->巡检任务记录</cite>
+            </a>
+        </span>
+        <a class="layui-btn layui-btn-small refresh" href="javascript:location.replace(location.href);" title="刷新">
+            <i class="layui-icon">&#xe666;</i>
+        </a>
+    </div>
+    <div class="layui-fluid">
+        <div class="layui-row layui-col-space15">
+            <div class="layui-col-md12">
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        <div class="two-left three-left-big">
+                            <form class="layui-form layui-col-md12">
+                                <text>计划完成时间</text>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="startDateTime" name="startDateTime" class="layui-input" placeholder="开始日期" >
+                                </div>
+                                <div class="layui-input-inline">
+                                    <input type="text" id="endDateTime" name="endDateTime"  class="layui-input" placeholder="结束日期" >
+                                </div>
+                                <text>状态</text>
+                                <select id="status" name="status" lay-filter="status">
+                                    <option value="">全部</option>
+                                    <option value="待执行">待执行</option>
+                                    <option value="逾期未执行">逾期未执行</option>
+                                    <option value="待确认">待确认</option>
+                                    <option value="完成">完成</option>
+                                    <option value="逾期终止">逾期终止</option>
+                                </select>
+                                <text>巡检计划模板</text>
+                                <select id="XJModelId" name="XJModelId" lay-filter="XJModelId">
+                                    <option value="">全部</option>
+                                </select>
+                                <text>关键词</text>
+                                <input type="text" name="search"  placeholder="输入任务名称" autocomplete="off" class="layui-input">
+                                <div class="two-search">
+                                    <button class="layui-btn" lay-submit lay-filter="search" type="button">查询</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="two-right-big">
+                            <table class="layui-table">
+                                <thead>
+                                    <tr>
+                                        <th>操作</th>
+                                        <th>巡检编号</th>
+                                        <th>任务名称</th>
+                                        <th>描述</th>
+                                        <th>巡检计划模板</th>
+                                        <th>发起人</th>
+                                        <th>巡检人</th>
+                                        <th>计划完成时间</th>
+                                        <th>状态</th>
+                                        <th>完成提交时间</th>
+                                        <th>备注</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <script type="text/html" id="listtemplate">
+                                        {{if data.info.length!=0}} {{each data.info as list i}}
+                                        <tr>
+                                            <td>
+                                                {{if list.XJStatus=='完成' || list.XJStatus=='待确认'}}
+                                                <a title="查看报表" onclick="xadmin.open('查看报表','yunwei-xjrecord-check.html','','','{{list.id}}')" href="javascript:;">
+                                                    <i class="layui-icon">&#xe705;</i>
+                                                </a>
+                                                {{else}}
+                                                -
+                                                {{/if}}
+                                            </td>
+                                            <td>{{list.XJTaskNumber}}</td>
+                                            <td>{{list.XJTaskName}}</td>
+                                            <td>{{list.XJDescribe}}</td>
+                                            <td>{{list.XJModelName}}</td>
+                                            <td>{{list.CreateEmpName}}</td>
+                                            <td>{{list.XJEmpName}}</td>
+                                            <td>{{list.XJPlanComplateTime}}</td>
+                                            <td>{{list.XJStatus}}</td>
+                                            <td>{{list.EndTime}}</td>
+                                            <td>{{list.EndRemark}}</td>
+                                        </tr>
+                                        {{/each}} {{else}}
+                                        <tr>
+                                            <td colspan="20" style="text-align: center">暂无相关数据</td>
+                                        </tr>
+                                        {{/if}}
+                                    </script>
+                                </tbody>
+                            </table>
+                            <div id="bottomPaging"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        //请求地址
+        var url = "GetXJTaskListKey";
+        $(function(){
+            //初始化数据
+            list.get(url, param);
+            
+            layui.use(["form","laydate"], function () {
+                $ = layui.jquery;
+                var form = layui.form;
+                var laydate = layui.laydate;
+                laydate.render({
+                    elem:'#startDateTime'
+                });
+                laydate.render({
+                    elem:'#endDateTime'
+                });
+                list.info("GetXJModelListKey", {
+                    token:token,
+                    ComboBox:'all'
+                }, function (res) {
+                    var html = "";
+                    $.each(res.data, function (n, val) {
+                        html += "<option value=\"" + val.id + "\">" + val.XJModelName + "</option>";
+                    });
+                    $("#XJModelId").append(html);
+                    form.render("select");
+                });
+                //监听提交
+                form.on("submit(search)", function (data) {
+                    param.pageNo = 1;
+                    param.search = data.field.search;
+                    param.startDateTime = data.field.startDateTime;
+                    param.endDateTime = data.field.endDateTime;
+                    param.status = data.field.status;
+                    param.XJModelId = data.field.XJModelId;
+                    list.get(url, param);
+                    return false;
+                });    
+            });
+            
+        })
+        //分页回调
+        function pagechange(curr) {
+            param.pageNo = curr;
+            list.get(url, param);
+        }
+    </script>
+</body>
+</html>
