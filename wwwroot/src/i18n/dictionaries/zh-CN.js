@@ -92,6 +92,16 @@
     pendingAccess: '待接入',
     gifFileCorrupted: '文件受损，请重新上传！',
   },
+  textReplace: {
+    triggerLabel: '文本替换',
+    find: '查找内容：',
+    replaceTo: '替换为：',
+    mustHaveFind: '请输入要查找的文本',
+    nothingMatched: '没有匹配到可替换的文本',
+    replacedCount: '已替换 {count} 处文本',
+    noTargets: '请先选中文本 / 数据文本 / 状态文本组件',
+    cancel: '取消',
+  },
 };
 
 export default zhCN;

@@ -92,6 +92,16 @@
     pendingAccess: 'Pending Access',
     gifFileCorrupted: 'File is corrupted, please upload again.',
   },
+  textReplace: {
+    triggerLabel: 'Replace Text',
+    find: 'Find:',
+    replaceTo: 'Replace with:',
+    mustHaveFind: 'Please enter the text to find.',
+    nothingMatched: 'No matching text was found in the selection.',
+    replacedCount: 'Replaced {count} text node(s).',
+    noTargets: 'Please select Text / Data Text / Status Text components first.',
+    cancel: 'Cancel',
+  },
 };
 
 export default enUS;

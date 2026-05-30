@@ -115,6 +115,9 @@ function Home() {
     // Comment translated to English.
     const [resetBox, setresetBox] = useState(false);
     const [pagedevList, setpagedevList] = useState([]);// Comment translated to English.
+    // F24 device-replace scope: when the user opens the dialog with a multi-selection,
+    // we limit collection + replacement to those ids. null = whole canvas (legacy behaviour).
+    const resetScopeIdsRef = useRef(null);
     // Comment translated to English.
     const [stageWidth, setstageWidth] = useState(1920);
     const stageWidthRef = useRef(stageWidth);
@@ -130,12 +133,10 @@ function Home() {
     const [canvasScale, setcanvasScale] = useState(100);
 
     const [saveStatusText, setSaveStatusText] = useState('已保存');
-    const [lastAutoSaveTime, setLastAutoSaveTime] = useState('');
     const lastSavedStageJsonRef = useRef('');
     const saveStatusTimerRef = useRef(null);
-    // F11b 精简版：5 分钟空闲自动保存
-    const dirtyRef = useRef(false);            // 有未保存修改时为 true
-    const autoSaveTimerRef = useRef(null);     // 5 分钟自动保存定时器
+    // Dirty flag: true when there are unsaved changes since the last save / load.
+    const dirtyRef = useRef(false);
     // 页面加载令牌：每次 dealStringPage / newPage 切换页面时换一个新值，
     // 用于跨页面复制粘贴时判断是否同一页面（草稿页 savePageId 都是 '0' 无法区分）
     const currentPageTokenRef = useRef('init-' + Date.now());
@@ -145,12 +146,10 @@ function Home() {
     const [tabFlash, setTabFlash] = useState('');
     const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
 
-    const formatTime = (date = new Date()) => {
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    };
+    // F22 text replace: dialog state for "find / replace within selected text-like shapes".
+    const [textReplaceBox, setTextReplaceBox] = useState(false);
+    const [textReplaceFind, setTextReplaceFind] = useState('');
+    const [textReplaceTo, setTextReplaceTo] = useState('');
 
     const setSavedStatus = (text = '已保存') => {
         if (saveStatusTimerRef.current) {
@@ -158,11 +157,6 @@ function Home() {
             saveStatusTimerRef.current = null;
         }
         setSaveStatusText(text);
-        if (text === '已自动保存') {
-            setLastAutoSaveTime(formatTime());
-        } else if (text === '已保存') {
-            setLastAutoSaveTime('');
-        }
         if (text !== '已修改') {
             saveStatusTimerRef.current = setTimeout(() => {
                 setSaveStatusText('已保存');
@@ -171,11 +165,9 @@ function Home() {
         }
     };
 
-    // F11b 精简版：把当前 Stage 序列化成保存用的 JSON（沿用 savePage 的处理逻辑）
+    // Serialize the current Stage to the JSON form expected by the savePage endpoint.
     const buildPageJson = () => {
         if (!stageRef.current) return '';
-        // 关键：序列化前先把 Konva 节点真实位置同步回 imagesRef，确保自动保存写入的 x/y
-        // 永远等于视觉看到的位置，避免 5 分钟空闲自动保存把旧 imagesRef 的偏差固化到 chart
         if (typeof syncKonvaPositionsToImagesRef === 'function') {
             syncKonvaPositionsToImagesRef();
         }
@@ -212,61 +204,99 @@ function Home() {
         return JSON.stringify(newjson);
     };
 
-    // F11b 精简版：仅静默回写"已经存在的页面"，永远不主动新建草稿页
-    const silentAutoSave = async () => {
-        if (isPreview) return;
-        if (!dirtyRef.current) return;             // 没改动就跳过
-        if (!savePageId || savePageId === '0') return;   // 草稿页（未新建过）跳过
-        if (savePageType !== '1' || !savePageTxt) return; // 只保存 PageType=1 的常规页面
-        const savejson = buildPageJson();
-        if (!savejson) return;
-        try {
-            const res = await httpsend.getData('ChangeDmpageKey', { id: savePageId });
-            if (!res || res.code !== 100) return;
-            const res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
-            if (!res2 || res2.code !== 100) return;
-            dirtyRef.current = false;
-            lastSavedStageJsonRef.current = savejson;
-            setSavedStatus('已自动保存');
-        } catch (e) {
-            // 静默失败：等下一次 dirty + 5 分钟后再尝试
-        }
-    };
-
-    // F11b 精简版：每次有修改都重置 5 分钟定时器（停止操作 5 分钟才触发自动保存）
-    const scheduleAutoSave = () => {
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = null;
-        }
-        if (isPreview) return;
-        autoSaveTimerRef.current = setTimeout(() => {
-            autoSaveTimerRef.current = null;
-            silentAutoSave();
-        }, 5 * 60 * 1000);
-    };
-
-    // 取消自动保存（用于手动保存后 / 切换页面 / unmount）
-    const cancelAutoSave = () => {
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = null;
-        }
-    };
-
-    // F11b 精简版：刚加载完一个页面，等 React 把 setImages/setBackgroundImage 引起的 useEffect 跑完后回滚 dirty 状态
+    // Reset the dirty flag after a page load, once the setImages/setBackgroundImage triggered effects have settled.
     const markPageLoaded = () => {
         setTimeout(() => {
             dirtyRef.current = false;
-            cancelAutoSave();
             if (saveStatusTimerRef.current) {
                 clearTimeout(saveStatusTimerRef.current);
                 saveStatusTimerRef.current = null;
             }
             setSaveStatusText('已保存');
-            setLastAutoSaveTime('');
         }, 0);
     };
+
+    // F22 text replace helpers ---------------------------------------------------
+    // Returns true when the child node is a "displayed text" target we are willing to edit:
+    // - Konva Text node with name === 'description' (plain text + data-text components)
+    // - Konva Text node with name === 'complexTextValue' (status-text component currently active text)
+    const isReplaceableTextChild = (child) => {
+        if (!child || child.className !== 'Text') return false;
+        const name = child.attrs && child.attrs.name;
+        return name === 'description' || name === 'complexTextValue';
+    };
+
+    // Open the find/replace dialog. Pre-fill "find" with selection's first text if all selected texts are identical.
+    const openTextReplaceDialog = () => {
+        const ids = Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0
+            ? selectedIdsRef.current
+            : (selectedIdRef.current ? [selectedIdRef.current] : []);
+        const candidates = imagesRef.current.filter((shape) => ids.includes(shape.id));
+        const eligible = candidates.filter((shape) => {
+            const children = shape && shape.moduleJson && shape.moduleJson.children;
+            return Array.isArray(children) && children.some(isReplaceableTextChild);
+        });
+        if (eligible.length === 0) {
+            message.warning(t('textReplace.noTargets'));
+            return;
+        }
+        // Pre-fill: collect distinct visible texts; if exactly one distinct value, default "find" to it.
+        const seen = new Set();
+        eligible.forEach((shape) => {
+            shape.moduleJson.children.forEach((child) => {
+                if (!isReplaceableTextChild(child)) return;
+                const raw = child.attrs && child.attrs.text;
+                if (typeof raw === 'string') seen.add(raw);
+            });
+        });
+        if (seen.size === 1) {
+            setTextReplaceFind(Array.from(seen)[0] || '');
+        }
+        setTextReplaceTo('');
+        setTextReplaceBox(true);
+    };
+
+    // Apply find/replace to the visible "text" attr of every replaceable child within the selected shapes.
+    // Returns the number of child text nodes that actually changed.
+    const applyTextReplace = (findStr, replaceStr) => {
+        if (typeof findStr !== 'string' || findStr.length === 0) return 0;
+        const ids = Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0
+            ? selectedIdsRef.current
+            : (selectedIdRef.current ? [selectedIdRef.current] : []);
+        if (ids.length === 0) return 0;
+
+        let changed = 0;
+        const next = imagesRef.current.map((shape) => {
+            if (!ids.includes(shape.id)) return shape;
+            const children = shape && shape.moduleJson && shape.moduleJson.children;
+            if (!Array.isArray(children)) return shape;
+            let touched = false;
+            const newChildren = children.map((child) => {
+                if (!isReplaceableTextChild(child)) return child;
+                const raw = child.attrs && child.attrs.text;
+                if (typeof raw !== 'string' || raw.indexOf(findStr) === -1) return child;
+                touched = true;
+                changed += 1;
+                // Plain string split / join — no regex, so user input never doubles as a pattern.
+                const updated = raw.split(findStr).join(replaceStr || '');
+                return {
+                    ...child,
+                    attrs: { ...child.attrs, text: updated },
+                };
+            });
+            if (!touched) return shape;
+            return {
+                ...shape,
+                moduleJson: { ...shape.moduleJson, children: newChildren },
+            };
+        });
+        if (changed === 0) return 0;
+        imagesRef.current = next;
+        setImages(next);
+        history.push(JSON.parse(JSON.stringify(next)));
+        return changed;
+    };
+    // ----------------------------------------------------------------------------
 
     useEffect(() => {
         // 关闭网页 / 刷新 / 跳转外部链接前，如果还有未保存改动则弹原生提示
@@ -292,9 +322,6 @@ function Home() {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             if (saveStatusTimerRef.current) {
                 clearTimeout(saveStatusTimerRef.current);
-            }
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
             }
         };
     }, []);
@@ -327,9 +354,8 @@ function Home() {
             initialImagesSnapshotRef.current = true;
             return;
         }
-        // F11b 精简版：用户做了改动 → 标 dirty + 启动/重置 5 分钟定时器
+        // User made changes -> mark dirty (used by save-and-switch confirmation and beforeunload guard).
         dirtyRef.current = true;
-        scheduleAutoSave();
         if (saveStatusTextRef.current !== '已修改') {
             if (saveStatusTimerRef.current) {
                 clearTimeout(saveStatusTimerRef.current);
@@ -362,7 +388,13 @@ function Home() {
         if (resetBox) {
             getevData(function (devList) {
                 let pagedev = [];
-                imagesRef.current.forEach(shapeProps => {
+                // F24 scope filter: if a selection scope was captured when the dialog opened,
+                // only walk those shapes; otherwise scan the whole canvas (legacy behaviour).
+                const scopeIds = resetScopeIdsRef.current;
+                const sourceShapes = (Array.isArray(scopeIds) && scopeIds.length > 0)
+                    ? imagesRef.current.filter((shape) => scopeIds.includes(shape.id))
+                    : imagesRef.current;
+                sourceShapes.forEach(shapeProps => {
                     if (shapeProps.moduleJson && shapeProps.moduleJson.attrs.dataKey) {
                         let dataKey = shapeProps.moduleJson.attrs.dataKey;
                         if (dataKey && dataKey.length === 1) {// Comment translated to English.
@@ -1620,6 +1652,9 @@ function Home() {
                 if (savePageId !== '0' && savePageType === '1') {
                     savePage('page')
                 }
+            } else if (e.ctrlKey && (e.key === 'H' || e.key === 'h')) {
+                e.preventDefault();
+                openTextReplaceDialog();
             } else if (e.key === 'Delete') {
                 handleToolChange('del');
                 // } else if (e.key === 'F' || e.key === 'f') {
@@ -3085,6 +3120,74 @@ function Home() {
         container.addEventListener('wheel', onWheel, { passive: false });
         return () => container.removeEventListener('wheel', onWheel);
     }, [isPreview]);
+    // F23 middle-button drag: pan the canvas by holding the wheel button.
+    // - Cursor switches to grabbing while panning
+    // - preventDefault on auxclick / scroll-anchor so the browser doesn't open the autoscroll cursor
+    useEffect(() => {
+        if (isPreview) return undefined;
+        const container = containerRef.current;
+        if (!container) return undefined;
+        const scroller = container.querySelector('.canvasStage');
+        if (!scroller) return undefined;
+
+        let panning = false;
+        let lastClientX = 0;
+        let lastClientY = 0;
+        let prevCursor = '';
+
+        const stopPan = () => {
+            if (!panning) return;
+            panning = false;
+            scroller.style.cursor = prevCursor || '';
+            window.removeEventListener('mousemove', onMouseMove, true);
+            window.removeEventListener('mouseup', onMouseUp, true);
+        };
+
+        const onMouseMove = (e) => {
+            if (!panning) return;
+            const dx = e.clientX - lastClientX;
+            const dy = e.clientY - lastClientY;
+            lastClientX = e.clientX;
+            lastClientY = e.clientY;
+            // Drag direction = mouse direction, so subtract the delta from scroll position.
+            scroller.scrollLeft -= dx;
+            scroller.scrollTop -= dy;
+            e.preventDefault();
+        };
+
+        const onMouseUp = (e) => {
+            if (e.button === 1) {
+                e.preventDefault();
+                stopPan();
+            }
+        };
+
+        const onMouseDown = (e) => {
+            if (e.button !== 1) return; // only middle button triggers pan
+            if (!scroller.contains(e.target)) return;
+            e.preventDefault();
+            panning = true;
+            lastClientX = e.clientX;
+            lastClientY = e.clientY;
+            prevCursor = scroller.style.cursor;
+            scroller.style.cursor = 'grabbing';
+            window.addEventListener('mousemove', onMouseMove, true);
+            window.addEventListener('mouseup', onMouseUp, true);
+        };
+
+        // Suppress the default middle-click autoscroll cursor in browsers that show it.
+        const onAuxClick = (e) => {
+            if (e.button === 1 && scroller.contains(e.target)) e.preventDefault();
+        };
+
+        scroller.addEventListener('mousedown', onMouseDown);
+        scroller.addEventListener('auxclick', onAuxClick);
+        return () => {
+            scroller.removeEventListener('mousedown', onMouseDown);
+            scroller.removeEventListener('auxclick', onAuxClick);
+            stopPan();
+        };
+    }, [isPreview, savePageId]);
     // F20 reset view: zoom back to 100% and scroll the viewport to the origin.
     const handleResetView = () => {
         const scroller = containerRef.current ? containerRef.current.querySelector('.canvasStage') : null;
@@ -3132,13 +3235,22 @@ function Home() {
                             </div>
                         </div>
                         <div className="topRight">
-                            <span className={`saveStatus ${saveStatusText === '已修改' ? 'dirty' : ''}`}>{saveStatusText === '已自动保存' && lastAutoSaveTime ? `${saveStatusText} · ${lastAutoSaveTime}` : saveStatusText}</span>
+                            <span className={`saveStatus ${saveStatusText === '已修改' ? 'dirty' : ''}`}>{saveStatusText}</span>
                             <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('page')}>{t('auto.k0391')}</Button>}
                             <Button type="primary" className="topActionBtn" onClick={() => savePage('editpage')}>{t('auto.k0392')}</Button>
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setresetBox(true)}>{t('auto.k0393')}</Button>}
+                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => {
+                                // F24 capture current multi-selection so the dialog only lists those devices.
+                                // Falls back to single-selected id; null means scan whole canvas.
+                                const ids = Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0
+                                    ? [...selectedIdsRef.current]
+                                    : (selectedIdRef.current ? [selectedIdRef.current] : null);
+                                resetScopeIdsRef.current = ids;
+                                setresetBox(true);
+                            }}>{t('auto.k0393')}</Button>}
+                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={openTextReplaceDialog}>{t('textReplace.triggerLabel')}</Button>}
                         </div>
                     </div>
                     <ItemBox
@@ -3452,7 +3564,7 @@ function Home() {
                                 let savejson = await savePage('tpl');
                                 let res = await httpsend.getDataLocal('saveTpl', { name: saveTplName, tplcon: savejson });
                                 if (res) {
-                                    message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
+                                    message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
                                 }
                                 setsaveTplName('');
                                 setshowsaveTplBox(0);
@@ -3564,12 +3676,12 @@ function Home() {
                                     if (savePageType === '1') {// Comment translated to English.
                                         let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
                                         if (fileres.code === 100) {
-                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
+                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
                                         } else {
                                             message.error(t('auto.k0444'));
                                         }
                                     } else {
-                                        message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
+                                        message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
                                     }
                                 } else {
                                     message.error(t('auto.k0445'));
@@ -3607,12 +3719,12 @@ function Home() {
                                         if (savePageType === '1') {
                                             let res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
                                             if (res2.code === 100) {
-                                                message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
+                                                message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
                                             } else {
                                                 message.error(t('auto.k0444'));
                                             }
                                         } else {
-                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false; cancelAutoSave();
+                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
                                         }
                                     } else {
                                         message.error(t('auto.k0445'));
@@ -3670,7 +3782,10 @@ function Home() {
                             })}
                             {pagedevList.length === 0 && <span>{t('auto.k0422')}</span>}
                         </div>
-                        <span className="layui-layer-setwin" onClick={() => setresetBox(false)}>
+                        <span className="layui-layer-setwin" onClick={() => {
+                            resetScopeIdsRef.current = null;
+                            setresetBox(false);
+                        }}>
                             <Close />
                         </span>
                         <div className="layui-layer-btn">
@@ -3678,9 +3793,13 @@ function Home() {
                                 // console.log(pagedevList);
                                 // Comment translated to English.
                                 if (pagedevList.length !== 0) {
+                                    // F24 scope filter: limit replacement to the captured selection (if any),
+                                    // otherwise apply across the whole canvas as before.
+                                    const scopeIds = resetScopeIdsRef.current;
+                                    const inScope = (id) => !Array.isArray(scopeIds) || scopeIds.length === 0 || scopeIds.includes(id);
                                     let newimags = [];
                                     imagesRef.current.forEach(shapeProps => {
-                                        if (shapeProps.moduleJson && shapeProps.moduleJson.attrs.dataKey) {
+                                        if (inScope(shapeProps.id) && shapeProps.moduleJson && shapeProps.moduleJson.attrs.dataKey) {
                                             let dataKey = shapeProps.moduleJson.attrs.dataKey;
                                             if (dataKey && dataKey.length === 1) {
                                                 dataKey.forEach((el) => {
@@ -3701,6 +3820,7 @@ function Home() {
                                     setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
                                     history.push(JSON.parse(JSON.stringify(imagesRef.current)));
                                 }
+                                resetScopeIdsRef.current = null;
                                 setresetBox(false);
 
                             }}>{t('auto.k0202')}</Button>
@@ -3721,27 +3841,54 @@ function Home() {
                         </span>
                         <div className="layui-layer-btn">
                             <Button type="primary" onClick={async () => {
-                                // 保存并切换：先静默保存，再执行挂起的切换
+                                // Save-and-switch: run the same blocking save path as the "save page" modal.
+                                // On any failure, surface the real backend message and DO NOT switch — the user can retry or pick "discard".
                                 const pending = pendingSwitchRef.current;
-                                pendingSwitchRef.current = null;
-                                setSwitchConfirmBox(false);
-                                try {
-                                    await silentAutoSave();
-                                } catch (e) {
-                                    message.error('保存失败');
+                                if (!savePageId || savePageId === '0' || !savePageTxt || savePageType !== '1') {
+                                    message.error(t('auto.k0442'));
                                     return;
                                 }
+                                const savejsonRaw = buildPageJson();
+                                if (!savejsonRaw) {
+                                    message.error(t('auto.k0444'));
+                                    return;
+                                }
+                                // dealStringPage uses JSON.parse(JSON.parse(...)), so we must double-stringify
+                                // to match the format the "save page" confirm button writes.
+                                const savejson = JSON.stringify(savejsonRaw);
+                                let res;
+                                try {
+                                    res = await httpsend.getData('ChangeDmpageKey', { id: savePageId });
+                                } catch (e) {
+                                    return;
+                                }
+                                if (!res || res.code !== 100) {
+                                    return;
+                                }
+                                let res2;
+                                try {
+                                    res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
+                                } catch (e) {
+                                    return;
+                                }
+                                if (!res2 || res2.code !== 100) {
+                                    message.error(t('auto.k0444'));
+                                    return;
+                                }
+                                setSavedStatus('已保存');
+                                dirtyRef.current = false;
+                                lastSavedStageJsonRef.current = savejson;
+                                pendingSwitchRef.current = null;
+                                setSwitchConfirmBox(false);
                                 if (pending) {
                                     await performItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type);
                                 }
                             }}>保存并切换</Button>
                             <Button onClick={async () => {
-                                // 不保存切换：丢弃改动直接切换
+                                // Discard-and-switch: drop dirty changes and proceed with the pending navigation.
                                 const pending = pendingSwitchRef.current;
                                 pendingSwitchRef.current = null;
                                 setSwitchConfirmBox(false);
-                                // 取消正在排程的自动保存定时器，避免随后还触发
-                                cancelAutoSave();
                                 dirtyRef.current = false;
                                 if (pending) {
                                     await performItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type);
@@ -3752,6 +3899,50 @@ function Home() {
                                 pendingSwitchRef.current = null;
                                 setSwitchConfirmBox(false);
                             }}>取消</Button>
+                        </div>
+                    </div>
+                    {/* F22 Text replace dialog: find / replace within selected text-like shapes (Ctrl+H). */}
+                    <div className="layui-layer" style={textReplaceBox ? { 'display': 'block' } : { 'display': 'none' }}>
+                        <div className="layui-layer-title">{t('textReplace.triggerLabel')}</div>
+                        <div className="layui-layer-content">
+                            <div style={{ marginBottom: '10px' }}>
+                                <label style={{ display: 'inline-block', width: '80px' }}>{t('textReplace.find')}</label>
+                                <input
+                                    type="text"
+                                    value={textReplaceFind}
+                                    onChange={(e) => setTextReplaceFind(e.target.value)}
+                                    style={{ width: 'calc(100% - 90px)' }}
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'inline-block', width: '80px' }}>{t('textReplace.replaceTo')}</label>
+                                <input
+                                    type="text"
+                                    value={textReplaceTo}
+                                    onChange={(e) => setTextReplaceTo(e.target.value)}
+                                    style={{ width: 'calc(100% - 90px)' }}
+                                />
+                            </div>
+                        </div>
+                        <span className="layui-layer-setwin" onClick={() => setTextReplaceBox(false)}>
+                            <Close />
+                        </span>
+                        <div className="layui-layer-btn">
+                            <Button type="primary" onClick={() => {
+                                if (!textReplaceFind) {
+                                    message.warning(t('textReplace.mustHaveFind'));
+                                    return;
+                                }
+                                const changed = applyTextReplace(textReplaceFind, textReplaceTo);
+                                if (changed === 0) {
+                                    message.warning(t('textReplace.nothingMatched'));
+                                    return;
+                                }
+                                message.success(t('textReplace.replacedCount').replace('{count}', String(changed)));
+                                setTextReplaceBox(false);
+                            }}>{t('auto.k0202')}</Button>
+                            <Button onClick={() => setTextReplaceBox(false)}>{t('textReplace.cancel')}</Button>
                         </div>
                     </div>
                 </>
