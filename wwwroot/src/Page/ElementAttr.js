@@ -1540,9 +1540,40 @@ const ElementAttr = memo((props) => {
     attrList.push(<div className="attrBox" key={shapeId + '005'}>
         <label>{t('auto.k0489')}</label>
         <input defaultValue={rotation ? parseFloat(rotation).toFixed(2) : 0} onChange={(e) => {
+            // Rotate around the element's own visual center.
+            // Konva rotates around (x, y) i.e. the group's top-left, so changing rotation alone
+            // makes the element swing around its top-left corner. We compensate by also adjusting
+            // x/y so the visual center stays put before/after the rotation change.
+            const newRot = parseFloat(e.target.value) || 0;
+            const oldRot = parseFloat(dragShape.rotation) || 0;
+            const grpAttrs = (dragShape.moduleJson && dragShape.moduleJson.children && dragShape.moduleJson.children[0] && dragShape.moduleJson.children[0].attrs) || {};
+            // Pick the unrotated bbox dims (mirrors Home.js getShapeRenderMetrics fallback path).
+            let w = dragShape.width || (dragShape.moduleJson && dragShape.moduleJson.width) || grpAttrs.width || 0;
+            let h = dragShape.height || (dragShape.moduleJson && dragShape.moduleJson.height) || grpAttrs.height || 0;
+            const groupName = grpAttrs.name;
+            if (groupName === 'rectBackground'
+                && dragShape.moduleJson && dragShape.moduleJson.children
+                && dragShape.moduleJson.children[3] && dragShape.moduleJson.children[3].attrs) {
+                const rectAttrs = dragShape.moduleJson.children[3].attrs;
+                w = rectAttrs.width || w;
+                h = rectAttrs.height || h;
+            }
+            const sx = dragShape.scaleX || 1;
+            const sy = dragShape.scaleY || 1;
+            const aw = (Number(w) || 0) * sx;
+            const ah = (Number(h) || 0) * sy;
+            const rad0 = oldRot * Math.PI / 180;
+            const rad1 = newRot * Math.PI / 180;
+            const cos0 = Math.cos(rad0), sin0 = Math.sin(rad0);
+            const cos1 = Math.cos(rad1), sin1 = Math.sin(rad1);
+            // dx/dy keeps the visual center invariant: (cx, cy) = old (x,y) + R0(w/2, h/2) = new (x,y) + R1(w/2, h/2)
+            const dx = (aw / 2) * (cos0 - cos1) - (ah / 2) * (sin0 - sin1);
+            const dy = (aw / 2) * (sin0 - sin1) + (ah / 2) * (cos0 - cos1);
             props.onChange({
                 ...dragShape,
-                rotation: parseFloat(e.target.value)
+                rotation: newRot,
+                x: (Number(dragShape.x) || 0) + dx,
+                y: (Number(dragShape.y) || 0) + dy,
             })
         }} />
     </div>)

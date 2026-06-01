@@ -967,6 +967,30 @@ function Home() {
 
     const getShapeRenderMetrics = (shape, stageNode) => {
         if (!shape || !shape.moduleJson || !shape.moduleJson.children || shape.moduleJson.children.length === 0) return null;
+        // Prefer the real rendered bbox from Konva when the live node is available.
+        // The legacy attr-derived path below misses width/height for many shape types
+        // (charts / data-text / custom components keep size in nested children attrs),
+        // which made alginvertical/algincenter behave like left/top alignment.
+        if (stageNode && typeof stageNode.getClientRect === 'function') {
+            try {
+                const stage = typeof stageNode.getStage === 'function' ? stageNode.getStage() : null;
+                const rect = stageNode.getClientRect({
+                    relativeTo: stage || undefined,
+                    skipShadow: true,
+                    skipStroke: false,
+                });
+                if (rect && rect.width > 0 && rect.height > 0) {
+                    return {
+                        x: rect.x, y: rect.y,
+                        width: rect.width, height: rect.height,
+                        left: rect.x, centerX: rect.x + rect.width / 2, right: rect.x + rect.width,
+                        top: rect.y, centerY: rect.y + rect.height / 2, bottom: rect.y + rect.height,
+                    };
+                }
+            } catch (e) {
+                // fall through to attr-based fallback
+            }
+        }
         const groupAttr = shape.moduleJson.children[0].attrs || {};
         const groupName = groupAttr.name;
         let width = shape.width || shape.moduleJson.width || 0;
@@ -1177,9 +1201,17 @@ function Home() {
         const stageNode = stage ? stage.findOne('#' + shape.id) : null;
         const metrics = getShapeRenderMetrics({ ...shape, x: node.x(), y: node.y() }, stageNode || node);
         if (!metrics) return;
+        // For rotated elements, metrics.x/y comes from getClientRect (axis-aligned bbox top-left)
+        // and is NOT equal to node.x()/node.y() (the rotation pivot). We must apply bound/snap
+        // corrections as a delta against the node's real position, otherwise the node would be
+        // teleported to the bbox top-left every dragmove and the element would jump.
+        const nodeX = node.x();
+        const nodeY = node.y();
         if (!snapEnabled) {
             const boundedPosition = getBoundedDragPosition(metrics, metrics.x, metrics.y);
-            node.position(boundedPosition);
+            const dx = boundedPosition.x - metrics.x;
+            const dy = boundedPosition.y - metrics.y;
+            node.position({ x: nodeX + dx, y: nodeY + dy });
             clearSnapGuides();
             return;
         }
@@ -1193,7 +1225,9 @@ function Home() {
             centerX: boundedPosition.x + snappedMetrics.width / 2,
             centerY: boundedPosition.y + snappedMetrics.height / 2,
         };
-        node.position({ x: boundedMetrics.x, y: boundedMetrics.y });
+        const dx = boundedMetrics.x - metrics.x;
+        const dy = boundedMetrics.y - metrics.y;
+        node.position({ x: nodeX + dx, y: nodeY + dy });
         if (matchX || matchY) {
             updateSnapGuides(buildSnapGuideLine(
                 matchX ? matchX.guide.value : null,
@@ -3165,7 +3199,11 @@ function Home() {
         const onMouseDown = (e) => {
             if (e.button !== 1) return; // only middle button triggers pan
             if (!scroller.contains(e.target)) return;
+            // Stop propagation in capture phase so Konva never sees this mousedown
+            // and won't start dragging the element under the cursor.
             e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
             panning = true;
             lastClientX = e.clientX;
             lastClientY = e.clientY;
@@ -3180,10 +3218,11 @@ function Home() {
             if (e.button === 1 && scroller.contains(e.target)) e.preventDefault();
         };
 
-        scroller.addEventListener('mousedown', onMouseDown);
+        // Register in capture phase so we run before Konva's bubble-phase mousedown handler.
+        scroller.addEventListener('mousedown', onMouseDown, true);
         scroller.addEventListener('auxclick', onAuxClick);
         return () => {
-            scroller.removeEventListener('mousedown', onMouseDown);
+            scroller.removeEventListener('mousedown', onMouseDown, true);
             scroller.removeEventListener('auxclick', onAuxClick);
             stopPan();
         };
