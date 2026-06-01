@@ -1,0 +1,65 @@
+{
+  "sourceImage": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\preview_import_original\\img_uploads_1727243565.png",
+  "sourceSize": {
+    "width": 1920,
+    "height": 1080
+  },
+  "targetSize": {
+    "width": 1920,
+    "height": 1080
+  },
+  "detectWetHtml": true,
+  "detectBusinessComponents": false,
+  "ocrItems": [
+    {
+      "text": "6#",
+      "x": 320,
+      "y": 420,
+      "width": 24,
+      "height": 18,
+      "confidence": 1
+    },
+    {
+      "text": "24.8",
+      "x": 362,
+      "y": 417,
+      "width": 42,
+      "height": 18,
+      "confidence": 1
+    },
+    {
+      "text": "51.6",
+      "x": 362,
+      "y": 445,
+      "width": 42,
+      "height": 18,
+      "confidence": 1
+    },
+    {
+      "text": "7#",
+      "x": 390,
+      "y": 420,
+      "width": 24,
+      "height": 18,
+      "confidence": 1
+    },
+    {
+      "text": "26.1",
+      "x": 432,
+      "y": 417,
+      "width": 42,
+      "height": 18,
+      "confidence": 1
+    },
+    {
+      "text": "49.3",
+      "x": 432,
+      "y": 445,
+      "width": 42,
+      "height": 18,
+      "confidence": 1
+    }
+  ],
+  "chartElements": [],
+  "templateComponents": []
+}

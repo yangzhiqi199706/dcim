@@ -1,0 +1,90 @@
+{
+  "status": "PASS",
+  "generatedAt": "2026-05-27T05:38:54.791Z",
+  "reportPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\image-package-acceptance_1779860334316.json",
+  "testSuite": "PASS",
+  "results": [
+    {
+      "label": "single",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-single_1779860334321.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-single_1779860334318.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-single_1779860334318.recognition.json",
+      "components": {
+        "wetHtml": 1,
+        "Echart": 1
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 1,
+        "chart": 1
+      }
+    },
+    {
+      "label": "template-assisted",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-template-assisted_1779860334535.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-template-assisted_1779860334533.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-template-assisted_1779860334533.recognition.json",
+      "components": {
+        "wetHtml": 72,
+        "leakWater": 3
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 75,
+        "chart": 0
+      }
+    },
+    {
+      "label": "batch-1",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779860334599.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779860334596.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779860334596.recognition.json",
+      "components": {
+        "wetHtml": 1
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 1,
+        "chart": 0
+      }
+    },
+    {
+      "label": "batch-2",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-b_1779860334642.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-b_1779860334640.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-b_1779860334640.recognition.json",
+      "components": {
+        "wetHtml": 2,
+        "Echart": 1
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 2,
+        "chart": 1
+      }
+    }
+  ],
+  "latestReportPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\image-package-acceptance-latest.json",
+  "markdownPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\image-package-acceptance_1779860334316.md",
+  "latestMarkdownPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\image-package-acceptance-latest.md"
+}

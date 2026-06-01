@@ -1,0 +1,11 @@
+{
+  "detectWetHtml": true,
+  "chartElements": [
+    { "cat": "bar", "x": 600, "y": 200, "width": 320, "height": 180, "title": "Load" }
+  ],
+  "ocrItems": [
+    { "text": "6#", "x": 320, "y": 420, "width": 24, "height": 18 },
+    { "text": "24.8", "x": 362, "y": 417, "width": 42, "height": 18 },
+    { "text": "51.6", "x": 362, "y": 445, "width": 42, "height": 18 }
+  ]
+}

@@ -1,0 +1,16 @@
+
+> react-moodboard@0.1.0 start /www/wwwroot/localhost_8081/wwwroot
+> react-scripts start
+
+Starting the development server...
+
+Compiled successfully!
+
+You can now view react-moodboard in the browser.
+
+  Local:            http://localhost:3000/
+  On Your Network:  http://172.17.0.2:3000/
+
+Note that the development build is not optimized.
+To create a production build, use npm run build.
+

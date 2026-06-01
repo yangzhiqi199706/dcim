@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "generatedAt": "2026-05-26T06:33:01.116Z",
+  "reportPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\image-package-acceptance_1779777180453.json",
+  "testSuite": "PASS",
+  "results": [
+    {
+      "label": "single",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-single_1779777180458.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-single_1779777180455.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-single_1779777180455.recognition.json",
+      "components": {
+        "wetHtml": 1,
+        "Echart": 1
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 1,
+        "chart": 1
+      }
+    },
+    {
+      "label": "batch-1",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779777180748.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779777180745.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779777180745.recognition.json",
+      "components": {
+        "wetHtml": 1
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 1,
+        "chart": 0
+      }
+    },
+    {
+      "label": "batch-2",
+      "status": "PASS",
+      "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-b_1779777180874.zip",
+      "manifestPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-b_1779777180872.manifest.json",
+      "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-b_1779777180872.recognition.json",
+      "components": {
+        "wetHtml": 2,
+        "Echart": 1
+      },
+      "elementCounts": {
+        "text": 0,
+        "rect": 0,
+        "line": 0,
+        "image": 0,
+        "template": 0,
+        "templateComponent": 2,
+        "chart": 1
+      }
+    }
+  ]
+}

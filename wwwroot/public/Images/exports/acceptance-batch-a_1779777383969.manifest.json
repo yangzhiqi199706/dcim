@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "recognitionPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779777383969.recognition.json",
+  "zipPath": "C:\\Users\\杨治琪\\Desktop\\脚本运行\\AI8081\\wwwroot\\public\\Images\\exports\\acceptance-batch-a_1779777383971.zip",
+  "pageTxtName": "acceptance-batch-a[202].txt",
+  "imageFileName": "img_uploads_1727243565_1779777383971.png",
+  "elementCounts": {
+    "text": 0,
+    "rect": 0,
+    "line": 0,
+    "image": 0,
+    "template": 0,
+    "templateComponent": 1,
+    "chart": 0
+  },
+  "validation": {
+    "status": "PASS",
+    "txtName": "acceptance-batch-a[202].txt",
+    "stageSize": {
+      "width": 1920,
+      "height": 1080
+    },
+    "referencedImages": [
+      "img/uploads/img_uploads_1727243565_1779777383971.png"
+    ],
+    "packagedImages": [
+      "img/uploads/img_uploads_1727243565_1779777383971.png"
+    ],
+    "missingImages": [],
+    "unusedImages": [],
+    "warnings": [],
+    "errors": []
+  }
+}

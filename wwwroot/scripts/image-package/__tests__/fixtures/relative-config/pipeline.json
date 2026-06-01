@@ -1,0 +1,10 @@
+{
+  "image": "../../../../../../preview_import_original/img_uploads_1727243565.png",
+  "template-zip": "../../../../../../机房环境温湿度监测系统 (1)[79] (1).zip",
+  "template-components-only": "true",
+  "ocr": "../sample-wet-html-ocr.json",
+  "detect-wet-html": "true",
+  "no-detect-shapes": "true",
+  "name": "sample-temperature-page-relative-config",
+  "index": "301"
+}

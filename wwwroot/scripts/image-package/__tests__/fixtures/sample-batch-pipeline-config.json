@@ -1,0 +1,22 @@
+{
+  "image": "../preview_import_original/img_uploads_1727243565.png",
+  "template-zip": "../机房环境温湿度监测系统 (1)[79] (1).zip",
+  "template-components-only": "true",
+  "detect-wet-html": "true",
+  "no-detect-shapes": "true",
+  "jobs": [
+    {
+      "name": "sample-temperature-page-batch-a",
+      "index": "103",
+      "ocr": "scripts/image-package/__tests__/fixtures/sample-wet-html-ocr.json"
+    },
+    {
+      "name": "sample-temperature-page-batch-b",
+      "index": "104",
+      "ocr": "scripts/image-package/__tests__/fixtures/sample-multi-wet-html-ocr.json",
+      "chart": [
+        "bar,600,200,320,180,Load"
+      ]
+    }
+  ]
+}
