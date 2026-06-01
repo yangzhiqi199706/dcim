@@ -3,6 +3,7 @@ import { Close, Lock, PermMedia } from '@mui/icons-material';
 import httpsend from '../Assets/httpsend';
 import { Select, Button } from 'antd';
 import { t } from '../i18n';
+import { ensureChartAttributeControls } from './chartAttributeControls';
 // import { Select, Button, message } from 'antd';
 // import GifImages from './Data/GifImages';
 import debounce from 'lodash.debounce';
@@ -37,6 +38,22 @@ const ElementAttr = memo((props) => {
 
     let shapeId = dragShape.id;
     let shapeAttr = dragShape.moduleJson;// Comment translated to English.
+    const isEchartComponent = !!(shapeAttr.children && shapeAttr.children.some((v) => v.className === 'Echart'));
+    if (isEchartComponent) {
+        const echartChild = shapeAttr.children.find((v) => v.className === 'Echart');
+        if (echartChild && echartChild.attrs) {
+            if (!echartChild.attrs.chartStyle) echartChild.attrs.chartStyle = 'original';
+            if (!echartChild.attrs.chartAnimation) echartChild.attrs.chartAnimation = 'off';
+            if (echartChild.attrs.cat === 'bar' && !echartChild.attrs.chartBarStyle) echartChild.attrs.chartBarStyle = 'original';
+        }
+        if (shapeAttr.attrs && shapeAttr.attrs.moduleAttr) {
+            shapeAttr.attrs.moduleAttr = ensureChartAttributeControls(
+                shapeAttr.attrs.moduleAttr,
+                true,
+                echartChild && echartChild.attrs ? echartChild.attrs.cat : undefined
+            );
+        }
+    }
     // Comment translated to English.
     let newparamDevId = null;
     let newparam = null;
@@ -685,6 +702,7 @@ const ElementAttr = memo((props) => {
             ...dragShape
         })
     }, 100)
+
     // Comment translated to English.
     // Comment translated to English.
     const ondataDevOptionChange = (value) => {
@@ -1169,6 +1187,48 @@ const ElementAttr = memo((props) => {
                             data-attrwhere={a.attrWhere}>
                             <option value='1'>{t('auto.k0460')}</option>
                             <option value='2'>{t('auto.k0461')}</option>
+                        </select>
+                    </div>)
+                }
+                if (a.attrType === 'chartStyleSelect' || a.attrType === 'chartAnimationSelect' || a.attrType === 'chartBarStyleSelect') {
+                    const chartStyleOptions = a.attrType === 'chartStyleSelect' ? [
+                        { value: 'original', label: '原始' },
+                        { value: 'neon', label: '霓虹' },
+                        { value: 'aurora', label: '蓝绿' },
+                        { value: 'amber', label: '金橙' }
+                    ] : (a.attrType === 'chartAnimationSelect' ? [
+                        { value: 'off', label: '关闭' },
+                        { value: 'entrance', label: '入场' },
+                        { value: 'pulse', label: '呼吸' },
+                        { value: 'flow', label: '流光' }
+                    ] : [
+                        { value: 'original', label: '原始' },
+                        { value: 'rounded', label: '圆角柱' },
+                        { value: 'cylinder', label: '圆柱体' },
+                        { value: 'diamond', label: '菱形柱' },
+                        { value: 'hexagon', label: '六边形柱' },
+                        { value: 'prism', label: '菱柱体' },
+                        { value: 'trapezoid', label: '梯形柱' },
+                        { value: 'pyramid', label: '金字塔柱' },
+                        { value: 'battery', label: '电池柱' },
+                        { value: 'stereoGroup', label: '立体组' }
+                    ]);
+                    const defaultChartSelectValue = a.attrType === 'chartStyleSelect'
+                        ? 'original'
+                        : (a.attrType === 'chartAnimationSelect' ? 'off' : 'original');
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <select
+                            defaultValue={val.attrs[a.attrCode] || defaultChartSelectValue}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere}>
+                            {chartStyleOptions.map((option) => (
+                                <option value={option.value} key={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
                         </select>
                     </div>)
                 }

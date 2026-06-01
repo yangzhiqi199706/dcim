@@ -761,6 +761,18 @@
                 "attrWhere": "Echart"
               },
               {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
+                "attrWhere": "Echart"
+              },
+              {
                 "attrName": "__i18n__.auto.k0042",
                 "attrCode": "titleSwitch",
                 "attrType": "showSelect",
@@ -901,7 +913,9 @@
             "width": 250,
             "height": 250,
             "cat": "gauge",
-            "data": 2.5
+            "data": 2.5,
+            "chartStyle": "original",
+            "chartAnimation": "off"
           },
           "className": "Echart"
         }
@@ -941,6 +955,18 @@
                 "attrName": "__i18n__.auto.k0021",
                 "attrCode": "height",
                 "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
@@ -1162,7 +1188,9 @@
               "Fri",
               "Sat",
               "Sun"
-            ]
+            ],
+            "chartStyle": "original",
+            "chartAnimation": "off"
           },
           "className": "Echart"
         }
@@ -1202,6 +1230,24 @@
                 "attrName": "__i18n__.auto.k0021",
                 "attrCode": "height",
                 "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表样式",
+                "attrCode": "chartBarStyle",
+                "attrType": "chartBarStyleSelect",
                 "attrWhere": "Echart"
               },
               {
@@ -1394,7 +1440,256 @@
               "Fri",
               "Sat",
               "Sun"
+            ],
+            "chartStyle": "original",
+            "chartAnimation": "off",
+            "chartBarStyle": "original"
+          },
+          "className": "Echart"
+        }
+      ],
+      "width": 350,
+      "height": 250
+    }
+  },
+  {
+    "moduleName": "横向柱状图",
+    "iconBase64": "Images/icon/3.png",
+    "moduleJson": {
+      "attrs": {
+        "dataKey": [],
+        "moduleAttr": [
+          {
+            "attrGroupName": "__i18n__.auto.k0002",
+            "attrGroupContent": [
+              {
+                "attrName": "__i18n__.auto.k0003",
+                "attrCode": "dataParamsKey",
+                "attrType": "hardwareInputNew",
+                "attrWhere": "this"
+              }
             ]
+          },
+          {
+            "attrGroupName": "__i18n__.auto.k0004",
+            "attrGroupContent": [
+              {
+                "attrName": "__i18n__.auto.k0020",
+                "attrCode": "width",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0021",
+                "attrCode": "height",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表样式",
+                "attrCode": "chartBarStyle",
+                "attrType": "chartBarStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0042",
+                "attrCode": "titleSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0043",
+                "attrCode": "title",
+                "attrType": "textarea",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0044",
+                "attrCode": "titleFontSize",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0045",
+                "attrCode": "titleColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0061",
+                "attrCode": "iconSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0062",
+                "attrCode": "iconColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0064",
+                "attrCode": "dataSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0046",
+                "attrCode": "dataFontSize",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0047",
+                "attrCode": "dataColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0048",
+                "attrCode": "markColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0049",
+                "attrCode": "markFontColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0065",
+                "attrCode": "xshow",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0066",
+                "attrCode": "xaxisLine",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0067",
+                "attrCode": "xTextShow",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0068",
+                "attrCode": "xColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0079",
+                "attrCode": "barbackgroundSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0080",
+                "attrCode": "barbackground",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0069",
+                "attrCode": "yshow",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0070",
+                "attrCode": "yaxisLine",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0071",
+                "attrCode": "yColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0072",
+                "attrCode": "splitSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0073",
+                "attrCode": "splitColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              }
+            ]
+          }
+        ]
+      },
+      "children": [
+        {
+          "attrs": {
+            "title": "横向柱状图",
+            "titleSwitch": "1",
+            "titleFontSize": 24,
+            "titleFontFamily": "__i18n__.auto.k0011",
+            "titleColor": "#000000",
+            "iconSwitch": "1",
+            "iconColor": "#000000",
+            "dataSwitch": "1",
+            "dataFontSize": 12,
+            "dataFontFamily": "__i18n__.auto.k0011",
+            "dataColor": "#000000",
+            "markColor": "#999999",
+            "markFontColor": "#999999",
+            "xshow": "2",
+            "xTextShow": "2",
+            "xaxisLine": "#000000",
+            "xColor": "#000000",
+            "barbackgroundSwitch": "1",
+            "barbackground": "#ffffff",
+            "yshow": "2",
+            "yaxisLine": "#000000",
+            "yColor": "#000000",
+            "splitSwitch": "2",
+            "splitColor": "#cccccc",
+            "name": "Echart",
+            "width": 350,
+            "height": 250,
+            "cat": "bar",
+            "data": [
+              {
+                "name": "UPS负载",
+                "data": [
+                  120,
+                  80,
+                  50
+                ],
+                "type": "bar"
+              }
+            ],
+            "xdata": [
+              "UPS1",
+              "UPS2",
+              "UPS3"
+            ],
+            "chartStyle": "original",
+            "chartAnimation": "off",
+            "chartBarStyle": "original",
+            "barDirection": "horizontal"
           },
           "className": "Echart"
         }
@@ -1434,6 +1729,24 @@
                 "attrName": "__i18n__.auto.k0021",
                 "attrCode": "height",
                 "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表样式",
+                "attrCode": "chartBarStyle",
+                "attrType": "chartBarStyleSelect",
                 "attrWhere": "Echart"
               },
               {
@@ -1648,7 +1961,10 @@
               "Fri",
               "Sat",
               "Sun"
-            ]
+            ],
+            "chartStyle": "original",
+            "chartAnimation": "off",
+            "chartBarStyle": "original"
           },
           "className": "Echart"
         }
@@ -1688,6 +2004,18 @@
                 "attrName": "__i18n__.auto.k0021",
                 "attrCode": "height",
                 "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
@@ -1789,7 +2117,9 @@
                 "value": 484,
                 "name": "__i18n__.auto.k0087"
               }
-            ]
+            ],
+            "chartStyle": "original",
+            "chartAnimation": "off"
           },
           "className": "Echart"
         }
@@ -1829,6 +2159,18 @@
                 "attrName": "__i18n__.auto.k0021",
                 "attrCode": "height",
                 "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
@@ -1931,7 +2273,9 @@
                 "value": 484,
                 "name": "__i18n__.auto.k0087"
               }
-            ]
+            ],
+            "chartStyle": "original",
+            "chartAnimation": "off"
           },
           "className": "Echart"
         }
