@@ -1831,6 +1831,7 @@ const getAlarmData = async (element, chartInfo, alarmDataList) => {
         }
     }
     var alarmpieoption = {
+        color: ['#35DFFC', '#3783FF', '#FFCC37', '#FF9000', '#F96055'],
         tooltip: {
             trigger: 'item'
         },
@@ -1865,7 +1866,10 @@ function echart(images, selectedId,alarmData) {
             let findimg = getImgIndex(images, element);
             if (findimg > -1 && images[findimg] && images[findimg].id) {
                 // Comment translated to English.
-                let chartInfo = images[findimg].moduleJson.children[0].attrs;
+                const moduleJson = images[findimg].moduleJson;
+                const firstChild = moduleJson && Array.isArray(moduleJson.children) ? moduleJson.children[0] : null;
+                if (!firstChild || !firstChild.attrs) continue;
+                let chartInfo = firstChild.attrs;
                 if (chartInfo.cat === 'gauge') {// Comment translated to English.
                     var gaugeChart = initChart(element);
                     bindChartAutoResize(gaugeChart, element);

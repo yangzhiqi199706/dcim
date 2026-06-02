@@ -131,6 +131,11 @@ function Home() {
     const displayedStageHeight = Math.round(safeStageHeight * (stageDimensions ? stageDimensions.scaley || 1 : 1));
     // Comment translated to English.
     const [canvasScale, setcanvasScale] = useState(100);
+    const [useSlaveId, setUseSlaveId] = useState(() => localStorage.getItem('UseSlaveID') === '1');
+    const useSlaveIdRef = useRef(useSlaveId);
+    useEffect(() => {
+        useSlaveIdRef.current = useSlaveId;
+    }, [useSlaveId]);
 
     const [saveStatusText, setSaveStatusText] = useState('已保存');
     const lastSavedStageJsonRef = useRef('');
@@ -371,14 +376,14 @@ function Home() {
             ComboBox: "all"
         });
         let devList = [];
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             res.data.forEach((val, n) => {
                 devList.push({
                     value: val.id,
                     label: val.DeviceName,
                     code: val.ProtocolCode,
                     codeName: val.ProtocolName,
-                    onlyCode: val.OnlyCode,// Comment translated to English.
+                    onlyCode: useSlaveId ? val.SlaveID : '',// Comment translated to English.
                 })
             })
             callback(devList)
@@ -411,7 +416,7 @@ function Home() {
                                         let finddevindex = devList.findIndex(v => String(v.value) === currentKeyStr)
                                         if (finddevindex === -1) {
                                             // Comment translated to English.
-                                            let finddevonlyindex = devList.findIndex(v => String(v.onlyCode) === currentKeyStr)
+                                            let finddevonlyindex = useSlaveId ? devList.findIndex(v => String(v.onlyCode) === currentKeyStr) : -1
                                             if (finddevonlyindex !== -1) {
                                                 pagedev.push({
                                                     value: devList[finddevonlyindex]['onlyCode'],
@@ -445,7 +450,7 @@ function Home() {
         } else {
             setpagedevList([]);// Comment translated to English.
         }
-    }, [resetBox]);
+    }, [resetBox, useSlaveId]);
     const ondataDevOptionSearch = (value) => { };
     const filterOption = (input, option) => (option && option.label).toLowerCase().includes(input.toLowerCase());
     // Comment translated to English.
@@ -2036,10 +2041,19 @@ function Home() {
             }
 
             // Comment translated to English.
-            const getSystemStartTime = async () => {
-                let res = await httpsend.getData('GetLogoKey', {
-                })
-                if (res && res.data && res.data[0].create_time) localStorage.setItem('SystemStartTime', res.data[0].create_time)
+            const syncSlaveIdConfig = async () => {
+                let res = await httpsend.getData('GetLogoKey', {})
+                if (!res || !res.data || !res.data[0]) return;
+                const logoData = res.data[0];
+                if (logoData.create_time) {
+                    localStorage.setItem('SystemStartTime', logoData.create_time)
+                }
+                const enabled = String(logoData.UseSlaveID) === '1';
+                useSlaveIdRef.current = enabled;
+                if (enabled !== (localStorage.getItem('UseSlaveID') === '1')) {
+                    setUseSlaveId(enabled);
+                }
+                localStorage.setItem('UseSlaveID', enabled ? '1' : '0');
             }
 
             // Comment translated to English.
@@ -2052,7 +2066,7 @@ function Home() {
             // }
 
             getpro();
-            getSystemStartTime();
+            syncSlaveIdConfig();
 
             // Comment translated to English.
             const setNewView = () => {
@@ -3305,6 +3319,7 @@ function Home() {
                             <ElementAttr
                                 MultiSelect={selectedIds.length !== 0}
                                 dragShape={dragShape}
+                                useSlaveId={useSlaveId}
                                 onChange={(dragShape, clickEvnt) => {
                                     handleShapeChange(dragShape, clickEvnt);
                                 }} />}
@@ -4022,6 +4037,7 @@ function Home() {
                                     }
                                 }}
                                 isSwiper={isSwiper}
+                                useSlaveId={useSlaveId}
                             />
                             );
                         })}
@@ -4035,6 +4051,7 @@ function Home() {
                                 wscale={stageDimensions.scalex}
                                 onhandleResize={(type) => { }}
                                 isSwiper={isSwiper}
+                                useSlaveId={useSlaveId}
                             />
                             );
                         })}

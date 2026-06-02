@@ -13,7 +13,15 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     if (!shapeProps.moduleJson) {
         return false
     }
-    const [imgurl] = useImage((shapeProps.moduleJson.children.length > 0 && (shapeProps.moduleJson.children[0].className === 'Image' || shapeProps.moduleJson.children[0].className === 'videoSwiper')) ? shapeProps.moduleJson.children[0].attrs.image : (shapeProps.src.indexOf('http') > -1 ? '../Images/' + shapeProps.src.split('/Images/')[0] : shapeProps.src));
+    const moduleChildren = Array.isArray(shapeProps.moduleJson.children) ? shapeProps.moduleJson.children : [];
+    const firstModuleChild = moduleChildren.length > 0 ? moduleChildren[0] : null;
+    const srcText = typeof shapeProps.src === 'string' ? shapeProps.src : '';
+    const fallbackImage = srcText.indexOf('http') > -1 ? '../Images/' + srcText.split('/Images/')[0] : srcText;
+    const [imgurl] = useImage(
+        (firstModuleChild && (firstModuleChild.className === 'Image' || firstModuleChild.className === 'videoSwiper') && firstModuleChild.attrs)
+            ? firstModuleChild.attrs.image
+            : fallbackImage
+    );
     const groupRef = useRef();
     const transformRef = useRef();
     const hoverTransformRef = useRef();

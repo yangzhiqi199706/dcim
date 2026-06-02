@@ -22,7 +22,7 @@ const ElementSvg = memo((props) => {
     const getImgData = async (type) => {
         let res = await httpsend.getDataLocal('imgData', { action: type });
         let imgData = [];
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             res.data.forEach(element => {
                 let imgOne = { "img": element.imgUrl }
                 imgData.push(imgOne);

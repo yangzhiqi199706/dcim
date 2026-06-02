@@ -9,6 +9,13 @@ import { ensureChartAttributeControls } from './chartAttributeControls';
 import debounce from 'lodash.debounce';
 
 const ElementAttr = memo((props) => {
+    const useSlaveId = props.useSlaveId === true;
+    const splitToken = (text, delimiter, index) => {
+        if (typeof text !== 'string') return '';
+        const parts = text.split(delimiter);
+        return parts[index] !== undefined ? parts[index] : '';
+    };
+
     if (props.MultiSelect) {
         return [<div className="attrLocked" key='123456'>
             <PermMedia fontSize="large" color="disabled" />
@@ -17,7 +24,7 @@ const ElementAttr = memo((props) => {
         ]
     }
 
-    let dragShape = JSON.parse(JSON.stringify(props.dragShape));
+    let dragShape = props.dragShape ? JSON.parse(JSON.stringify(props.dragShape)) : null;
     if (!dragShape || (dragShape && !dragShape.moduleJson)) {
         return [<div className="attrLocked" key='123456'>
             <PermMedia fontSize="large" color="disabled" />
@@ -38,6 +45,8 @@ const ElementAttr = memo((props) => {
 
     let shapeId = dragShape.id;
     let shapeAttr = dragShape.moduleJson;// Comment translated to English.
+    if (!shapeAttr.attrs) shapeAttr.attrs = {};
+    if (!Array.isArray(shapeAttr.children)) shapeAttr.children = [];
     const isEchartComponent = !!(shapeAttr.children && shapeAttr.children.some((v) => v.className === 'Echart'));
     if (isEchartComponent) {
         const echartChild = shapeAttr.children.find((v) => v.className === 'Echart');
@@ -273,6 +282,11 @@ const ElementAttr = memo((props) => {
     });// Comment translated to English.
 
     const normalizeValue = (v) => (v === undefined || v === null ? '' : String(v).trim());
+    const getDeviceSrc = (val, fallback = '1') => {
+        if (!useSlaveId) return fallback;
+        if (!val || !val.SlaveID) return fallback;
+        return val.ServerIP + '@' + val.SlaveID;
+    };
 
     const getDataKeyFirst = () => {
         if (!shapeAttr.attrs.dataKey || shapeAttr.attrs.dataKey.length === 0) return null;
@@ -387,18 +401,18 @@ const ElementAttr = memo((props) => {
         } else {
             getevData();
         }
-    }, [showEventsBox]);
+    }, [showEventsBox, useSlaveId]);
 
     const geteventData = async () => {
         let res = await httpsend.getData('GetEventListKey', {
             ComboBox: "all"
         });
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             let eventsArr = [];
             res.data.forEach((val, n) => {
                 eventsArr.push({
                     'label': val.DeviceName + '/' + val.AlarmName,
-                    'value': val.DeviceName + '&' + val.id + '/' + val.AlarmName + '~' + val.DevId + '%' + (val.OnlyCode ? val.ServerIP + '@' + val.OnlyCode : '')// Comment translated to English.
+                    'value': val.DeviceName + '&' + val.id + '/' + val.AlarmName + '~' + val.DevId + '%' + getDeviceSrc(val, '')// Comment translated to English.
                 });
             })
             seteventsList(eventsArr);
@@ -409,7 +423,7 @@ const ElementAttr = memo((props) => {
     const getImgData = async (type) => {
         let res = await httpsend.getDataLocal('imgData', { action: type });
         let imgData = [];
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             res.data.forEach(element => {
                 let imgOne = { "img": element.imgUrl, "isani": element.imgUrl.endsWith('.gif') }
                 imgData.push(imgOne);
@@ -425,7 +439,7 @@ const ElementAttr = memo((props) => {
         });
         let parData = [];
         let parsData = [];
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             res.data.forEach(element => {
                 parData.push({
                     'label': element.ParamName,
@@ -446,20 +460,22 @@ const ElementAttr = memo((props) => {
             ComboBox: "all"
         });
         let devList = [];
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             let paramsArr = [];
             let commandArr = [];
             res.data.forEach((val, n) => {
+                const commandData = Array.isArray(val.CommandData) ? val.CommandData : [];
+                const lastDataArr = Array.isArray(val.DeviceLastDataArr) ? val.DeviceLastDataArr : [];
                 devList.push({
-                    value: val.id + '&' + val.LinkMode + '/' + (val.OnlyCode ? val.ServerIP + '@' + val.OnlyCode : '1'),// Comment translated to English.
+                    value: val.id + '&' + val.LinkMode + '/' + getDeviceSrc(val, '1'),// Comment translated to English.
                     label: val.DeviceName,
                     param: val.DeviceLastDataArr
                 })
-                if (val.CommandData.length !== 0) {
-                    for (var kes in val.CommandData) {
+                if (commandData.length !== 0) {
+                    for (var kes in commandData) {
                         commandArr.push({
-                            value: val.id + '/' + val.CommandData[kes].value + '/' + val.DeviceName + '/' + val.CommandData[kes].label + '/' + (val.OnlyCode ? val.ServerIP + '@' + val.OnlyCode : '1'),// Comment translated to English.
-                            label: val.DeviceName + '/' + val.CommandData[kes].label
+                            value: val.id + '/' + commandData[kes].value + '/' + val.DeviceName + '/' + commandData[kes].label + '/' + getDeviceSrc(val, '1'),// Comment translated to English.
+                            label: val.DeviceName + '/' + commandData[kes].label
                         })
                     }
                 }
@@ -467,8 +483,8 @@ const ElementAttr = memo((props) => {
                 // Comment translated to English.
                 if (!val.DeviceLastData) return true;
                 // let LastReceiveData = val.DeviceLastData.replace(/'/g, '"');
-                if (val.DeviceLastDataArr.length > 0) {
-                    val.DeviceLastDataArr.forEach((item) => {
+                if (lastDataArr.length > 0) {
+                    lastDataArr.forEach((item) => {
                         dealParamArr(val, item.data, paramsArr, item.cmdType);
                     })
                 } else {
@@ -476,15 +492,21 @@ const ElementAttr = memo((props) => {
                 }
 
                 // Comment translated to English.
-                if (paramDevId && String(val.id) === String(paramDevId).split('&')[0]) {
+                if (paramDevId && String(val.id) === splitToken(String(paramDevId), '&', 0)) {
                     let paramArr = [];
-                    val.DeviceLastDataArr.forEach((item) => {
-                        let LastReceiveData = item.data.replace(/'/g, '"');
-                        var jsonarr2 = JSON.parse(LastReceiveData);
+                    lastDataArr.forEach((item) => {
+                        let LastReceiveData = typeof item.data === 'string' ? item.data.replace(/'/g, '"') : '';
+                        if (!LastReceiveData) return true;
+                        let jsonarr2 = {};
+                        try {
+                            jsonarr2 = JSON.parse(LastReceiveData);
+                        } catch (e) {
+                            jsonarr2 = {};
+                        }
                         for (var keys in jsonarr2) {
                             paramArr.push({
                                 'label': keys,
-                                'value': keys + '~' + val.LinkMode + '%' + item.cmdType + '|' + (val.OnlyCode ? val.ServerIP + '@' + val.OnlyCode : '1'),// Comment translated to English.
+                                'value': keys + '~' + val.LinkMode + '%' + item.cmdType + '|' + getDeviceSrc(val, '1'),// Comment translated to English.
                             });
                         }
                         setparamList(paramArr);
@@ -498,7 +520,8 @@ const ElementAttr = memo((props) => {
     }
     // Comment translated to English.
     const dealParamArr = (val, revData, paramsArr, revDataType = '') => {
-        let LastReceiveData = revData.replace(/'/g, '"');
+        let LastReceiveData = typeof revData === 'string' ? revData.replace(/'/g, '"') : '';
+        if (!LastReceiveData) return true;
         var jsonarr = [];
         try {
             jsonarr = JSON.parse(LastReceiveData);
@@ -511,7 +534,7 @@ const ElementAttr = memo((props) => {
         for (var key in jsonarr) {
             paramsArr.push({
                 'label': val.DeviceName + '/' + key,
-                'value': val.id + '&' + val.DeviceName + '/' + key + '~' + val.LinkMode + '%' + revDataType + '|' + (val.OnlyCode ? val.ServerIP + '@' + val.OnlyCode : '1')// Comment translated to English.
+                'value': val.id + '&' + val.DeviceName + '/' + key + '~' + val.LinkMode + '%' + revDataType + '|' + getDeviceSrc(val, '1')// Comment translated to English.
             });
         }
 
@@ -523,23 +546,25 @@ const ElementAttr = memo((props) => {
         let res = await httpsend.getData('GetDmpageListKey', { ComboBox: '1' });
         let options = [];
         let pname = '';
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             res.data.forEach((el) => {
                 // Comment translated to English.
                 if (savePagePid === el.id) pname = el.PageName;
+                const firstChildren = Array.isArray(el.children) ? el.children : [];
                 let firstop = {
                     value: el.id + '-' + el.PageName,
                     label: el.PageName
                 }
-                if (el.children.length !== 0) {
-                    el.children.forEach((y) => {
+                if (firstChildren.length !== 0) {
+                    firstChildren.forEach((y) => {
                         if (savePagePid === y.id) pname = y.PageName;
+                        const secondChildren = Array.isArray(y.children) ? y.children : [];
                         let secop = {
                             value: y.id + '-' + y.PageName,
                             label: y.PageName
                         }
-                        if (y.children.length !== 0) {
-                            y.children.forEach((m) => {
+                        if (secondChildren.length !== 0) {
+                            secondChildren.forEach((m) => {
                                 if (savePagePid === m.id) pname = m.PageName;
                                 let throp = {
                                     value: m.id + '-' + m.PageName,
@@ -567,13 +592,13 @@ const ElementAttr = memo((props) => {
         if (resLogin) {
             // Comment translated to English.
             let resDev = await httpsend.getDataVideo('api/device/query/devices?page=1&count=100', {});
-            if (resDev) {
+            if (resDev && resDev.data && Array.isArray(resDev.data.list)) {
                 if (resDev.data.list.length !== 0) {
                     resDev.data.list.forEach(async (n) => {
                         // Comment translated to English.
                         let channelurl = 'api/device/query/tree/' + n.deviceId + '?page=1&count=100&parentId=' + n.deviceId + '&onlyCatalog=false';
                         let resChannel = await httpsend.getDataVideo(channelurl, {});
-                        if (resChannel) {
+                        if (resChannel && resChannel.data && Array.isArray(resChannel.data.list)) {
                             if (resChannel.data.list.length !== 0) {
                                 resChannel.data.list.forEach(async (y) => {
                                     videoList.push({
@@ -614,7 +639,7 @@ const ElementAttr = memo((props) => {
             setsavePagePidSel([]);
             setcusparamsList([]);
         }
-    }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox]);
+    }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox, useSlaveId]);
 
     // Comment translated to English.
     const initFormData = shapeAttr.attrs.where;
@@ -646,6 +671,7 @@ const ElementAttr = memo((props) => {
         const findAttr = shapeAttr.children.filter((v) => v.attrs.name === e.target.dataset.attrwhere);
         // Comment translated to English.
         if (e.target.dataset.attrcode === 'rowNum' || e.target.dataset.attrcode === 'colNum' || e.target.dataset.attrcode === 'cellWidth' || e.target.dataset.attrcode === 'cellHeight') {
+            if (!Array.isArray(findAttr) || findAttr.length === 0 || !findAttr[0] || !findAttr[0].attrs) return;
             // Comment translated to English.
             if (e.target.dataset.attrcode === 'rowNum') findAttr[0].attrs['rowNum'] = e.target.value;
             if (e.target.dataset.attrcode === 'colNum') findAttr[0].attrs['colNum'] = e.target.value;
@@ -675,12 +701,18 @@ const ElementAttr = memo((props) => {
                 }
             }
             findAttr[0]['attrs']['points'] = wpath.toString().split(',');
-            findAttr[1]['attrs']['points'] = hpath.toString().split(',');
+            if (findAttr[1] && findAttr[1].attrs) {
+                findAttr[1]['attrs']['points'] = hpath.toString().split(',');
+            }
             // Comment translated to English.
-            shapeAttr.children[0]['attrs']['width'] = wtoatl;
-            shapeAttr.children[0]['attrs']['height'] = htoatl;
-            shapeAttr.children[3]['attrs']['width'] = wtoatl;
-            shapeAttr.children[3]['attrs']['height'] = htoatl;
+            if (shapeAttr.children[0] && shapeAttr.children[0].attrs) {
+                shapeAttr.children[0]['attrs']['width'] = wtoatl;
+                shapeAttr.children[0]['attrs']['height'] = htoatl;
+            }
+            if (shapeAttr.children[3] && shapeAttr.children[3].attrs) {
+                shapeAttr.children[3]['attrs']['width'] = wtoatl;
+                shapeAttr.children[3]['attrs']['height'] = htoatl;
+            }
         } else {
             findAttr.forEach(element => {
                 // if (e.target.value) {
@@ -688,7 +720,9 @@ const ElementAttr = memo((props) => {
                 element['attrs'][e.target.dataset.attrcode] = isNumberLike ? parseFloat(e.target.value) : e.target.value;
                 if (e.target.dataset.attrwhere === 'buttonRect') {// Comment translated to English.
                     if (e.target.dataset.attrcode === 'width' || e.target.dataset.attrcode === 'height') {
-                        shapeAttr.children[1]['attrs'][e.target.dataset.attrcode] = element['attrs'][e.target.dataset.attrcode];
+                        if (shapeAttr.children[1] && shapeAttr.children[1].attrs) {
+                            shapeAttr.children[1]['attrs'][e.target.dataset.attrcode] = element['attrs'][e.target.dataset.attrcode];
+                        }
                     }
                 }
                 // Comment translated to English.
@@ -709,6 +743,10 @@ const ElementAttr = memo((props) => {
         setparamList([]);
         setparam(null);
         setparamDevId(value);
+        const valueTypeSrc = splitToken(value, '&', 1);
+        const valueType = splitToken(valueTypeSrc, '/', 0);
+        const valueSrc = splitToken(value, '/', 1);
+        const valueDevId = splitToken(value, '&', 0);
         if (devList.length > 0) {
             devList.forEach(val => {
                 if (val.value === value) {
@@ -730,21 +768,22 @@ const ElementAttr = memo((props) => {
                     //     }
                     // }
                     // setparamList(paramArr);
-                    if (!val.param) return true;
+                    if (!Array.isArray(val.param)) return true;
                     let paramArr = [];
                     val.param.forEach((item) => {
                         try {
-                            let LastReceiveData = item.data.replace(/'/g, '"');
+                            let LastReceiveData = typeof item.data === 'string' ? item.data.replace(/'/g, '"') : '';
+                            if (!LastReceiveData) return true;
                             let jsonarr = JSON.parse(LastReceiveData);
                             for (var keys in jsonarr) {
                                 paramArr.push({
                                     'label': keys,
-                                    'value': keys + '~' + value.split('&')[1].split('/')[0] + '%' + item.cmdType + '|' + value.split('/')[1],
+                                    'value': keys + '~' + valueType + '%' + item.cmdType + '|' + valueSrc,
                                 });
                             }
                         } catch (e) {
                             if (e instanceof SyntaxError) {
-                                console.log(t('auto.k0515') + value.split('&')[0] + t('auto.k0516') + item.data);
+                                console.log(t('auto.k0515') + valueDevId + t('auto.k0516') + item.data);
                             }
                         }
                         setparamList(paramArr);
@@ -780,8 +819,8 @@ const ElementAttr = memo((props) => {
     const onEventsOptionSearch = (value) => { };
     // Comment translated to English.
     const onLinkOptionChange = (value) => {
-        setsavePagePid(value.split('-')[0]);
-        setsavePagePname(value.split('-')[1])
+        setsavePagePid(splitToken(value, '-', 0));
+        setsavePagePname(splitToken(value, '-', 1))
     };
     const onlinkOptionSearch = (value) => { };
     // Comment translated to English.
