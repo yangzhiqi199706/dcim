@@ -178,6 +178,17 @@ const gradientColor = (topColor, bottomColor) => ({
     global: false
 });
 
+const hexToRgba = (hexColor, alpha) => {
+    const normalized = String(hexColor || '').replace('#', '').trim();
+    if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return hexColor;
+    const red = parseInt(normalized.slice(0, 2), 16);
+    const green = parseInt(normalized.slice(2, 4), 16);
+    const blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+const getPieBorderColor = (preset, alpha) => hexToRgba(preset.axis || preset.colors[0], alpha);
+
 const withAxisStyle = (option, preset) => {
     if (option.xAxis) {
         option.xAxis.axisLine = {
@@ -393,7 +404,7 @@ const isDefaultDarkLabelColor = (color) => {
     return normalized === '#000000' || normalized === '#000' || normalized === 'black' || normalized === 'rgb(0,0,0)' || normalized === 'rgba(0,0,0,1)';
 };
 
-const styleBarDataLabel = (label = {}, preset) => {
+const styleDataLabel = (label = {}, preset) => {
     if (!label.show) return label;
     return {
         ...label,
@@ -408,7 +419,7 @@ const styleBarSeries = (series, preset, index) => ({
     ...series,
     barMaxWidth: series.barMaxWidth || 34,
     barMinHeight: series.barMinHeight || 3,
-    ...(series.label ? { label: styleBarDataLabel(series.label, preset) } : {}),
+    ...(series.label ? { label: styleDataLabel(series.label, preset) } : {}),
     itemStyle: {
         ...(series.itemStyle || {}),
         color: gradientColor(preset.colors[index % preset.colors.length], 'rgba(5, 20, 42, 0.45)'),
@@ -440,14 +451,8 @@ const styleSortedBarSeries = (series, preset, index) => ({
 const getAnimationMode = (chartInfo = {}) => chartInfo.chartAnimation || chartInfo.chartMotion || 'off';
 
 const buildLineFlowSeries = (series, option, preset, index) => {
-    const xdata = option.xAxis && Array.isArray(option.xAxis.data) ? option.xAxis.data : [];
-    const data = Array.isArray(series.data) ? series.data : [];
-    if (data.length < 2) return null;
-    const points = data.map((value, pointIndex) => {
-        const xValue = xdata[pointIndex] === undefined ? pointIndex : xdata[pointIndex];
-        const yValue = value && typeof value === 'object' ? value.value : value;
-        return [xValue, yValue];
-    });
+    const points = getLineMotionPoints(series, option);
+    if (points.length < 2) return null;
     return {
         name: `${series.name || 'line'}-flow`,
         type: 'lines',
@@ -469,6 +474,151 @@ const buildLineFlowSeries = (series, option, preset, index) => {
             color: preset.colors[index % preset.colors.length]
         },
         tooltip: { show: false }
+    };
+};
+
+const getLineDataValue = (dataItem) => {
+    const rawValue = dataItem && typeof dataItem === 'object' && !Array.isArray(dataItem)
+        ? dataItem.value
+        : dataItem;
+    if (Array.isArray(rawValue)) {
+        return rawValue.length > 1 ? rawValue[1] : rawValue[0];
+    }
+    return rawValue;
+};
+
+const getLineMotionPoints = (series, option) => {
+    const xAxis = getSingleAxisOption(option.xAxis);
+    const xdata = Array.isArray(xAxis.data) ? xAxis.data : [];
+    const data = Array.isArray(series.data) ? series.data : [];
+    return data
+        .map((item, pointIndex) => {
+            const yValue = getLineDataValue(item);
+            if (yValue === null || yValue === undefined || yValue === '' || Number.isNaN(Number(yValue))) return null;
+            return [xdata[pointIndex] === undefined ? pointIndex : xdata[pointIndex], Number(yValue)];
+        })
+        .filter(Boolean);
+};
+
+const buildLineMotionSeries = (series, option, preset, index, mode) => {
+    if (mode !== 'entrance' && mode !== 'pulse') return null;
+    const points = getLineMotionPoints(series, option);
+    if (points.length < 2) return null;
+    const glowColor = preset.colors[index % preset.colors.length];
+    const tailColor = preset.colors[(index + 1) % preset.colors.length] || glowColor;
+    return {
+        name: mode === 'entrance' ? 'line-entrance-motion' : 'line-pulse-motion',
+        type: 'custom',
+        coordinateSystem: 'cartesian2d',
+        data: [0],
+        silent: true,
+        z: 92,
+        tooltip: { show: false },
+        renderItem: (params, api) => {
+            const screenPoints = points.map(point => api.coord(point));
+            if (screenPoints.length < 2) return null;
+            const coordSys = params.coordSys || {};
+            const pathStyle = {
+                stroke: glowColor,
+                lineWidth: mode === 'entrance' ? 4 : 5,
+                fill: null,
+                opacity: mode === 'entrance' ? 0.86 : 0.54,
+                shadowBlur: mode === 'entrance' ? 22 : 28,
+                shadowColor: glowColor,
+                lineJoin: 'round',
+                lineCap: 'round'
+            };
+            const children = [
+                {
+                    name: mode === 'entrance' ? 'line-entrance-stroke' : 'line-pulse-glow',
+                    type: 'polyline',
+                    shape: {
+                        points: screenPoints,
+                        smooth: 0.25
+                    },
+                    style: pathStyle,
+                    keyframeAnimation: mode === 'pulse' ? {
+                        duration: 1500,
+                        delay: (index % 5) * 120,
+                        loop: true,
+                        keyframes: [
+                            { percent: 0, style: { opacity: 0.28, lineWidth: 3, shadowBlur: 10 } },
+                            { percent: 0.5, style: { opacity: 0.92, lineWidth: 6, shadowBlur: 34 } },
+                            { percent: 1, style: { opacity: 0.28, lineWidth: 3, shadowBlur: 10 } }
+                        ]
+                    } : undefined
+                }
+            ];
+
+            if (mode === 'entrance') {
+                const lastPoint = screenPoints[screenPoints.length - 1];
+                children.push({
+                    name: 'line-entrance-head',
+                    type: 'circle',
+                    shape: { cx: lastPoint[0], cy: lastPoint[1], r: 5 },
+                    style: {
+                        fill: '#ffffff',
+                        opacity: 0.82,
+                        shadowBlur: 18,
+                        shadowColor: glowColor
+                    },
+                    keyframeAnimation: {
+                        duration: 1200,
+                        loop: false,
+                        keyframes: [
+                            { percent: 0, style: { opacity: 0, shadowBlur: 0 } },
+                            { percent: 0.72, style: { opacity: 0.92, shadowBlur: 22 } },
+                            { percent: 1, style: { opacity: 0.54, shadowBlur: 12 } }
+                        ]
+                    }
+                });
+            } else {
+                children.push({
+                    name: 'line-pulse-core',
+                    type: 'polyline',
+                    shape: {
+                        points: screenPoints,
+                        smooth: 0.25
+                    },
+                    style: {
+                        stroke: tailColor,
+                        lineWidth: 2,
+                        fill: null,
+                        opacity: 0.46,
+                        lineJoin: 'round',
+                        lineCap: 'round'
+                    }
+                });
+            }
+
+            const group = {
+                type: 'group',
+                children
+            };
+            if (mode === 'entrance') {
+                group.clipPath = {
+                    type: 'rect',
+                    shape: {
+                        x: coordSys.x || 0,
+                        y: coordSys.y || 0,
+                        width: coordSys.width || 0,
+                        height: coordSys.height || 0
+                    },
+                    origin: [coordSys.x || 0, coordSys.y || 0],
+                    scaleX: 0,
+                    keyframeAnimation: {
+                        duration: 1200,
+                        loop: false,
+                        keyframes: [
+                            { percent: 0, scaleX: 0 },
+                            { percent: 0.2, scaleX: 0.08 },
+                            { percent: 1, scaleX: 1 }
+                        ]
+                    }
+                };
+            }
+            return group;
+        }
     };
 };
 
@@ -662,7 +812,7 @@ const buildBarMotionSeries = (series, option, preset, index, mode, styleKey = 'o
                     type: 'group',
                     children
                 };
-                if (['rounded', 'cylinder', 'battery'].includes(styleKey)) {
+                if (['rounded', 'cylinder'].includes(styleKey)) {
                     shapeGroup.clipPath = { type: 'rect', shape: clippedShape };
                 }
                 return shapeGroup;
@@ -736,13 +886,6 @@ const buildBarMotionSeries = (series, option, preset, index, mode, styleKey = 'o
         }
     };
 };
-
-const insetShape = (shape, ratio) => ({
-    x: shape.x + shape.width * ratio,
-    y: shape.y + shape.height * ratio,
-    width: shape.width * (1 - ratio * 2),
-    height: shape.height * (1 - ratio * 2)
-});
 
 const polygonShape = (points) => ({ points });
 
@@ -931,33 +1074,141 @@ const buildBarShapeChildren = (shape, isHorizontal, styleKey, glowColor, tailCol
         ];
     }
     if (styleKey === 'battery') {
-        const inner = insetShape(shape, 0.12);
+        const wallX = Math.max(2, shape.width * 0.14);
+        const wallY = Math.max(3, shape.height * 0.08);
+        const inner = {
+            x: shape.x + wallX,
+            y: shape.y + wallY,
+            width: Math.max(2, shape.width - wallX * 2),
+            height: Math.max(2, shape.height - wallY * 2)
+        };
         const segmentCount = 4;
+        const shellRadius = Math.max(3, Math.min(shape.width, shape.height) * 0.16);
+        const shellStroke = 'rgba(214, 247, 255, 0.92)';
+        const shellFill = new echarts.graphic.LinearGradient(
+            0, 0, isHorizontal ? 1 : 0, isHorizontal ? 0 : 1,
+            [
+                { offset: 0, color: 'rgba(7, 23, 54, 0.88)' },
+                { offset: 0.55, color: 'rgba(5, 18, 45, 0.68)' },
+                { offset: 1, color: 'rgba(7, 25, 56, 0.92)' }
+            ]
+        );
+        const segmentFill = new echarts.graphic.LinearGradient(
+            0, isHorizontal ? 0 : 1, isHorizontal ? 1 : 0, isHorizontal ? 0 : 0,
+            [
+                { offset: 0, color: 'rgba(210, 255, 185, 0.95)' },
+                { offset: 0.42, color: glowColor },
+                { offset: 1, color: tailColor }
+            ]
+        );
         const segments = Array.from({ length: segmentCount }).map((_, segmentIndex) => {
             if (isHorizontal) {
-                const gap = inner.width * 0.04;
-                const width = (inner.width - gap * (segmentCount - 1)) / segmentCount;
+                const gap = Math.max(2, Math.min(inner.width * 0.045, 6));
+                const width = Math.max(1, (inner.width - gap * (segmentCount - 1)) / segmentCount);
                 return {
+                    name: 'battery-segment',
                     type: 'rect',
-                    shape: { x: inner.x + segmentIndex * (width + gap), y: inner.y, width, height: inner.height, r: 3 },
-                    style: { fill: segmentIndex % 2 === 0 ? glowColor : tailColor, opacity: 0.72 }
+                    shape: {
+                        x: inner.x + segmentIndex * (width + gap),
+                        y: inner.y,
+                        width,
+                        height: inner.height,
+                        r: Math.min(5, inner.height * 0.22)
+                    },
+                    style: {
+                        fill: segmentFill,
+                        opacity: 0.86,
+                        shadowBlur: 10,
+                        shadowColor: glowColor
+                    }
                 };
             }
-            const gap = inner.height * 0.05;
-            const height = (inner.height - gap * (segmentCount - 1)) / segmentCount;
+            const gap = Math.max(2, Math.min(inner.height * 0.055, 6));
+            const height = Math.max(1, (inner.height - gap * (segmentCount - 1)) / segmentCount);
             return {
+                name: 'battery-segment',
                 type: 'rect',
-                shape: { x: inner.x, y: inner.y + (segmentCount - 1 - segmentIndex) * (height + gap), width: inner.width, height, r: 3 },
-                style: { fill: segmentIndex % 2 === 0 ? glowColor : tailColor, opacity: 0.72 }
+                shape: {
+                    x: inner.x,
+                    y: inner.y + (segmentCount - 1 - segmentIndex) * (height + gap),
+                    width: inner.width,
+                    height,
+                    r: Math.min(5, inner.width * 0.22)
+                },
+                style: {
+                    fill: segmentFill,
+                    opacity: 0.86,
+                    shadowBlur: 10,
+                    shadowColor: glowColor
+                }
             };
         });
         const head = isHorizontal
-            ? { x: x2, y: y1 + shape.height * 0.34, width: Math.max(3, shape.height * 0.18), height: shape.height * 0.32, r: 2 }
-            : { x: x1 + shape.width * 0.34, y: y1 - Math.max(3, shape.width * 0.18), width: shape.width * 0.32, height: Math.max(3, shape.width * 0.18), r: 2 };
+            ? {
+                x: x2 - 1,
+                y: y1 + shape.height * 0.32,
+                width: Math.max(4, Math.min(shape.height * 0.24, 10)),
+                height: shape.height * 0.36,
+                r: 2
+            }
+            : {
+                x: x1 + shape.width * 0.3,
+                y: y1 - Math.max(4, Math.min(shape.width * 0.24, 10)) + 1,
+                width: shape.width * 0.4,
+                height: Math.max(4, Math.min(shape.width * 0.24, 10)),
+                r: 2
+            };
+        const gloss = isHorizontal
+            ? { x: shape.x + shape.width * 0.08, y: shape.y + shape.height * 0.16, width: Math.max(2, shape.width * 0.18), height: Math.max(1, shape.height * 0.06), r: 2 }
+            : { x: shape.x + shape.width * 0.16, y: shape.y + shape.height * 0.08, width: Math.max(1, shape.width * 0.08), height: Math.max(2, shape.height * 0.18), r: 2 };
         return [
-            { type: 'rect', shape: { ...shape, r: 4 }, style: { fill: 'rgba(7, 20, 48, 0.28)', stroke: glowColor, lineWidth: 1.4, shadowBlur: 14, shadowColor: glowColor } },
-            { type: 'rect', shape: head, style: { fill: 'rgba(180, 238, 255, 0.64)' } },
+            {
+                name: 'battery-terminal',
+                type: 'rect',
+                shape: head,
+                style: {
+                    fill: 'rgba(186, 238, 255, 0.36)',
+                    stroke: shellStroke,
+                    lineWidth: 1.4,
+                    shadowBlur: 10,
+                    shadowColor: glowColor
+                }
+            },
+            {
+                name: 'battery-shell',
+                type: 'rect',
+                shape: { ...shape, r: shellRadius },
+                style: {
+                    fill: shellFill,
+                    stroke: shellStroke,
+                    lineWidth: 1.8,
+                    shadowBlur: 18,
+                    shadowColor: glowColor
+                }
+            },
+            {
+                name: 'battery-chamber',
+                type: 'rect',
+                shape: { ...inner, r: Math.max(3, Math.min(inner.width, inner.height) * 0.12) },
+                style: {
+                    fill: 'rgba(2, 12, 34, 0.62)',
+                    stroke: 'rgba(88, 210, 255, 0.22)',
+                    lineWidth: 1
+                }
+            },
             ...segments
+            ,
+            {
+                name: 'battery-gloss',
+                type: 'rect',
+                shape: gloss,
+                style: {
+                    fill: 'rgba(255, 255, 255, 0.42)',
+                    opacity: 0.5,
+                    shadowBlur: 8,
+                    shadowColor: '#ffffff'
+                }
+            }
         ];
     }
     return [{ type: 'rect', shape, style: baseStyle }];
@@ -981,7 +1232,7 @@ const buildBarShapeSeries = (series, option, preset, index, styleKey) => {
                 type: 'group',
                 children: buildBarShapeChildren(clippedShape, isHorizontal, styleKey, glowColor, tailColor)
             };
-            if (['rounded', 'cylinder', 'battery'].includes(styleKey)) {
+            if (['rounded', 'cylinder'].includes(styleKey)) {
                 group.clipPath = { type: 'rect', shape: clippedShape };
             }
             return group;
@@ -1088,6 +1339,105 @@ const getMotionGraphicLayer = (mode, preset, cat) => {
     return [];
 };
 
+const isPieLikeChart = (cat) => cat === 'pie' || cat === 'huan' || cat === 'alarmpie';
+
+const getPieMotionGraphicLayer = (mode, preset) => {
+    if (mode === 'entrance') {
+        return [{
+            name: 'pie-motion-entrance',
+            type: 'ring',
+            left: 'center',
+            top: 'middle',
+            silent: true,
+            z: 86,
+            shape: { r: 108, r0: 102 },
+            style: {
+                stroke: preset.axis,
+                fill: 'transparent',
+                opacity: 0.2,
+                lineWidth: 2,
+                shadowBlur: 22,
+                shadowColor: preset.shadow
+            },
+            keyframeAnimation: {
+                duration: 1200,
+                loop: false,
+                keyframes: [
+                    { percent: 0, scaleX: 0.4, scaleY: 0.4, style: { opacity: 0, shadowBlur: 2 } },
+                    { percent: 0.55, scaleX: 1.12, scaleY: 1.12, style: { opacity: 0.54, shadowBlur: 30 } },
+                    { percent: 1, scaleX: 1, scaleY: 1, style: { opacity: 0.16, shadowBlur: 14 } }
+                ]
+            }
+        }];
+    }
+    if (mode === 'pulse') {
+        return [{
+            name: 'pie-motion-pulse',
+            type: 'ring',
+            left: 'center',
+            top: 'middle',
+            silent: true,
+            z: 86,
+            shape: { r: 112, r0: 94 },
+            style: {
+                stroke: preset.axis,
+                fill: 'transparent',
+                opacity: 0.16,
+                lineWidth: 2,
+                shadowBlur: 20,
+                shadowColor: preset.shadow
+            },
+            keyframeAnimation: {
+                duration: 1700,
+                loop: true,
+                keyframes: [
+                    { percent: 0, scaleX: 0.94, scaleY: 0.94, style: { opacity: 0.08, shadowBlur: 8 } },
+                    { percent: 0.5, scaleX: 1.1, scaleY: 1.1, style: { opacity: 0.42, shadowBlur: 36 } },
+                    { percent: 1, scaleX: 0.94, scaleY: 0.94, style: { opacity: 0.08, shadowBlur: 8 } }
+                ]
+            }
+        }];
+    }
+    if (mode === 'flow') {
+        return [{
+            name: 'pie-motion-flow',
+            type: 'arc',
+            left: 'center',
+            top: 'middle',
+            silent: true,
+            z: 88,
+            shape: {
+                cx: 0,
+                cy: 0,
+                r: 108,
+                startAngle: -Math.PI * 0.18,
+                endAngle: Math.PI * 0.34,
+                clockwise: true
+            },
+            style: {
+                stroke: preset.label,
+                fill: null,
+                opacity: 0.7,
+                lineWidth: 5,
+                lineCap: 'round',
+                shadowBlur: 24,
+                shadowColor: preset.shadow
+            },
+            keyframeAnimation: {
+                duration: 1800,
+                loop: true,
+                keyframes: [
+                    { percent: 0, rotation: 0, style: { opacity: 0 } },
+                    { percent: 0.16, rotation: Math.PI * 0.45, style: { opacity: 0.78 } },
+                    { percent: 0.84, rotation: Math.PI * 1.75, style: { opacity: 0.78 } },
+                    { percent: 1, rotation: Math.PI * 2, style: { opacity: 0 } }
+                ]
+            }
+        }];
+    }
+    return [];
+};
+
 const withAnimationStyle = (option, chartInfo, preset) => {
     const mode = getAnimationMode(chartInfo);
     const barStyleKey = chartInfo.chartBarStyle || 'original';
@@ -1107,12 +1457,28 @@ const withAnimationStyle = (option, chartInfo, preset) => {
     option.stateAnimation = { duration: 450, easing: 'cubicOut' };
 
     const flowSeries = [];
+    const lineMotionSeries = [];
     const barMotionSeries = [];
     option.series = (option.series || []).map((series, index) => {
         if (series.type === 'line' && mode === 'flow') {
             const lineFlowSeries = buildLineFlowSeries(series, option, preset, index);
             if (lineFlowSeries) flowSeries.push(lineFlowSeries);
             return series;
+        }
+        if (series.type === 'line' && (mode === 'entrance' || mode === 'pulse')) {
+            const lineMotion = buildLineMotionSeries(series, option, preset, index, mode);
+            if (lineMotion) lineMotionSeries.push(lineMotion);
+            return {
+                ...series,
+                animation: true,
+                animationDuration: mode === 'entrance' ? 1200 : 900,
+                animationEasing: mode === 'entrance' ? 'cubicOut' : 'cubicInOut',
+                lineStyle: {
+                    ...(series.lineStyle || {}),
+                    shadowBlur: Math.max(((series.lineStyle || {}).shadowBlur || 0), mode === 'pulse' ? 20 : 12),
+                    shadowColor: (series.lineStyle || {}).shadowColor || preset.colors[index % preset.colors.length]
+                }
+            };
         }
         if (series.type === 'bar' && (mode === 'pulse' || mode === 'entrance' || mode === 'flow')) {
             const barMotion = buildBarMotionSeries(series, option, preset, index, mode, barStyleKey);
@@ -1149,11 +1515,13 @@ const withAnimationStyle = (option, chartInfo, preset) => {
                 }
             };
         }
-        if (series.type === 'pie' && mode === 'pulse') {
+        if (series.type === 'pie' && (mode === 'pulse' || mode === 'entrance' || mode === 'flow')) {
             return {
                 ...series,
-                animationType: 'scale',
-                animationEasing: 'elasticOut'
+                animation: true,
+                animationType: mode === 'flow' ? 'expansion' : 'scale',
+                animationDuration: mode === 'entrance' ? 1200 : 1000,
+                animationEasing: mode === 'flow' ? 'cubicOut' : 'elasticOut'
             };
         }
         return series;
@@ -1161,10 +1529,15 @@ const withAnimationStyle = (option, chartInfo, preset) => {
     if (flowSeries.length > 0) {
         option.series = option.series.concat(flowSeries);
     }
+    if (lineMotionSeries.length > 0) {
+        option.series = option.series.concat(lineMotionSeries);
+    }
     if (barMotionSeries.length > 0) {
         option.series = option.series.concat(barMotionSeries);
     }
-    const motionGraphics = getMotionGraphicLayer(mode, preset, chartInfo.cat);
+    const motionGraphics = isPieLikeChart(chartInfo.cat)
+        ? getPieMotionGraphicLayer(mode, preset)
+        : getMotionGraphicLayer(mode, preset, chartInfo.cat);
     if (motionGraphics.length > 0) {
         option.graphic = [
             ...(option.graphic || []),
@@ -1173,38 +1546,42 @@ const withAnimationStyle = (option, chartInfo, preset) => {
     }
 };
 
-const styleLineSeries = (series, preset, index) => ({
-    ...series,
-    smooth: true,
-    showSymbol: false,
-    symbol: 'circle',
-    symbolSize: 7,
-    lineStyle: {
-        ...(series.lineStyle || {}),
-        width: 3,
-        color: preset.colors[index % preset.colors.length],
-        shadowBlur: 14,
-        shadowColor: preset.colors[index % preset.colors.length],
-        shadowOffsetY: 0
-    },
-    areaStyle: {
-        ...(series.areaStyle || {}),
-        opacity: 0.22,
-        color: gradientColor(preset.colors[index % preset.colors.length], 'rgba(5, 20, 42, 0)')
-    },
-    emphasis: {
-        ...(series.emphasis || {}),
-        focus: 'series'
-    }
-});
+const styleLineSeries = (series, preset, index) => {
+    const hasDataLabel = !!(series.label && series.label.show);
+    return {
+        ...series,
+        smooth: true,
+        showSymbol: hasDataLabel ? true : false,
+        symbol: 'circle',
+        symbolSize: hasDataLabel ? Math.max(Number(series.symbolSize || 0), 7) : 7,
+        ...(series.label ? { label: styleDataLabel(series.label, preset) } : {}),
+        lineStyle: {
+            ...(series.lineStyle || {}),
+            width: 3,
+            color: preset.colors[index % preset.colors.length],
+            shadowBlur: 14,
+            shadowColor: preset.colors[index % preset.colors.length],
+            shadowOffsetY: 0
+        },
+        areaStyle: {
+            ...(series.areaStyle || {}),
+            opacity: 0.22,
+            color: gradientColor(preset.colors[index % preset.colors.length], 'rgba(5, 20, 42, 0)')
+        },
+        emphasis: {
+            ...(series.emphasis || {}),
+            focus: 'series'
+        }
+    };
+};
 
 const stylePieSeries = (series, preset) => ({
     ...series,
     avoidLabelOverlap: true,
     itemStyle: {
         ...(series.itemStyle || {}),
-        borderColor: 'rgba(5, 18, 36, 0.92)',
-        borderWidth: 2,
+        borderColor: getPieBorderColor(preset, 0.46),
+        borderWidth: 1.6,
         shadowBlur: 18,
         shadowColor: preset.shadow
     },
@@ -1226,6 +1603,8 @@ const stylePieSeries = (series, preset) => ({
         scaleSize: 8,
         itemStyle: {
             ...((series.emphasis || {}).itemStyle || {}),
+            borderColor: getPieBorderColor(preset, 0.68),
+            borderWidth: 2,
             shadowBlur: 28,
             shadowColor: preset.shadow
         }

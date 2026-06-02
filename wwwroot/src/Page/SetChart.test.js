@@ -84,13 +84,56 @@ describe('applyChartVisualStyle', () => {
         expect(styled.series[0].lineStyle.shadowBlur).toBeGreaterThan(0);
     });
 
+    test('keeps line chart point symbols visible when data labels are enabled', () => {
+        const styled = applyChartVisualStyle({
+            series: [{
+                type: 'line',
+                data: [1, 2, 3],
+                label: {
+                    show: true,
+                    position: 'top',
+                    color: '#00ffcc',
+                    fontSize: 14
+                }
+            }]
+        }, { cat: 'line', chartStyle: 'neon', dataSwitch: '2' });
+
+        expect(styled.series[0].label.show).toBe(true);
+        expect(styled.series[0].showSymbol).toBe(true);
+        expect(styled.series[0].symbolSize).toBeGreaterThanOrEqual(7);
+    });
+
+    test('uses themed label color when styled line charts would otherwise keep default black labels', () => {
+        const styled = applyChartVisualStyle({
+            series: [{
+                type: 'line',
+                data: [1, 2, 3],
+                label: {
+                    show: true,
+                    position: 'top',
+                    color: '#000000',
+                    fontSize: 14
+                }
+            }]
+        }, { cat: 'line', chartStyle: 'aurora', dataSwitch: '2' });
+
+        expect(styled.series[0].label.show).toBe(true);
+        expect(styled.series[0].label.color).toBe('#dffdf4');
+        expect(styled.series[0].label.fontWeight).toBe(700);
+        expect(styled.series[0].label.textShadowColor).toBe('#36f2b7');
+        expect(styled.series[0].label.textShadowBlur).toBeGreaterThan(0);
+    });
+
     test('adds dimensional treatment to pie charts', () => {
         const styled = applyChartVisualStyle({
             series: [{ type: 'pie', data: [{ name: 'A', value: 10 }] }]
         }, { cat: 'pie', chartStyle: 'amber' });
 
         expect(styled.series[0].itemStyle.borderWidth).toBeGreaterThan(0);
+        expect(styled.series[0].itemStyle.borderColor).toBe('rgba(255, 209, 102, 0.46)');
+        expect(styled.series[0].itemStyle.borderColor).not.toBe('rgba(5, 18, 36, 0.92)');
         expect(styled.series[0].itemStyle.shadowBlur).toBeGreaterThan(0);
+        expect(styled.series[0].emphasis.itemStyle.borderColor).toBe('rgba(255, 209, 102, 0.68)');
         expect(styled.series[0].label.color).toBe('#fff7dc');
     });
 
@@ -244,6 +287,32 @@ describe('applyChartVisualStyle', () => {
         expect(rendered.clipPath).toBeUndefined();
         expect(rendered.children.filter(child => child.type === 'polygon')).toHaveLength(3);
         expect(rendered.children.map(child => child.name)).toEqual(['stereo-front', 'stereo-side', 'stereo-top']);
+    });
+
+    test('renders battery bars with shell, terminal and segmented charge blocks', () => {
+        const styled = applyChartVisualStyle({
+            xAxis: { type: 'category', data: ['UPS1'] },
+            yAxis: { type: 'value' },
+            series: [{ type: 'bar', data: [80] }]
+        }, { cat: 'bar', chartStyle: 'neon', chartBarStyle: 'battery' });
+
+        const shapeSeries = styled.series.find(item => item.type === 'custom' && item.name === 'bar-battery-shape');
+        const rendered = shapeSeries.renderItem({
+            coordSys: { x: 0, y: 0, width: 200, height: 220 }
+        }, {
+            value: index => ['UPS1', 80, 0][index],
+            coord: ([, value]) => [80, 200 - value],
+            size: () => [42, 20]
+        });
+
+        expect(shapeSeries).toBeTruthy();
+        expect(rendered.type).toBe('group');
+        expect(rendered.clipPath).toBeUndefined();
+        expect(rendered.children.some(child => child.name === 'battery-shell')).toBe(true);
+        expect(rendered.children.some(child => child.name === 'battery-terminal')).toBe(true);
+        expect(rendered.children.some(child => child.name === 'battery-chamber')).toBe(true);
+        expect(rendered.children.filter(child => child.name === 'battery-segment')).toHaveLength(4);
+        expect(rendered.children.some(child => child.name === 'battery-gloss')).toBe(true);
     });
 
     test('hides original bar body when custom prism bar style is selected', () => {
@@ -452,6 +521,75 @@ describe('applyChartVisualStyle', () => {
         expect(styled.series.some(item => item.type === 'lines' && item.effect.show)).toBe(true);
     });
 
+    test('keeps line flow effect valid for 7-day and 30-day history data placeholders', () => {
+        const styled = applyChartVisualStyle({
+            xAxis: { data: ['2026-05-29', '2026-05-30', '2026-05-31', '2026-06-01'] },
+            series: [{
+                type: 'line',
+                data: [[], '12.50', 'NaN', { value: '18.25' }]
+            }]
+        }, { cat: 'line', chartStyle: 'neon', chartAnimation: 'flow', dataType: 'day' });
+
+        const flowSeries = styled.series.find(item => item.type === 'lines' && item.name === 'line-flow');
+        expect(flowSeries).toBeTruthy();
+        expect(flowSeries.effect.show).toBe(true);
+        expect(flowSeries.data[0].coords).toEqual([
+            ['2026-05-30', 12.5],
+            ['2026-06-01', 18.25]
+        ]);
+    });
+
+    test('adds visible line drawing layer when line animation style is entrance', () => {
+        const styled = applyChartVisualStyle({
+            xAxis: { data: ['A', 'B', 'C'] },
+            yAxis: { type: 'value' },
+            series: [{ type: 'line', data: [1, 2, 3] }]
+        }, { cat: 'line', chartStyle: 'original', chartAnimation: 'entrance' });
+
+        const entranceSeries = styled.series.find(item => item.type === 'custom' && item.name === 'line-entrance-motion');
+        const rendered = entranceSeries.renderItem({
+            coordSys: { x: 0, y: 0, width: 200, height: 120 }
+        }, {
+            coord: ([category, value]) => {
+                const xMap = { A: 20, B: 100, C: 180 };
+                return [xMap[category], 120 - value * 20];
+            }
+        });
+
+        expect(styled.animation).toBe(true);
+        expect(entranceSeries).toBeTruthy();
+        expect(entranceSeries.silent).toBe(true);
+        expect(rendered.type).toBe('group');
+        expect(rendered.children.some(child => child.name === 'line-entrance-stroke')).toBe(true);
+        expect(rendered.children.some(child => child.name === 'line-entrance-head')).toBe(true);
+        expect(rendered.clipPath.keyframeAnimation.loop).toBe(false);
+    });
+
+    test('adds visible looping line glow layer when line animation style is pulse', () => {
+        const styled = applyChartVisualStyle({
+            xAxis: { data: ['A', 'B', 'C'] },
+            yAxis: { type: 'value' },
+            series: [{ type: 'line', data: [1, 2, 3] }]
+        }, { cat: 'line', chartStyle: 'original', chartAnimation: 'pulse' });
+
+        const pulseSeries = styled.series.find(item => item.type === 'custom' && item.name === 'line-pulse-motion');
+        const rendered = pulseSeries.renderItem({
+            coordSys: { x: 0, y: 0, width: 200, height: 120 }
+        }, {
+            coord: ([category, value]) => {
+                const xMap = { A: 20, B: 100, C: 180 };
+                return [xMap[category], 120 - value * 20];
+            }
+        });
+
+        const glowLine = rendered.children.find(child => child.name === 'line-pulse-glow');
+        expect(styled.animation).toBe(true);
+        expect(pulseSeries).toBeTruthy();
+        expect(glowLine).toBeTruthy();
+        expect(glowLine.keyframeAnimation.loop).toBe(true);
+        expect(glowLine.style.shadowBlur).toBeGreaterThan(10);
+    });
+
     test('adds breathing pulse to gauge charts', () => {
         const styled = applyChartVisualStyle({
             series: [{ type: 'gauge', data: [{ value: 55 }] }]
@@ -461,6 +599,39 @@ describe('applyChartVisualStyle', () => {
         expect(styled.series[0].detail.valueAnimation).toBe(true);
         expect(styled.series[0].progress.itemStyle.shadowBlur).toBeGreaterThan(20);
         expect(styled.graphic.some(item => item.keyframeAnimation && item.keyframeAnimation.loop)).toBe(true);
+    });
+
+    test('adds visible entrance animation for pie charts', () => {
+        const styled = applyChartVisualStyle({
+            series: [{ type: 'pie', data: [{ name: 'A', value: 10 }, { name: 'B', value: 20 }] }]
+        }, { cat: 'pie', chartStyle: 'neon', chartAnimation: 'entrance' });
+
+        expect(styled.animation).toBe(true);
+        expect(styled.series[0].animationType).toBe('scale');
+        expect(styled.series[0].animationEasing).toBe('elasticOut');
+        expect(styled.graphic.some(item => item.name === 'pie-motion-entrance' && item.keyframeAnimation.loop === false)).toBe(true);
+    });
+
+    test('adds visible breathing glow for pie charts', () => {
+        const styled = applyChartVisualStyle({
+            series: [{ type: 'pie', data: [{ name: 'A', value: 10 }, { name: 'B', value: 20 }] }]
+        }, { cat: 'pie', chartStyle: 'aurora', chartAnimation: 'pulse' });
+
+        expect(styled.animation).toBe(true);
+        expect(styled.series[0].animationType).toBe('scale');
+        expect(styled.series[0].animationEasing).toBe('elasticOut');
+        expect(styled.graphic.some(item => item.name === 'pie-motion-pulse' && item.keyframeAnimation.loop)).toBe(true);
+    });
+
+    test('adds visible circular flow sweep for pie charts', () => {
+        const styled = applyChartVisualStyle({
+            series: [{ type: 'pie', data: [{ name: 'A', value: 10 }, { name: 'B', value: 20 }] }]
+        }, { cat: 'pie', chartStyle: 'amber', chartAnimation: 'flow' });
+
+        expect(styled.animation).toBe(true);
+        expect(styled.series[0].animationType).toBe('expansion');
+        expect(styled.graphic.some(item => item.name === 'pie-motion-flow' && item.keyframeAnimation.loop)).toBe(true);
+        expect(styled.graphic.some(item => item.name === 'chart-motion-flow')).toBe(false);
     });
 
     test('applies animation even when chart style remains original', () => {
