@@ -14,6 +14,18 @@ export default {
             return false
         }
         const normalizeValue = (v) => (v === undefined || v === null ? '' : v.toString().trim());
+        const stripUnitText = (value) => {
+            const text = normalizeValue(value);
+            return text.indexOf('(') > -1 ? text.split('(')[0] : text;
+        };
+        const hasOwnValue = (obj, key) => obj && Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined && obj[key] !== null;
+        const toObjectRecord = (value) => (value && typeof value === 'object' ? value : {});
+        const getAlarmMetricName = (textMessage, typeName = '') => {
+            if (typeof textMessage !== 'string') return '';
+            const msgArr = textMessage.split(',');
+            if (msgArr.length < 3) return '';
+            return normalizeValue(msgArr[2]).replace(normalizeValue(typeName), '');
+        };
         const resolveAlarmLevelMeta = (rawLevel) => {
             const level = normalizeValue(rawLevel);
             switch (level) {
@@ -242,8 +254,13 @@ export default {
             if (val.LastReceiveData || val.Data) {
                 let LastReceiveData = val.LastReceiveData || val.Data;
                 LastReceiveData = LastReceiveData.replace(/'/g, '"');
-                jsonarr = JSON.parse(LastReceiveData);
+                try {
+                    jsonarr = JSON.parse(LastReceiveData);
+                } catch (e) {
+                    jsonarr = {};
+                }
             }
+            jsonarr = toObjectRecord(jsonarr);
             if (type === 3) {
                 return setDataNewVal(type, '', jsonarr);
             } else {
@@ -261,6 +278,7 @@ export default {
         // Comment translated to English.
         // Comment translated to English.
         const setDataNewVal = (CommandType, ProtocolCode, jsonarr, DevID = '') => {
+            jsonarr = toObjectRecord(jsonarr);
             if (CommandType === '3') {
                 if (snmplist && snmplist.data.length > 0) {
                     for (let key in jsonarr) {
@@ -399,18 +417,18 @@ export default {
         async function fetchData(element, newshapeProps, dataWhere) {
             if (!newCommandData) return newshapeProps;
             // console.log(newCommandData);
-            let findNewValIndex = newCommandData.findIndex(v => sameId(v.DevID, element.key) && v.collectData && v.collectData[element.name]);// Comment translated to English.
+            let findNewValIndex = newCommandData.findIndex(v => sameId(v.DevID, element.key) && hasOwnValue(v.collectData, element.name));// Comment translated to English.
             if (findNewValIndex !== -1) {// Comment translated to English.
                 let collectVal = newCommandData[findNewValIndex]['collectData'][element.name];
                 // Comment translated to English.
                 // console.log(collectVal);
-                collectVal = collectVal.indexOf('(') > -1 ? collectVal.split('(')[0] : collectVal;// Comment translated to English.
+                collectVal = stripUnitText(collectVal);// Comment translated to English.
                 // Comment translated to English.
                 // console.log(collectVal);
                 // Comment translated to English.
                 if (newshapeProps.moduleJson.children[0].className === 'Text') {// Comment translated to English.
                     let srcalarm = [];
-                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === element.name); // Comment translated to English.
+                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => sameId(v.DevId, element.key) && getAlarmMetricName(v.TextMessage, v.TypeName) === element.name); // Comment translated to English.
                     // Comment translated to English.
                     // console.log(srcalarm);
                     if (dataWhere) {// Comment translated to English.
@@ -451,7 +469,7 @@ export default {
                 if (newshapeProps.moduleJson.children[0].className === 'leakWater') {// Comment translated to English.
                     newshapeProps.moduleJson.children[0].attrs.data = collectVal;
                     let srcalarm = [];
-                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === element.name); // Comment translated to English.
+                    if (alarmdata && alarmdata.data) srcalarm = alarmdata.data.filter(v => sameId(v.DevId, element.key) && getAlarmMetricName(v.TextMessage, v.TypeName) === element.name); // Comment translated to English.
                     // Comment translated to English.
                     // console.log(srcalarm)
                     if (srcalarm.length !== 0) {
@@ -480,8 +498,12 @@ export default {
                 if (newshapeProps.moduleJson.children[0].className === 'Text') {// Comment translated to English.
                     if (dataWhere) {// Comment translated to English.
                         let whereval = Number.isFinite(Number(collectVal)) ? dataWhere.find(v => Number(v.conditionNum) === Number(collectVal)) : dataWhere.find(v => v.conditionNum === collectVal);
-                        newshapeProps.moduleJson.children[0].attrs.text = whereval.conditionText;
-                        newshapeProps.moduleJson.children[0].attrs.fill = whereval.statusSelectColor;
+                        if (whereval) {
+                            newshapeProps.moduleJson.children[0].attrs.text = whereval.conditionText;
+                            newshapeProps.moduleJson.children[0].attrs.fill = whereval.statusSelectColor;
+                        } else {
+                            newshapeProps.moduleJson.children[0].attrs.text = collectVal;
+                        }
                     } else {
                         newshapeProps.moduleJson.children[0].attrs.text = collectVal;
                     }
@@ -511,10 +533,25 @@ export default {
         iamges.forEach(async (shapeProps) => {
             if (shapeProps.moduleJson) {
                 let newshapeProps = JSON.parse(JSON.stringify(shapeProps));
-                const dataKey = newshapeProps.moduleJson.attrs.dataKey;// Comment translated to English.
+                const firstChild = newshapeProps.moduleJson && Array.isArray(newshapeProps.moduleJson.children) ? newshapeProps.moduleJson.children[0] : null;
+                if (!firstChild || !firstChild.attrs) {
+                    newimages.push(newshapeProps);
+                    return;
+                }
+                const moduleAttrs = newshapeProps.moduleJson && newshapeProps.moduleJson.attrs ? newshapeProps.moduleJson.attrs : null;
+                if (!moduleAttrs) {
+                    newimages.push(newshapeProps);
+                    return;
+                }
+                const dataKey = moduleAttrs.dataKey;// Comment translated to English.
                 if (dataKey && dataKey.length > 0) {
-                    const dataWhere = newshapeProps.moduleJson.attrs.where;// Comment translated to English.
-                    const dataArr = newshapeProps.moduleJson.attrs.moduleAttr.find(v => v.attrGroupName === t('auto.k0601'));
+                    const dataWhere = moduleAttrs.where;// Comment translated to English.
+                    const moduleAttr = Array.isArray(moduleAttrs.moduleAttr) ? moduleAttrs.moduleAttr : [];
+                    const dataArr = moduleAttr.find(v => v.attrGroupName === t('auto.k0601'));
+                    if (!dataArr || !Array.isArray(dataArr.attrGroupContent) || !dataArr.attrGroupContent[0]) {
+                        newimages.push(newshapeProps);
+                        return;
+                    }
                     const dataType = dataArr.attrGroupContent[0].attrCode;// Comment translated to English.
                     switch (dataType) {
                         case 'dataKey':// Comment translated to English.
@@ -531,7 +568,7 @@ export default {
                                 let srcalarmevent = [];
                                 if (alarmdata && alarmdata.data) {
                                     srcalarmevent = alarmdata.data.filter(v => el.eventskey ?
-                                        (v.NotifyModeID === el.eventskey || (sameId(v.DevId, el.eventsdevkey) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === el.name)) :
+                                        (v.NotifyModeID === el.eventskey || (sameId(v.DevId, el.eventsdevkey) && getAlarmMetricName(v.TextMessage, v.TypeName) === el.name)) :
                                         (sameId(v.DevId, el.deveventskey))); // Comment translated to English.
                                     // Comment translated to English.
                                     // console.log(srcalarmevent);
@@ -548,7 +585,7 @@ export default {
                             break;
                         case 'pageKey':// Comment translated to English.
                             newshapeProps.clickEvnt = dataKey;
-                            delete (newshapeProps.moduleJson.attrs.dataKey);
+                            delete (moduleAttrs.dataKey);
                             newimages.push(JSON.parse(JSON.stringify(newshapeProps)));
                             break;
                         case 'dataParamsKey':// Comment translated to English.
@@ -620,23 +657,23 @@ export default {
                                         if (type !== 'cusparam') {// Comment translated to English.
                                             datatime.forEach((y, x) => {
                                                 if (dayNum !== 0) {
-                                                    let findthis = res.data.filter(val => val.create_time.split(' ')[0] === y && val.collectData && val.collectData[el.name]);
+                                                    let findthis = res.data.filter(val => val.create_time.split(' ')[0] === y && hasOwnValue(val.collectData, el.name));
                                                     // console.log(findthis)
                                                     if (findthis) {
                                                         // let findData = res.data[findthis]['collectData'][el.name];
                                                         // Comment translated to English.
                                                         // linethis.name = res.data[findthis].DeviceName + '=' + el.name;
                                                         // linethis.data[x].push(parseFloat(collectVal));
-                                                        const sum = findthis.reduce((accumulator, vals) => accumulator + parseFloat(vals['collectData'][el.name].indexOf('(') > -1 ? vals['collectData'][el.name].split('(')[0] : vals['collectData'][el.name]), 0);
+                                                        const sum = findthis.reduce((accumulator, vals) => accumulator + parseFloat(stripUnitText(vals['collectData'][el.name])), 0);
                                                         // console.log(sum)
                                                         linethis.name = el.dev + '=' + el.name;
                                                         linethis.data[x] = (sum / findthis.length).toFixed(2);
                                                     }
                                                 } else {// Comment translated to English.
-                                                    let findthis = res.data.findIndex(val => val.create_time.split(':')[0] === y.split(t('auto.k0609'))[0] && val.collectData && val.collectData[el.name]);
+                                                    let findthis = res.data.findIndex(val => val.create_time.split(':')[0] === y.split(t('auto.k0609'))[0] && hasOwnValue(val.collectData, el.name));
                                                     if (findthis > -1) {
                                                         let findData = res.data[findthis]['collectData'][el.name];
-                                                        let collectVal = findData.indexOf('(') > -1 ? findData.split('(')[0] : findData;// Comment translated to English.
+                                                        let collectVal = stripUnitText(findData);// Comment translated to English.
                                                         linethis.name = el.dev + '=' + el.name;
                                                         linethis.data[x] = parseFloat(collectVal);
                                                     }
@@ -709,10 +746,10 @@ export default {
                                         };
                                         res.data = newCommandData.filter(v => sameId(v.DevID, element.devkey));
                                         if (res.data) {
-                                            let findthis = res.data.findIndex(val => val.collectData[element.name] && val.collectData);
+                                            let findthis = res.data.findIndex(val => hasOwnValue(val.collectData, element.name));
                                             if (findthis > -1) {
                                                 let findData = res.data[findthis]['collectData'][element.name];
-                                                let collectVal = findData.indexOf('(') > -1 ? findData.split('(')[0] : findData;// Comment translated to English.
+                                                let collectVal = stripUnitText(findData);// Comment translated to English.
                                                 barlinedata[0].data.push(parseFloat(collectVal));
                                                 barxdata.push(res.data[findthis].DeviceName + '-' + element.name);
                                             } else {
@@ -756,10 +793,10 @@ export default {
                                         };
                                         res.data = newCommandData.filter(v => sameId(v.DevID, element.devkey));
                                         if (res.data) {
-                                            let findthis = res.data.findIndex(val => val.collectData[element.name] && val.collectData);
+                                            let findthis = res.data.findIndex(val => hasOwnValue(val.collectData, element.name));
                                             if (findthis > -1) {
                                                 let findData = res.data[findthis]['collectData'][element.name];
-                                                let collectVal = findData.indexOf('(') > -1 ? findData.split('(')[0] : findData;// Comment translated to English.
+                                                let collectVal = stripUnitText(findData);// Comment translated to English.
                                                 piethis.value = parseFloat(collectVal);
                                                 piethis.name = element.dev + '-' + element.name;
                                                 pielinedata.push(piethis);
@@ -789,17 +826,17 @@ export default {
                             if (res.data) {
                                 // Comment translated to English.
                                 if (newshapeProps.moduleJson.children[0].className === 'wetHtml') {// Comment translated to English.
-                                    let findthis = res.data.findIndex(val => val.collectData[t('auto.k0610')] && val.collectData[t('auto.k0611')] && val.collectData);
+                                    let findthis = res.data.findIndex(val => hasOwnValue(val.collectData, t('auto.k0610')) && hasOwnValue(val.collectData, t('auto.k0611')));
                                     let srcalarmwen = [];
                                     let srcalarmwet = [];
                                     if (alarmdata && alarmdata.data) {
-                                        srcalarmwen = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === t('auto.k0610')); // Comment translated to English.
-                                        srcalarmwet = alarmdata.data.filter(v => sameId(v.DevId, element.key) && v.TextMessage && v.TextMessage.split(',')[2].replace(v.TypeName, '') === t('auto.k0611')); // Comment translated to English.
+                                        srcalarmwen = alarmdata.data.filter(v => sameId(v.DevId, element.key) && getAlarmMetricName(v.TextMessage, v.TypeName) === t('auto.k0610')); // Comment translated to English.
+                                        srcalarmwet = alarmdata.data.filter(v => sameId(v.DevId, element.key) && getAlarmMetricName(v.TextMessage, v.TypeName) === t('auto.k0611')); // Comment translated to English.
                                     }
                                     if (findthis > -1) {
                                         let findData = res.data[findthis]['collectData'];
-                                        let collectwenVal = findData[t('auto.k0610')].indexOf('(') > -1 ? findData[t('auto.k0610')].split('(')[0] : findData[t('auto.k0610')];
-                                        let collectwetVal = findData[t('auto.k0611')].indexOf('(') > -1 ? findData[t('auto.k0611')].split('(')[0] : findData[t('auto.k0611')];
+                                        let collectwenVal = stripUnitText(findData[t('auto.k0610')]);
+                                        let collectwetVal = stripUnitText(findData[t('auto.k0611')]);
                                         newshapeProps.moduleJson.children[0].attrs.dataWen = parseFloat(collectwenVal);
                                         newshapeProps.moduleJson.children[0].attrs.dataWet = parseFloat(collectwetVal);
                                         if (srcalarmwen.length !== 0) newshapeProps.moduleJson.children[0].attrs.fill1 = '#ff2626';
@@ -823,8 +860,9 @@ export default {
                                             let data = [];
                                             if (resArr) {
                                                 for (let key in resArr) {
-                                                    let newvalue = resArr[key].indexOf('(') > -1 ? resArr[key].split('(')[0] : resArr[key];
-                                                    let newunit = resArr[key].indexOf('(') > -1 ? resArr[key].split('(')[1].split(')')[0] : '';
+                                                    let valueText = normalizeValue(resArr[key]);
+                                                    let newvalue = stripUnitText(valueText);
+                                                    let newunit = valueText.indexOf('(') > -1 ? valueText.split('(')[1].split(')')[0] : '';
                                                     data.push({
                                                         "name": key, "value": newvalue, "unit": newunit
                                                     })
@@ -839,7 +877,7 @@ export default {
                                             let data = [];
                                             if (resArr) {
                                                 for (let key in resArr) {
-                                                    let newvalue = resArr[key].indexOf('(') > -1 ? resArr[key].split('(')[0] : resArr[key];
+                                                    let newvalue = stripUnitText(resArr[key]);
                                                     data.push({
                                                         "name": key, "value": newvalue
                                                     })
@@ -856,7 +894,7 @@ export default {
                                             // console.log(resArr)
                                             if (resArr) {
                                                 for (let key in resArr) {
-                                                    let newvalue = resArr[key].indexOf('(') > -1 ? resArr[key].split('(')[0] : resArr[key];
+                                                    let newvalue = stripUnitText(resArr[key]);
                                                     data.push({
                                                         "name": key, "value": newvalue
                                                     })
@@ -890,9 +928,11 @@ export default {
                                 element.AlarmTime = element.update_time;
                                 if (element.TextMessage) {// Comment translated to English.
                                     let msgArr = element.TextMessage.split(',');
-                                    element.AlarmName = msgArr[2];
-                                    let dealAlarmTime = msgArr[4].replace(t('auto.k0607'), '-').replace(t('auto.k0608'), ' ');
-                                    element.AlarmTime = element.create_time.split('-')[0] + '-' + dealAlarmTime;
+                                    if (msgArr[2]) element.AlarmName = msgArr[2];
+                                    if (msgArr[4] && element.create_time) {
+                                        let dealAlarmTime = msgArr[4].replace(t('auto.k0607'), '-').replace(t('auto.k0608'), ' ');
+                                        element.AlarmTime = element.create_time.split('-')[0] + '-' + dealAlarmTime;
+                                    }
                                 }
                             });
                             newshapeProps.moduleJson.children[0].attrs.data = alarmdata.data;
@@ -903,7 +943,7 @@ export default {
                         newimages.push(newshapeProps);
                     } else if (newshapeProps.moduleJson.children[0].attrs.name === 'ipImage') {// Comment translated to English.
                         let srcalarm = [];
-                        let ipArr = newshapeProps.moduleJson.children[0].attrs.ipKey.split(',');
+                        let ipArr = normalizeValue(newshapeProps.moduleJson.children[0].attrs.ipKey).split(',').filter(v => normalizeValue(v));
                         if (alarmdata && alarmdata.data) {// Comment translated to English.
                             srcalarm = alarmdata.data.filter(item => {
                                 const ipWithPort = `${item.DeviceIP}:${item.DevicePort}`;

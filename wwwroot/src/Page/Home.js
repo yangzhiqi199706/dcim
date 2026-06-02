@@ -43,6 +43,17 @@ const normalizeStageSize = (value, fallback) => {
     return Math.round(parsed);
 };
 
+const getFirstModuleChild = (moduleJson) => {
+    if (!moduleJson || !Array.isArray(moduleJson.children) || moduleJson.children.length === 0) return null;
+    return moduleJson.children[0];
+};
+
+const getStageLayerChildren = (stageJson) => {
+    if (!stageJson || !Array.isArray(stageJson.children) || stageJson.children.length === 0) return [];
+    const firstLayer = stageJson.children[0];
+    return firstLayer && Array.isArray(firstLayer.children) ? firstLayer.children : [];
+};
+
 function Home() {
     const stageRef = useRef();
     const containerRef = useRef();
@@ -116,6 +127,8 @@ function Home() {
     const safeStageHeight = normalizeStageSize(stageHeight, 1080);
     // Comment translated to English.
     const [canvasScale, setcanvasScale] = useState(100);
+    const [useSlaveId, setUseSlaveId] = useState(() => localStorage.getItem('UseSlaveID') === '1');
+    const useSlaveIdRef = useRef(useSlaveId);
 
     // Comment translated to English.
     const getevData = async (callback) => {
@@ -123,14 +136,14 @@ function Home() {
             ComboBox: "all"
         });
         let devList = [];
-        if (res) {
+        if (res && Array.isArray(res.data)) {
             res.data.forEach((val, n) => {
                 devList.push({
                     value: val.id,
                     label: val.DeviceName,
                     code: val.ProtocolCode,
                     codeName: val.ProtocolName,
-                    onlyCode: val.OnlyCode,// Comment translated to English.
+                    onlyCode: useSlaveId ? val.SlaveID : '',// Comment translated to English.
                 })
             })
             callback(devList)
@@ -141,7 +154,7 @@ function Home() {
             getevData(function (devList) {
                 let pagedev = [];
                 imagesRef.current.forEach(shapeProps => {
-                    if (shapeProps.moduleJson && shapeProps.moduleJson.attrs.dataKey) {
+                    if (shapeProps.moduleJson && shapeProps.moduleJson.attrs && shapeProps.moduleJson.attrs.dataKey) {
                         let dataKey = shapeProps.moduleJson.attrs.dataKey;
                         if (dataKey && dataKey.length === 1) {// Comment translated to English.
                             dataKey.forEach((el) => {
@@ -157,7 +170,7 @@ function Home() {
                                         let finddevindex = devList.findIndex(v => String(v.value) === currentKeyStr)
                                         if (finddevindex === -1) {
                                             // Comment translated to English.
-                                            let finddevonlyindex = devList.findIndex(v => String(v.onlyCode) === currentKeyStr)
+                                            let finddevonlyindex = useSlaveId ? devList.findIndex(v => String(v.onlyCode) === currentKeyStr) : -1
                                             if (finddevonlyindex !== -1) {
                                                 pagedev.push({
                                                     value: devList[finddevonlyindex]['onlyCode'],
@@ -191,7 +204,10 @@ function Home() {
         } else {
             setpagedevList([]);// Comment translated to English.
         }
-    }, [resetBox]);
+    }, [resetBox, useSlaveId]);
+    useEffect(() => {
+        useSlaveIdRef.current = useSlaveId;
+    }, [useSlaveId]);
     const ondataDevOptionSearch = (value) => { };
     const filterOption = (input, option) => (option && option.label).toLowerCase().includes(input.toLowerCase());
     // Comment translated to English.
@@ -252,11 +268,15 @@ function Home() {
                 scaley: 1,
             });
             handleResize(previewjson.attrs.width, previewjson.attrs.height);
-            previewjson.children[0].children.forEach((element) => {
+            const previewChildren = getStageLayerChildren(previewjson);
+            previewChildren.forEach((element) => {
                 if (element.attrs.id !== 'canvasBackground' && element.attrs.moduleJson) {
-                    if ((element.attrs.moduleJson.attrs.dataKey && element.attrs.moduleJson.attrs.dataKey.length !== 0) || (element.attrs.moduleJson.children && element.attrs.moduleJson.children[0].attrs.cat === 'alarmpie') ||
-                        (element.attrs.moduleJson.children && element.attrs.moduleJson.children[0].className === 'alarmList') ||
-                        element.attrs.moduleJson.children[0].attrs.name === 'ipImage') {
+                    const firstModuleChild = getFirstModuleChild(element.attrs.moduleJson);
+                    const firstModuleAttrs = firstModuleChild && firstModuleChild.attrs ? firstModuleChild.attrs : null;
+                    const moduleJsonAttrs = element.attrs.moduleJson.attrs ? element.attrs.moduleJson.attrs : {};
+                    if ((moduleJsonAttrs.dataKey && moduleJsonAttrs.dataKey.length !== 0) || (firstModuleAttrs && firstModuleAttrs.cat === 'alarmpie') ||
+                        (firstModuleChild && firstModuleChild.className === 'alarmList') ||
+                        (firstModuleAttrs && firstModuleAttrs.name === 'ipImage')) {
                         tplimages.push(element.attrs);
                     } else {
                         tplstaticimages.push(element.attrs);
@@ -393,6 +413,26 @@ function Home() {
                 return '';
             }
         }
+        const syncSlaveIdConfig = async () => {
+            let res = await httpsend.getData('GetLogoKey', {
+            });
+            let logoData = null;
+            if (res && Array.isArray(res.data) && res.data.length > 0) {
+                logoData = res.data[0];
+            } else if (res && res.data && !Array.isArray(res.data)) {
+                logoData = res.data;
+            }
+            const enabled = !!(logoData && String(logoData.MasterSlaveOpen) === '2' && String(logoData.MasterSlaveRelation) === '1');
+            useSlaveIdRef.current = enabled;
+            if (!isDisposed) {
+                setUseSlaveId(enabled);
+            }
+            localStorage.setItem('UseSlaveID', enabled ? '1' : '0');
+            if (logoData && logoData.create_time) {
+                localStorage.setItem('SystemStartTime', logoData.create_time)
+            }
+        }
+        syncSlaveIdConfig();
 
         let pageTime;// Comment translated to English.
         let pageTimecalc = 0;// Comment translated to English.
@@ -445,16 +485,19 @@ function Home() {
             // let pageparamHistoryDate ='2024-12-10';
             // Comment translated to English.
             const getHisDevId = async (imagesdata) => {
+                if (!Array.isArray(imagesdata)) return;
                 imagesdata.forEach((shapeProps) => {
                     // Comment translated to English.
-                    if (shapeProps.attrs.moduleJson && shapeProps.attrs.moduleJson.children[0].className === 'Echart' && shapeProps.attrs.moduleJson.children[0].attrs.cat === 'line') {
-                        const dataKey = shapeProps.attrs.moduleJson.attrs.dataKey;// Comment translated to English.
+                    const firstModuleChild = getFirstModuleChild(shapeProps.attrs && shapeProps.attrs.moduleJson);
+                    if (shapeProps.attrs.moduleJson && firstModuleChild && firstModuleChild.className === 'Echart' && firstModuleChild.attrs && firstModuleChild.attrs.cat === 'line') {
+                        const moduleAttrs = shapeProps.attrs.moduleJson.attrs ? shapeProps.attrs.moduleJson.attrs : {};
+                        const dataKey = moduleAttrs.dataKey;// Comment translated to English.
                         if (dataKey && dataKey.length > 0) {
                             // Comment translated to English.
                             dataKey.forEach((el) => {
                                 // console.log(el)
                                 if (el.devkey) {// Comment translated to English.
-                                    if (el.src && el.src.indexOf('@') > -1) {
+                                    if (useSlaveIdRef.current && el.src && el.src.indexOf('@') > -1) {
                                         // Comment translated to English.
                                         let serverIP = el.src.split('@')[0];
                                         let devkey = el.src.split('@')[1];
@@ -480,6 +523,7 @@ function Home() {
 
                     // Comment translated to English.
                     if (shapeProps.attrs.moduleJson &&
+                        shapeProps.attrs.moduleJson.attrs &&
                         shapeProps.attrs.moduleJson.attrs.dataKey &&
                         shapeProps.attrs.moduleJson.attrs.dataKey.length !== 0 &&
                         (shapeProps.attrs.moduleJson.attrs.dataKey[0].hasOwnProperty('parkey') || shapeProps.attrs.moduleJson.attrs.dataKey[0].hasOwnProperty('paramskey'))) {
@@ -491,6 +535,7 @@ function Home() {
                         }
                     }
                     if (shapeProps.attrs.moduleJson &&
+                        shapeProps.attrs.moduleJson.attrs &&
                         shapeProps.attrs.moduleJson.attrs.dataKey &&
                         shapeProps.attrs.moduleJson.attrs.dataKey.length !== 0 &&
                         shapeProps.attrs.moduleJson.attrs.dataKey[0].hasOwnProperty('paramskey')) {
@@ -510,6 +555,7 @@ function Home() {
                     // Comment translated to English.
                     // Comment translated to English.
                     if (shapeProps.attrs.moduleJson &&
+                        shapeProps.attrs.moduleJson.attrs &&
                         shapeProps.attrs.moduleJson.attrs.dataKey &&
                         shapeProps.attrs.moduleJson.attrs.dataKey.length !== 0) {
                         // && shapeProps.attrs.moduleJson.attrs.dataKey[0].hasOwnProperty('type') ) {
@@ -660,9 +706,14 @@ function Home() {
                             keyword: spareDevCmd,
                             ComboBox: 'all'
                         })
-                        if (spareRes) {
+                        if (spareRes && Array.isArray(spareRes.data)) {
                             spareRes.data.forEach((ele) => {
-                                ele.DevID = spareObj[ele.DevID].toString() || ele.DevID.toString()
+                                const mappedDevId = spareObj[ele.DevID];
+                                if (mappedDevId !== undefined && mappedDevId !== null) {
+                                    ele.DevID = mappedDevId.toString();
+                                } else if (ele.DevID !== undefined && ele.DevID !== null) {
+                                    ele.DevID = ele.DevID.toString();
+                                }
                             })
                             if (!waitHistoryData.data) {
                                 waitHistoryData.data = [];
@@ -695,13 +746,6 @@ function Home() {
             }
 
             // Comment translated to English.
-            const getSystemStartTime = async () => {
-                let res = await httpsend.getData('GetLogoKey', {
-                })
-                if (res && res.data && res.data[0].create_time) localStorage.setItem('SystemStartTime', res.data[0].create_time)
-            }
-
-            // Comment translated to English.
             // const getEventData = async () => {
             //     let res = await httpsend.getData('GetEventListKey', {
             //         type: '1',
@@ -711,7 +755,6 @@ function Home() {
             // }
 
             getpro();
-            getSystemStartTime();
 
             // Comment translated to English.
             const setNewView = () => {
@@ -720,12 +763,16 @@ function Home() {
                 let tplimages = [];
                 const previewjson = previewDataRef.current;
                 if (previewjson) {
-                    previewjson.children[0].children.forEach((element) => {
+                    const previewChildren = getStageLayerChildren(previewjson);
+                    previewChildren.forEach((element) => {
                         if (element.attrs.id !== 'canvasBackground' && element.attrs.moduleJson) {
-                            if ((element.attrs.moduleJson.attrs.dataKey && element.attrs.moduleJson.attrs.dataKey.length !== 0) ||
-                                (element.attrs.moduleJson.children && element.attrs.moduleJson.children[0].attrs.cat === 'alarmpie') ||
-                                (element.attrs.moduleJson.children && element.attrs.moduleJson.children[0].className === 'alarmList') ||
-                                element.attrs.moduleJson.children[0].attrs.name === 'ipImage'
+                            const firstModuleChild = getFirstModuleChild(element.attrs.moduleJson);
+                            const firstModuleAttrs = firstModuleChild && firstModuleChild.attrs ? firstModuleChild.attrs : null;
+                            const moduleJsonAttrs = element.attrs.moduleJson.attrs ? element.attrs.moduleJson.attrs : {};
+                            if ((moduleJsonAttrs.dataKey && moduleJsonAttrs.dataKey.length !== 0) ||
+                                (firstModuleAttrs && firstModuleAttrs.cat === 'alarmpie') ||
+                                (firstModuleChild && firstModuleChild.className === 'alarmList') ||
+                                (firstModuleAttrs && firstModuleAttrs.name === 'ipImage')
                             ) {
                                 tplimages.push(element.attrs);
                             }
@@ -751,12 +798,17 @@ function Home() {
                 if (txttitle) {
                     previewDataRef.current = await gettxtdata();
                 } else {
-                    previewDataRef.current = JSON.parse(JSON.parse(localStorage.getItem('stageJson')));
+                    const savedStageJson = localStorage.getItem('stageJson');
+                    try {
+                        previewDataRef.current = savedStageJson ? JSON.parse(JSON.parse(savedStageJson)) : null;
+                    } catch (e) {
+                        previewDataRef.current = null;
+                    }
                 }
                 if (isDisposed) return;
                 const previewjson = previewDataRef.current;
                 if (previewjson) {
-                    await getHisDevId(previewjson.children[0].children);
+                    await getHisDevId(getStageLayerChildren(previewjson));
                     if (isDisposed) return;
                     handlepredata(previewjson);// Comment translated to English.
                     setNewView()// Comment translated to English.
@@ -914,22 +966,24 @@ function Home() {
                     value: '0',
                     label: t('auto.k0360')
                 }];
-                if (res) {
+                if (res && Array.isArray(res.data)) {
                     res.data.forEach((el) => {
+                        const firstChildren = Array.isArray(el.children) ? el.children : [];
                         let firstop = {
                             value: el.id,
                             label: el.PageName
                         }
-                        if (el.children.length !== 0) {
+                        if (firstChildren.length !== 0) {
                             firstop.children = [];
-                            el.children.forEach((y) => {
+                            firstChildren.forEach((y) => {
+                                const secondChildren = Array.isArray(y.children) ? y.children : [];
                                 let secop = {
                                     value: y.id,
                                     label: y.PageName
                                 }
-                                if (y.children.length !== 0) {
+                                if (secondChildren.length !== 0) {
                                     secop.children = [];
-                                    y.children.forEach((m) => {
+                                    secondChildren.forEach((m) => {
                                         let throp = {
                                             value: m.id,
                                             label: m.PageName
@@ -1100,15 +1154,20 @@ function Home() {
     const handleItemDragUrl = async (dragUrl, dragAttrs, type) => {
         setDragUrl(dragUrl);
         if (type) {
-            let conres = await httpsend.getDataLocal('imgData', { action: 'page', name: type.split('&')[0] });
+            const typeParts = String(type).split('&');
+            const pageName = typeParts[0] || '';
+            const pageId = typeParts[3] || '';
+            const pageDisplayName = typeParts[2] || '';
+            const pageType = typeParts[4];
+            let conres = await httpsend.getDataLocal('imgData', { action: 'page', name: pageName });
             if (conres) {
                 // seteditPageId(type.split('&')[3]);
                 // seteditPageName(type.split('&')[2]);
                 // seteditPageType(type.split('&')[4]);
-                setsavePageTxt(type.split('&')[0]);
-                setsavePageId(type.split('&')[3]);
-                setsavePageName(type.split('&')[2]);
-                setsavePageType(type.split('&')[4].toString());
+                setsavePageTxt(pageName);
+                setsavePageId(pageId);
+                setsavePageName(pageDisplayName);
+                setsavePageType(pageType !== undefined && pageType !== null ? pageType.toString() : '');
                 const hasPageData = conres.code === 100
                     && conres.data
                     && conres.data[0]
@@ -1341,13 +1400,20 @@ function Home() {
                 const singnodeId = stage.findOne('#' + ids);
                 if (singnodeId && findIndex !== -1) {
                     let singleImage = imagesRef.current[findIndex];
-                    let groupAttr = singleImage.moduleJson.children[0].attrs;
+                    const groupChildren = singleImage && singleImage.moduleJson && Array.isArray(singleImage.moduleJson.children) ? singleImage.moduleJson.children : [];
+                    if (!groupChildren[0] || !groupChildren[0].attrs) return;
+                    let groupAttr = groupChildren[0].attrs;
                     let groupName = groupAttr.name;
                     if (groupName === 'rectBackground') {
-                        groupAttr = singleImage.moduleJson.children[3].attrs;
+                        if (groupChildren[3] && groupChildren[3].attrs) {
+                            groupAttr = groupChildren[3].attrs;
+                        }
                     }
-                    let findWidth = groupAttr.width ? groupAttr.width : singnodeId.children[0].textWidth + 20;
-                    let findHeight = groupAttr.height ? groupAttr.height : singnodeId.children[0].textHeight + 20;
+                    let textNode = singnodeId.children && singnodeId.children[0] ? singnodeId.children[0] : null;
+                    let textWidth = textNode && Number.isFinite(Number(textNode.textWidth)) ? Number(textNode.textWidth) : 0;
+                    let textHeight = textNode && Number.isFinite(Number(textNode.textHeight)) ? Number(textNode.textHeight) : 0;
+                    let findWidth = groupAttr.width ? groupAttr.width : textWidth + 20;
+                    let findHeight = groupAttr.height ? groupAttr.height : textHeight + 20;
                     let width = findWidth * (singleImage.scaleX ? singleImage.scaleX : 1);
                     let height = findHeight * (singleImage.scaleY ? singleImage.scaleY : 1);
                     let borderWidth = groupAttr.strokeWidth;// Comment translated to English.
@@ -1417,13 +1483,20 @@ function Home() {
             if (singnodeId && findIndex !== -1) {
                 let singleImageToUpdate = JSON.parse(JSON.stringify(imagesToUpdate))[findIndex];
                 // Comment translated to English.
-                let groupAttr = singleImageToUpdate.moduleJson.children[0].attrs;
+                const groupChildren = singleImageToUpdate && singleImageToUpdate.moduleJson && Array.isArray(singleImageToUpdate.moduleJson.children) ? singleImageToUpdate.moduleJson.children : [];
+                if (!groupChildren[0] || !groupChildren[0].attrs) return;
+                let groupAttr = groupChildren[0].attrs;
                 let groupName = groupAttr.name;
                 if (groupName === 'rectBackground') {
-                    groupAttr = singleImageToUpdate.moduleJson.children[3].attrs;
+                    if (groupChildren[3] && groupChildren[3].attrs) {
+                        groupAttr = groupChildren[3].attrs;
+                    }
                 }
-                let findWidth = groupAttr.width ? groupAttr.width : singnodeId.children[0].textWidth + 20;
-                let findHeight = groupAttr.height ? groupAttr.height : singnodeId.children[0].textHeight + 20;
+                let textNode = singnodeId.children && singnodeId.children[0] ? singnodeId.children[0] : null;
+                let textWidth = textNode && Number.isFinite(Number(textNode.textWidth)) ? Number(textNode.textWidth) : 0;
+                let textHeight = textNode && Number.isFinite(Number(textNode.textHeight)) ? Number(textNode.textHeight) : 0;
+                let findWidth = groupAttr.width ? groupAttr.width : textWidth + 20;
+                let findHeight = groupAttr.height ? groupAttr.height : textHeight + 20;
                 let width = findWidth * (singleImageToUpdate.scaleX ? singleImageToUpdate.scaleX : 1);
                 let height = findHeight * (singleImageToUpdate.scaleY ? singleImageToUpdate.scaleY : 1);
                 let borderWidth = groupAttr.strokeWidth / 2;// Comment translated to English.
@@ -1610,7 +1683,13 @@ function Home() {
         stagejson = stageRef.current.toJSON();
         if (backgroundImage) {// Comment translated to English.
             let newjson = JSON.parse(stagejson);
-            newjson.children[0].children.forEach(element => {// Comment translated to English.
+            const stageChildren = newjson
+                && Array.isArray(newjson.children)
+                && newjson.children[0]
+                && Array.isArray(newjson.children[0].children)
+                ? newjson.children[0].children
+                : [];
+            stageChildren.forEach(element => {// Comment translated to English.
                 if (element.attrs.id === 'canvasBackground') {
                     if (backgroundImage.indexOf('#') === -1) {
                         if (backgroundImage.indexOf('/public/') > 0) {
@@ -1722,6 +1801,7 @@ function Home() {
                             <ElementAttr
                                 MultiSelect={selectedIds.length !== 0}
                                 dragShape={dragShape}
+                                useSlaveId={useSlaveId}
                                 onChange={(dragShape, clickEvnt) => {
                                     handleShapeChange(dragShape, clickEvnt);
                                 }} />}
@@ -2074,7 +2154,7 @@ function Home() {
                                 if (pagedevList.length !== 0) {
                                     let newimags = [];
                                     imagesRef.current.forEach(shapeProps => {
-                                        if (shapeProps.moduleJson && shapeProps.moduleJson.attrs.dataKey) {
+                                        if (shapeProps.moduleJson && shapeProps.moduleJson.attrs && shapeProps.moduleJson.attrs.dataKey) {
                                             let dataKey = shapeProps.moduleJson.attrs.dataKey;
                                             if (dataKey && dataKey.length === 1) {
                                                 dataKey.forEach((el) => {
@@ -2139,6 +2219,7 @@ function Home() {
                                     }
                                 }}
                                 isSwiper={isSwiper}
+                                useSlaveId={useSlaveId}
                             />
                             );
                         })}
@@ -2152,6 +2233,7 @@ function Home() {
                                 wscale={stageDimensions.scalex}
                                 onhandleResize={(type) => { }}
                                 isSwiper={isSwiper}
+                                useSlaveId={useSlaveId}
                             />
                             );
                         })}

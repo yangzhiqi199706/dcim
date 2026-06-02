@@ -55,6 +55,15 @@ function ItemBox(props) {
         });
     };
 
+    const parseDragModuleFromAlt = (altText) => {
+        if (typeof altText !== 'string' || !altText.trim()) return null;
+        try {
+            return JSON.parse(altText);
+        } catch (e) {
+            return null;
+        }
+    };
+
     useEffect(() => {
         if (selectedNav === 0) getImgData('page');
     }, []);
@@ -72,23 +81,25 @@ function ItemBox(props) {
                     label: t('itemBox.topLevelPage')
                 }];
 
-                if (res) {
+                if (res && Array.isArray(res.data)) {
                     res.data.forEach((el) => {
+                        const firstChildren = Array.isArray(el.children) ? el.children : [];
                         let firstop = {
                             value: el.id,
                             label: el.PageName
                         };
 
-                        if (el.children.length !== 0) {
+                        if (firstChildren.length !== 0) {
                             firstop.children = [];
-                            el.children.forEach((y) => {
+                            firstChildren.forEach((y) => {
+                                const secondChildren = Array.isArray(y.children) ? y.children : [];
                                 let secop = {
                                     value: y.id,
                                     label: y.PageName
                                 };
-                                if (y.children.length !== 0) {
+                                if (secondChildren.length !== 0) {
                                     secop.children = [];
-                                    y.children.forEach((m) => {
+                                    secondChildren.forEach((m) => {
                                         let throp = {
                                             value: m.id,
                                             label: m.PageName
@@ -154,11 +165,15 @@ function ItemBox(props) {
 
         if (type === 'page') {
             let res = await httpsend.getData('GetDmpageListKey', { ComboBox: 'all' });
-            if (res) {
+            if (res && Array.isArray(res.data)) {
                 res.data.forEach((element) => {
-                    let zuP = element.PageType.toString() === '1' ? <FileProtectOutlined /> : (element.PageType.toString() === '2' ? <FileOutlined /> : <FileExclamationOutlined />);
-                    let indexP = element.PageTop.toString() === '1' ? t('itemBox.homeTag') : '';
-                    let pagei = element.PageIndex.length === 1 ? `00${element.PageIndex}` : (element.PageIndex.length === 2 ? `0${element.PageIndex}` : element.PageIndex.toString());
+                    const pageType = element && element.PageType !== undefined && element.PageType !== null ? element.PageType.toString() : '';
+                    const pageTop = element && element.PageTop !== undefined && element.PageTop !== null ? element.PageTop.toString() : '';
+                    const pageIndex = element && element.PageIndex !== undefined && element.PageIndex !== null ? element.PageIndex.toString() : '';
+                    const elementChildren = Array.isArray(element.children) ? element.children : [];
+                    let zuP = pageType === '1' ? <FileProtectOutlined /> : (pageType === '2' ? <FileOutlined /> : <FileExclamationOutlined />);
+                    let indexP = pageTop === '1' ? t('itemBox.homeTag') : '';
+                    let pagei = pageIndex.length === 1 ? `00${pageIndex}` : (pageIndex.length === 2 ? `0${pageIndex}` : pageIndex);
 
                     let dataone = {
                         ...element,
@@ -173,18 +188,22 @@ function ItemBox(props) {
 
                     pageDataLocal.push(dataone);
 
-                    if (element.children.length !== 0) {
-                        element.children.forEach((ele) => {
-                            let zuP1 = ele.PageType.toString() === '1' ? <FileProtectOutlined /> : (ele.PageType.toString() === '2' ? <FileOutlined /> : <FileExclamationOutlined />);
-                            let indexP1 = ele.PageTop.toString() === '1' ? t('itemBox.homeTag') : '';
-                            let pagei1 = ele.PageIndex.length === 1 ? `00${ele.PageIndex}` : (ele.PageIndex.length === 2 ? `0${ele.PageIndex}` : ele.PageIndex.toString());
+                    if (elementChildren.length !== 0) {
+                        elementChildren.forEach((ele) => {
+                            const pageType1 = ele && ele.PageType !== undefined && ele.PageType !== null ? ele.PageType.toString() : '';
+                            const pageTop1 = ele && ele.PageTop !== undefined && ele.PageTop !== null ? ele.PageTop.toString() : '';
+                            const pageIndex1 = ele && ele.PageIndex !== undefined && ele.PageIndex !== null ? ele.PageIndex.toString() : '';
+                            const secondChildren = Array.isArray(ele.children) ? ele.children : [];
+                            let zuP1 = pageType1 === '1' ? <FileProtectOutlined /> : (pageType1 === '2' ? <FileOutlined /> : <FileExclamationOutlined />);
+                            let indexP1 = pageTop1 === '1' ? t('itemBox.homeTag') : '';
+                            let pagei1 = pageIndex1.length === 1 ? `00${pageIndex1}` : (pageIndex1.length === 2 ? `0${pageIndex1}` : pageIndex1);
 
                             let datasec = {
                                 ...ele,
                                 key: `${ele.id}-${ele.PageType}`,
                                 title: `${indexP1}[${pagei1}]${ele.PageName}`,
                                 icon: zuP1,
-                                parantTree: element.id.toString(),
+                                parantTree: element && element.id !== undefined && element.id !== null ? element.id.toString() : '',
                                 children: [],
                                 iconBase64: 'Images/icon/page.png',
                                 moduleJson: 'page'
@@ -192,11 +211,14 @@ function ItemBox(props) {
 
                             pageDataLocal.push(datasec);
 
-                            if (ele.children.length !== 0) {
-                                ele.children.forEach((el) => {
-                                    let zuP2 = el.PageType.toString() === '1' ? <FileProtectOutlined /> : (el.PageType.toString() === '2' ? <FileOutlined /> : <FileExclamationOutlined />);
-                                    let indexP2 = el.PageTop.toString() === '1' ? t('itemBox.homeTag') : '';
-                                    let pagei2 = el.PageIndex.length === 1 ? `00${el.PageIndex}` : (el.PageIndex.length === 2 ? `0${el.PageIndex}` : el.PageIndex.toString());
+                            if (secondChildren.length !== 0) {
+                                secondChildren.forEach((el) => {
+                                    const pageType2 = el && el.PageType !== undefined && el.PageType !== null ? el.PageType.toString() : '';
+                                    const pageTop2 = el && el.PageTop !== undefined && el.PageTop !== null ? el.PageTop.toString() : '';
+                                    const pageIndex2 = el && el.PageIndex !== undefined && el.PageIndex !== null ? el.PageIndex.toString() : '';
+                                    let zuP2 = pageType2 === '1' ? <FileProtectOutlined /> : (pageType2 === '2' ? <FileOutlined /> : <FileExclamationOutlined />);
+                                    let indexP2 = pageTop2 === '1' ? t('itemBox.homeTag') : '';
+                                    let pagei2 = pageIndex2.length === 1 ? `00${pageIndex2}` : (pageIndex2.length === 2 ? `0${pageIndex2}` : pageIndex2);
 
                                     let datathr = {
                                         ...el,
@@ -230,8 +252,12 @@ function ItemBox(props) {
         let res = await httpsend.getDataLocal('imgData', { action: type });
             if (res) {
                 if (type === 'tpl') {
-                    imgData = localizeDeep(res.data);
+                    imgData = Array.isArray(res.data) ? localizeDeep(res.data) : [];
                 } else {
+                if (!Array.isArray(res.data)) {
+                    setSelectedData(imgData);
+                    return;
+                }
                 res.data.forEach((element) => {
                     let imgOne = {
                         moduleName: t('itemBox.image'),
@@ -585,7 +611,8 @@ function ItemBox(props) {
                                         src={v.iconBase64}
                                         alt={JSON.stringify(v.moduleJson)}
                                         onDragStart={(e) => {
-                                            props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
+                                            const moduleJson = parseDragModuleFromAlt(e.target.alt);
+                                            if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
                                         }}
                                     />
                                 </div>
@@ -608,7 +635,8 @@ function ItemBox(props) {
                                         src="Images/icon/tpl.png"
                                         alt={JSON.stringify(v.moduleJson)}
                                         onDragStart={(e) => {
-                                            props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
+                                            const moduleJson = parseDragModuleFromAlt(e.target.alt);
+                                            if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
                                         }}
                                     />
                                     <div title={v.moduleName}>{v.moduleName}</div>
@@ -743,7 +771,8 @@ function ItemBox(props) {
                             src={v.iconBase64}
                             alt={JSON.stringify(v.moduleJson)}
                             onDragStart={(e) => {
-                                props.onChangeDragUrl(e.target.src, JSON.parse(e.target.alt));
+                                const moduleJson = parseDragModuleFromAlt(e.target.alt);
+                                if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
                             }}
                         />
                         {selectedNav !== 3 && <div>{v.moduleName}</div>}

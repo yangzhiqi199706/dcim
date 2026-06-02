@@ -11,9 +11,10 @@ import axios from 'axios';
 import { buildMainApiUrl } from '../config/endpoints';
 import PreviewGif from "./PreviewGif.js";
 
-const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResize, isSwiper }) => {
+const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResize, isSwiper, useSlaveId }) => {
     // console.log(shapeProps);
     const clickEvnt = shapeProps.clickEvnt || (shapeProps.moduleJson && shapeProps.moduleJson.clickEvnt) || [];
+    const clickEventFirst = clickEvnt.length > 0 ? clickEvnt[0] : null;
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     const groupRef = useRef();
     const [divTab, setdivTab] = useState(0);
@@ -117,6 +118,11 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
         return next;
     };
 
+    const getFirstModuleChild = (moduleJson) => {
+        if (!moduleJson || !Array.isArray(moduleJson.children) || moduleJson.children.length === 0) return null;
+        return moduleJson.children[0];
+    };
+
     const renderFirefoxTextFallback = (attrs, key, overrideText) => {
         const textValue = sanitizeCanvasText(overrideText == null ? attrs.text : overrideText);
         const fontSize = toPositiveNumber(attrs.fontSize, 18);
@@ -167,13 +173,15 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
 
     useEffect(() => {
         let newshapeProps = JSON.parse(JSON.stringify(shapeProps));
-        if (newshapeProps.moduleJson.children && newshapeProps.moduleJson.children[0].attrs.alarmSwitch === '2') {
+        const firstChild = getFirstModuleChild(newshapeProps && newshapeProps.moduleJson);
+        if (!firstChild || !firstChild.attrs) return;
+        if (firstChild.attrs.alarmSwitch === '2') {
             setdivTab(2)
         }
-        if (newshapeProps.moduleJson.children && newshapeProps.moduleJson.children[0].attrs.stateSwitch === '2') {
+        if (firstChild.attrs.stateSwitch === '2') {
             setdivTab(1)
         }
-        if (newshapeProps.moduleJson.children && newshapeProps.moduleJson.children[0].attrs.dataSwitch === '2') {
+        if (firstChild.attrs.dataSwitch === '2') {
             setdivTab(0)
         }
     }, [])
@@ -217,10 +225,11 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
         // Comment translated to English.
         // Comment translated to English.
         // Comment translated to English.
-        if (clickEvnt[0]['link'] || clickEvnt[0]['weblink'] || clickEvnt[0]['pagekey']) {
+        if (!clickEventFirst) return;
+        if (clickEventFirst['link'] || clickEventFirst['weblink'] || clickEventFirst['pagekey']) {
             setbackBtn(true);
-            if (clickEvnt[0]['weblink']) {
-                let conres = await httpsend.getData('GetDmpageDetailKey', { id: clickEvnt[0]['weblink'] });
+            if (clickEventFirst['weblink']) {
+                let conres = await httpsend.getData('GetDmpageDetailKey', { id: clickEventFirst['weblink'] });
                 if (conres) {
                     if (conres.data) {
                         setdealweblink(httpsend.mainURL() + 'index.html?type=preview&title=' + conres.data.PageTxt)
@@ -230,25 +239,29 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                     }
                 }
             }
-            if (clickEvnt[0]['pagekey']) {
+            if (clickEventFirst['pagekey']) {
                 // Comment translated to English.
                 let textIds = [];
                 // Comment translated to English.
                 // console.log(shapeProps);
-                let ani = shapeProps.moduleJson.children[0].attrs.ani;
-                let anitime = shapeProps.moduleJson.children[0].attrs.anitime;
-                let anispeed = shapeProps.moduleJson.children[0].attrs.anispeed;
+                const firstChild = getFirstModuleChild(shapeProps && shapeProps.moduleJson);
+                const firstAttrs = firstChild && firstChild.attrs ? firstChild.attrs : {};
+                let ani = firstAttrs.ani || '';
+                let anitime = firstAttrs.anitime || '';
+                let anispeed = firstAttrs.anispeed || '';
                 clickEvnt.forEach((item, index) => {
                     textIds.push(item['pagekey']);
                 })
                 // setplayimgurl('Images/icon/playend.png');
                 setdealweblink(httpsend.viewURL() + '/donghuan-dcim-swiper.html?ids=' + textIds.join(',') + '&ani=' + ani + '&anitime=' + anitime + '&anispeed=' + anispeed);
             }
-        } else if (clickEvnt[0]['newlink']) {
+        } else if (clickEventFirst['newlink']) {
             const w = window.open('about:blank');
-            w.location.href = clickEvnt[0]['newlink'];
+            if (w) {
+                w.location.href = clickEventFirst['newlink'];
+            }
             // Comment translated to English.
-        } else if (clickEvnt[0]['full']) {
+        } else if (clickEventFirst['full']) {
             if (!document.fullscreenElement) {
                 // Comment translated to English.
                 document.documentElement.requestFullscreen().then(() => {
@@ -264,7 +277,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                     });
                 }
             }
-        } else if (clickEvnt[0]['videoChannel']) {
+        } else if (clickEventFirst['videoChannel']) {
             let videoIds = [];
             clickEvnt.forEach((item, index) => {
                 videoIds.push(item['videoChannel']);
@@ -296,7 +309,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                     RecvData: '',
                     SendState: '0'
                 }
-                if (onlycode && onlycode.data && onlycode.data.OnlyCode) {
+                if (useSlaveId && onlycode && onlycode.data && onlycode.data.SlaveID) {
                     paramCommand.RecvData = t('auto.k0204')
                     paramCommand.SendState = '1'
                     let serverip = await httpsend.getData('GetServerListKey', {
@@ -308,7 +321,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                         let sendip = serverip.data[serveripindex]['ServerIP']
                         const url = buildMainApiUrl('CreateDeviceCommandSendKey', sendip);
                         const data = {
-                            'DevID': onlycode.data.OnlyCode,
+                            'DevID': onlycode.data.SlaveID,
                             'Command': element.command
                         };
                         axios.post(url, data).then(async (response) => {
@@ -388,12 +401,15 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                 onClick={() => (clickEvnt && clickEvnt.length > 0) ? dealClick() : null}
                 onTap={() => (clickEvnt && clickEvnt.length > 0) ? dealClick() : null}
             >
-                {shapeProps.moduleJson.children.map((img, i) => {
+                {(Array.isArray(shapeProps.moduleJson.children) ? shapeProps.moduleJson.children : []).map((img, i) => {
                     const Ele = img.className;
                     let typearr = [];
                     let type = '';
-                    if (shapeProps.moduleJson.attrs && shapeProps.moduleJson.attrs.moduleAttr[0] && shapeProps.moduleJson.attrs.moduleAttr[0]['attrGroupContent']) {
-                        typearr = shapeProps.moduleJson.attrs.moduleAttr[0]['attrGroupContent'];
+                    const moduleAttr = shapeProps.moduleJson.attrs && Array.isArray(shapeProps.moduleJson.attrs.moduleAttr)
+                        ? shapeProps.moduleJson.attrs.moduleAttr
+                        : [];
+                    if (moduleAttr[0] && moduleAttr[0]['attrGroupContent']) {
+                        typearr = moduleAttr[0]['attrGroupContent'];
                         let findtypeindex = typearr.findIndex(v => v.attrType === "rotateTableNewNew");// Comment translated to English.
                         if (findtypeindex > -1) {
                             type = 'rotate';
@@ -776,15 +792,15 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                 <Fragment key='0003'>
                     <Html>
                         <Close className="closeBtn" onClick={() => { setbackBtn(false); }} />
-                        {backBtn && clickEvnt[0]['link'] && <iframe
+                        {backBtn && clickEventFirst && clickEventFirst['link'] && <iframe
                             title="Myiframe"
-                            src={clickEvnt[0]['link']}
+                            src={clickEventFirst['link']}
                             width={((wwidth / wscale)) + 'px'}
                             height={((wheight / wscale) - 5) + 'px'}
                             frameBorder="0"
                             allowFullScreen
                         ></iframe>}
-                        {backBtn && (clickEvnt[0]['weblink'] || clickEvnt[0]['pagekey']) && <iframe
+                        {backBtn && clickEventFirst && (clickEventFirst['weblink'] || clickEventFirst['pagekey']) && <iframe
                             title="Myiframe"
                             src={dealweblink}
                             width={((wwidth / wscale)) + 'px'}
