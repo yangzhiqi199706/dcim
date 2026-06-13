@@ -2055,6 +2055,12 @@
                 "attrWhere": "Echart"
               },
               {
+                "attrName": "__i18n__.auto.k0064",
+                "attrCode": "dataSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
                 "attrName": "__i18n__.auto.k0046",
                 "attrCode": "dataFontSize",
                 "attrType": "number",
@@ -2064,6 +2070,18 @@
                 "attrName": "__i18n__.auto.k0047",
                 "attrCode": "dataColor",
                 "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "中心空白",
+                "attrCode": "centerBlankSwitch",
+                "attrType": "showSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "中心直径",
+                "attrCode": "centerBlankDiameter",
+                "attrType": "number",
                 "attrWhere": "Echart"
               },
               {
@@ -2087,11 +2105,14 @@
             "iconSwitch": "1",
             "iconColor": "#000000",
             "dataFontSize": 12,
+            "dataSwitch": "1",
             "dataColor": "#000000",
             "dataFontFamily": "__i18n__.auto.k0011",
             "orient": "vertical",
             "algin": "right",
             "roseSwitch": "1",
+            "centerBlankSwitch": "1",
+            "centerBlankDiameter": 80,
             "name": "Echart",
             "width": 380,
             "height": 250,
@@ -2282,6 +2303,141 @@
       ],
       "width": 380,
       "height": 250
+    }
+  },
+  {
+    "moduleName": "水球",
+    "iconBase64": "Images/icon/5.png",
+    "moduleJson": {
+      "attrs": {
+        "dataKey": [],
+        "moduleAttr": [
+          {
+            "attrGroupName": "__i18n__.auto.k0002",
+            "attrGroupContent": [
+              {
+                "attrName": "__i18n__.auto.k0003",
+                "attrCode": "dataParamsKey",
+                "attrType": "hardwareInputNew",
+                "attrWhere": "this"
+              }
+            ]
+          },
+          {
+            "attrGroupName": "__i18n__.auto.k0004",
+            "attrGroupContent": [
+              {
+                "attrName": "__i18n__.auto.k0020",
+                "attrCode": "width",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0021",
+                "attrCode": "height",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表外观",
+                "attrCode": "chartStyle",
+                "attrType": "chartStyleSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "图表动效",
+                "attrCode": "chartAnimation",
+                "attrType": "chartAnimationSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "固定值",
+                "attrCode": "waterBallFixedValue",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "形状",
+                "attrCode": "waterBallShape",
+                "attrType": "waterBallShapeSelect",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "背景颜色",
+                "attrCode": "waterBallBackgroundColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "水波纹颜色1",
+                "attrCode": "waterBallWaveColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "水波纹颜色2",
+                "attrCode": "waterBallWaveColor2",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0046",
+                "attrCode": "dataFontSize",
+                "attrType": "number",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0047",
+                "attrCode": "dataColor",
+                "attrType": "color",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0009",
+                "attrCode": "dataFontFamily",
+                "attrType": "selectFamily",
+                "attrWhere": "Echart"
+              },
+              {
+                "attrName": "__i18n__.auto.k0010",
+                "attrCode": "fontStyle",
+                "attrType": "select",
+                "attrWhere": "Echart"
+              }
+            ]
+          }
+        ]
+      },
+      "children": [
+        {
+          "attrs": {
+            "name": "Echart",
+            "width": 200,
+            "height": 160,
+            "cat": "waterBall",
+            "data": [
+              {
+                "value": 50,
+                "name": "水球"
+              }
+            ],
+            "waterBallFixedValue": 100,
+            "waterBallShape": "circle",
+            "waterBallBackgroundColor": "rgba(68, 181, 226, 0.3)",
+            "waterBallWaveColor": "#4992FF",
+            "dataFontSize": 24,
+            "dataColor": "#ffffff",
+            "dataFontFamily": "Arial",
+            "fontStyle": "bold",
+            "chartStyle": "original",
+            "chartAnimation": "off",
+            "waterBallWaveColor2": "#7CFFB2"
+          },
+          "className": "Echart"
+        }
+      ],
+      "width": 200,
+      "height": 160
     }
   },
   {

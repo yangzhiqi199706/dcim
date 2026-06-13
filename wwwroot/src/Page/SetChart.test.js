@@ -1,6 +1,307 @@
-import { applyChartVisualStyle, buildBarAxisOption, getBarDataLabelPosition } from './SetChart';
+import {
+    applyChartVisualStyle,
+    buildBarAxisOption,
+    buildPieLegendOption,
+    buildPieSeriesOption,
+    buildWaterBallOption,
+    getWaterBallRatio,
+    getBarDataLabelPosition
+} from './SetChart';
+import * as echarts from 'echarts';
 
 describe('applyChartVisualStyle', () => {
+    test('calculates water ball percent from collected value and fixed value', () => {
+        expect(getWaterBallRatio({ data: [{ value: 20 }], waterBallFixedValue: 100 })).toBe(0.2);
+        expect(getWaterBallRatio({ data: [{ value: 150 }], waterBallFixedValue: 100 })).toBe(1);
+        expect(getWaterBallRatio({ data: [{ value: -5 }], waterBallFixedValue: 100 })).toBe(0);
+    });
+
+    test('builds water ball option with configurable shape, colors, and label text', () => {
+        const option = buildWaterBallOption({
+            width: 200,
+            height: 160,
+            data: [{ value: 20 }],
+            waterBallFixedValue: 100,
+            waterBallShape: 'circle',
+            waterBallBackgroundColor: '#1b3b46',
+            waterBallWaveColor: '#65f0bc',
+            waterBallWaveColor2: '#7cffb2',
+            dataColor: '#ffffff',
+            dataFontSize: 26,
+            dataFontFamily: 'Arial',
+            fontStyle: 'bold'
+        });
+
+        const clipShape = option.graphic.find(item => item.name === 'water-ball-clip');
+        const background = option.graphic.find(item => item.name === 'water-ball-background');
+        const waveGroup = option.graphic.find(item => item.name === 'water-ball-wave-group');
+        const wave = waveGroup.children.find(item => item.name === 'water-ball-wave');
+        const highlight = waveGroup.children.find(item => item.name === 'water-ball-wave-highlight');
+        const label = option.graphic.find(item => item.name === 'water-ball-label');
+
+        expect(option.series[0].name).toBe('water-ball-value');
+        expect(option.series[0].data[0]).toBe(0.2);
+        expect(clipShape.type).toBe('circle');
+        expect(waveGroup.clipPath.name).toBe('water-ball-clip');
+        expect(wave.z).toBeGreaterThan(background.z);
+        expect(wave.style.fill).toBe('#65f0bc');
+        expect(highlight.style.fill).toBe('#7cffb2');
+        expect(label.style.text).toBe('20%');
+        expect(label.style.fill).toBe('#ffffff');
+        expect(label.style.fontSize).toBe(26);
+    });
+
+    test('keeps animated water waves clipped inside the fixed water ball shape', () => {
+        const option = buildWaterBallOption({
+            width: 200,
+            height: 160,
+            data: [{ value: 50 }],
+            waterBallFixedValue: 100,
+            waterBallShape: 'circle',
+            chartAnimation: 'flow'
+        });
+
+        const waveGroup = option.graphic.find(item => item.name === 'water-ball-wave-group');
+        const wave = waveGroup.children.find(item => item.name === 'water-ball-wave');
+        const highlight = waveGroup.children.find(item => item.name === 'water-ball-wave-highlight');
+
+        expect(waveGroup.clipPath.name).toBe('water-ball-clip');
+        expect(waveGroup.keyframeAnimation).toBeUndefined();
+        expect(wave.clipPath).toBeUndefined();
+        expect(highlight.clipPath).toBeUndefined();
+        expect(wave.keyframeAnimation.loop).toBe(true);
+        expect(highlight.keyframeAnimation.loop).toBe(true);
+        expect(Math.abs(wave.keyframeAnimation.keyframes[0].x)).toBeGreaterThanOrEqual(10);
+        expect(Math.abs(highlight.keyframeAnimation.keyframes[0].x)).toBeGreaterThanOrEqual(10);
+    });
+
+    test('applies water ball visual presets from chart appearance', () => {
+        const option = buildWaterBallOption({
+            width: 200,
+            height: 160,
+            data: [{ value: 20 }],
+            waterBallFixedValue: 100,
+            chartStyle: 'neon',
+            dataColor: '#000000'
+        });
+
+        const background = option.graphic.find(item => item.name === 'water-ball-background');
+        const waveGroup = option.graphic.find(item => item.name === 'water-ball-wave-group');
+        const wave = waveGroup.children.find(item => item.name === 'water-ball-wave');
+        const label = option.graphic.find(item => item.name === 'water-ball-label');
+
+        expect(background.style.fill.type).toBe('linear');
+        expect(wave.style.fill).toBe('#20f7ff');
+        expect(label.style.fill).toBe('#d8f7ff');
+        expect(label.style.textShadowColor).toBe('#20f7ff');
+    });
+
+    test('adds distinct water ball motion layers for chart animation modes', () => {
+        const entrance = buildWaterBallOption({ width: 200, height: 160, data: [{ value: 20 }], chartAnimation: 'entrance' });
+        const pulse = buildWaterBallOption({ width: 200, height: 160, data: [{ value: 20 }], chartAnimation: 'pulse' });
+        const flow = buildWaterBallOption({ width: 200, height: 160, data: [{ value: 20 }], chartAnimation: 'flow' });
+
+        expect(entrance.graphic.some(item => item.name === 'water-ball-motion-entrance')).toBe(true);
+        expect(pulse.graphic.some(item => item.name === 'water-ball-motion-pulse')).toBe(true);
+        expect(flow.graphic.some(item => item.name === 'water-ball-motion-flow')).toBe(true);
+        expect(flow.graphic.find(item => item.name === 'water-ball-motion-flow').keyframeAnimation.loop).toBe(true);
+    });
+
+    test('renders water ball graphics without requiring chart axes', () => {
+        const originalGetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+            measureText: () => ({ width: 32 })
+        }));
+        const chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width: 200, height: 160 });
+        const option = buildWaterBallOption({
+            width: 200,
+            height: 160,
+            data: [{ value: 20 }],
+            waterBallFixedValue: 100,
+            dataColor: '#ffffff',
+            dataFontSize: 24
+        });
+
+        try {
+            expect(() => chart.setOption(option)).not.toThrow();
+            const svg = chart.renderToSVGString();
+            expect(svg).toContain('fill="rgb(68,181,226)"');
+            expect(svg).toContain('fill-opacity="0.285"');
+            expect(svg).toContain('#4992FF');
+            expect(svg).toContain('#7CFFB2');
+            expect(svg).toContain('20%');
+        } finally {
+            chart.dispose();
+            HTMLCanvasElement.prototype.getContext = originalGetContext;
+        }
+    });
+
+    test('places pie legends below the chart when legend display is enabled', () => {
+        const legend = buildPieLegendOption({
+            iconSwitch: '2',
+            iconColor: '#20f7ff',
+            orient: 'vertical',
+            algin: 'right'
+        });
+
+        expect(legend.show).toBe(true);
+        expect(legend.left).toBe('center');
+        expect(legend.bottom).toBe(0);
+        expect(legend.orient).toBe('horizontal');
+        expect(legend.right).toBeUndefined();
+    });
+
+    test('uses themed legend text when styled pie legends would otherwise stay black', () => {
+        const styled = applyChartVisualStyle({
+            legend: buildPieLegendOption({
+                iconSwitch: '2',
+                iconColor: '#000000'
+            }),
+            series: [buildPieSeriesOption({
+                dataSwitch: '1',
+                dataColor: '#000000',
+                data: [{ name: 'A', value: 10 }]
+            })]
+        }, { cat: 'pie', chartStyle: 'neon' });
+
+        expect(styled.legend.textStyle.color).toBe('#d8f7ff');
+        expect(styled.legend.textStyle.textShadowColor).toBe('#20f7ff');
+        expect(styled.legend.textStyle.textShadowBlur).toBeGreaterThan(0);
+    });
+
+    test('builds pie labels from data display switch', () => {
+        const hidden = buildPieSeriesOption({
+            dataSwitch: '1',
+            dataColor: '#000000',
+            dataFontSize: 12,
+            data: [{ name: 'A', value: 10 }]
+        });
+        const visible = buildPieSeriesOption({
+            dataSwitch: '2',
+            dataColor: '#20f7ff',
+            dataFontSize: 16,
+            data: [{ name: 'A', value: 10 }]
+        });
+
+        expect(hidden.label.show).toBe(false);
+        expect(visible.label.show).toBe(true);
+        expect(visible.label.color).toBe('#20f7ff');
+        expect(visible.label.fontSize).toBe(16);
+    });
+
+    test('uses transparent center diameter as pie inner radius without changing data', () => {
+        const series = buildPieSeriesOption({
+            centerBlankSwitch: '2',
+            centerBlankDiameter: 90,
+            dataSwitch: '2',
+            dataColor: '#ffffff',
+            dataFontSize: 14,
+            data: [{ name: 'A', value: 10 }]
+        });
+
+        expect(series.radius).toEqual([45, '70%']);
+        expect(series.data).toEqual([{ name: 'A', value: 10 }]);
+    });
+
+    test('moves pie upward and reduces outer radius when bottom legend is enabled', () => {
+        const series = buildPieSeriesOption({
+            iconSwitch: '2',
+            dataSwitch: '1',
+            dataColor: '#ffffff',
+            data: [{ name: 'A', value: 10 }]
+        });
+
+        expect(series.center).toEqual(['50%', '42%']);
+        expect(series.radius).toBe('58%');
+    });
+
+    test('keeps transparent center while reducing pie radius for bottom legend', () => {
+        const series = buildPieSeriesOption({
+            iconSwitch: '2',
+            centerBlankSwitch: '2',
+            centerBlankDiameter: 80,
+            dataSwitch: '1',
+            dataColor: '#ffffff',
+            data: [{ name: 'A', value: 10 }]
+        });
+
+        expect(series.center).toEqual(['50%', '42%']);
+        expect(series.radius).toEqual([40, '58%']);
+    });
+
+    test('uses transparent center diameter as rose pie inner radius', () => {
+        const series = buildPieSeriesOption({
+            roseSwitch: '2',
+            centerBlankSwitch: '2',
+            centerBlankDiameter: 80,
+            dataSwitch: '1',
+            dataColor: '#ffffff',
+            data: [{ name: 'A', value: 10 }]
+        });
+
+        expect(series.radius).toEqual([40, 100]);
+        expect(series.roseType).toBe('radius');
+        expect(series.itemStyle.borderRadius).toBe(5);
+    });
+
+    test('aligns pie motion layers to the shifted pie center when bottom legend is enabled', () => {
+        ['entrance', 'pulse', 'flow'].forEach((chartAnimation) => {
+            const styled = applyChartVisualStyle({
+                legend: buildPieLegendOption({
+                    iconSwitch: '2',
+                    iconColor: '#000000'
+                }),
+                series: [buildPieSeriesOption({
+                    iconSwitch: '2',
+                    dataSwitch: '1',
+                    dataColor: '#000000',
+                    width: 380,
+                    height: 250,
+                    data: [{ name: 'A', value: 10 }, { name: 'B', value: 20 }]
+                })]
+            }, { cat: 'pie', chartStyle: 'neon', chartAnimation, iconSwitch: '2', width: 380, height: 250 });
+
+            const motionLayer = styled.graphic.find(item => item.name === `pie-motion-${chartAnimation === 'flow' ? 'flow' : chartAnimation}`);
+            expect(styled.series[0].center).toEqual(['50%', '42%']);
+            if (chartAnimation === 'flow') {
+                const flowArc = motionLayer.children.find(item => item.name === 'pie-motion-flow-arc');
+                expect(motionLayer.origin).toEqual([190, 105]);
+                expect(flowArc.shape.cx).toBe(190);
+                expect(flowArc.shape.cy).toBe(105);
+                expect(flowArc.shape.r).toBe(73);
+            } else {
+                expect(motionLayer.origin).toEqual([190, 105]);
+                expect(motionLayer.shape.cx).toBe(190);
+                expect(motionLayer.shape.cy).toBe(105);
+            }
+        });
+    });
+
+    test('scales pie motion center offset with chart height when bottom legend is enabled', () => {
+        const styled = applyChartVisualStyle({
+            legend: buildPieLegendOption({
+                iconSwitch: '2',
+                iconColor: '#000000'
+            }),
+            series: [buildPieSeriesOption({
+                iconSwitch: '2',
+                width: 380,
+                height: 400,
+                dataSwitch: '1',
+                dataColor: '#000000',
+                data: [{ name: 'A', value: 10 }, { name: 'B', value: 20 }]
+            })]
+        }, { cat: 'pie', chartStyle: 'neon', chartAnimation: 'flow', iconSwitch: '2', width: 380, height: 400 });
+
+        const motionLayer = styled.graphic.find(item => item.name === 'pie-motion-flow');
+        const flowArc = motionLayer.children.find(item => item.name === 'pie-motion-flow-arc');
+        expect(styled.series[0].center).toEqual(['50%', '42%']);
+        expect(motionLayer.origin).toEqual([190, 168]);
+        expect(flowArc.shape.cx).toBe(190);
+        expect(flowArc.shape.cy).toBe(168);
+        expect(flowArc.shape.r).toBe(110);
+    });
+
     test('builds horizontal bar axes with value x-axis and category y-axis', () => {
         const axes = buildBarAxisOption({
             barDirection: 'horizontal',
@@ -630,7 +931,20 @@ describe('applyChartVisualStyle', () => {
 
         expect(styled.animation).toBe(true);
         expect(styled.series[0].animationType).toBe('expansion');
-        expect(styled.graphic.some(item => item.name === 'pie-motion-flow' && item.keyframeAnimation.loop)).toBe(true);
+        const flowLayer = styled.graphic.find(item => item.name === 'pie-motion-flow');
+        const flowArc = flowLayer.children.find(item => item.name === 'pie-motion-flow-arc');
+        const flowBounds = flowLayer.children.find(item => item.name === 'pie-motion-flow-bounds');
+        expect(flowLayer.type).toBe('group');
+        expect(flowLayer.origin).toEqual([190, 125]);
+        expect(flowLayer.keyframeAnimation.loop).toBe(true);
+        expect(flowBounds).toBeTruthy();
+        expect(flowBounds.shape.cx).toBe(flowArc.shape.cx);
+        expect(flowBounds.shape.cy).toBe(flowArc.shape.cy);
+        expect(flowBounds.shape.r).toBe(flowArc.shape.r);
+        expect(flowBounds.style.opacity).toBe(0);
+        expect(flowArc.shape.cx).toBe(190);
+        expect(flowArc.shape.cy).toBe(125);
+        expect(flowArc.shape.r).toBeLessThan(100);
         expect(styled.graphic.some(item => item.name === 'chart-motion-flow')).toBe(false);
     });
 

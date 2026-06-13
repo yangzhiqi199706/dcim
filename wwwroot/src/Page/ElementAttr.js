@@ -1271,6 +1271,32 @@ const ElementAttr = memo((props) => {
                         </select>
                     </div>)
                 }
+                if (a.attrType === 'waterBallShapeSelect') {
+                    const waterBallShapeOptions = [
+                        { value: 'circle', label: '圆形' },
+                        { value: 'rect', label: '正方形' },
+                        { value: 'roundedRect', label: '带圆角的方形' },
+                        { value: 'triangle', label: '正三角形' },
+                        { value: 'diamond', label: '菱形' },
+                        { value: 'drop', label: '水滴' },
+                        { value: 'arrow', label: '箭头' }
+                    ];
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <select
+                            defaultValue={val.attrs[a.attrCode] || 'circle'}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere}>
+                            {waterBallShapeOptions.map((option) => (
+                                <option value={option.value} key={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>)
+                }
                 if (a.attrType === 'sortOrderSelect') {
                     attrList.push(<div className="attrBox" key={unikey}>
                         <label>{a.attrName}</label>

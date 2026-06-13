@@ -22,4 +22,19 @@ describe('ElementAttr chart control rendering', () => {
         expect(chartControlBlock[0]).toContain("{ value: 'stereoGroup'");
         expect(chartControlBlock[0]).not.toContain('chartStyleButtons');
     });
+
+    test('renders water ball shape control as a select field', () => {
+        const source = fs.readFileSync(path.join(__dirname, 'ElementAttr.js'), 'utf8');
+        const waterBallShapeBlock = source.match(/if \(a\.attrType === 'waterBallShapeSelect'[\s\S]*?if \(a\.attrType === 'sortOrderSelect'\)/);
+
+        expect(waterBallShapeBlock).toBeTruthy();
+        expect(waterBallShapeBlock[0]).toContain('<select');
+        expect(waterBallShapeBlock[0]).toContain("value: 'circle'");
+        expect(waterBallShapeBlock[0]).toContain("value: 'rect'");
+        expect(waterBallShapeBlock[0]).toContain("value: 'roundedRect'");
+        expect(waterBallShapeBlock[0]).toContain("value: 'triangle'");
+        expect(waterBallShapeBlock[0]).toContain("value: 'diamond'");
+        expect(waterBallShapeBlock[0]).toContain("value: 'drop'");
+        expect(waterBallShapeBlock[0]).toContain("value: 'arrow'");
+    });
 });

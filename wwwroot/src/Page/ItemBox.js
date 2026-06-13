@@ -8,6 +8,23 @@ import { CloseCircleOutlined, FileExclamationOutlined, FileOutlined, FileProtect
 import { Button, Cascader, message, Tree, Upload } from 'antd';
 import { Close } from '@mui/icons-material';
 
+export const isWaterBallComponent = (item) => (
+    item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
+    && item.moduleJson.children[0].attrs
+    && item.moduleJson.children[0].attrs.cat === 'waterBall'
+);
+
+export const isChartPaletteComponent = (item) => (
+    item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
+    && item.moduleJson.children[0].className === 'Echart'
+    && !isWaterBallComponent(item)
+);
+
+export const isBasicPaletteComponent = (item) => (
+    item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
+    && (item.moduleJson.children[0].className !== 'Echart' || isWaterBallComponent(item))
+);
+
 function ItemBox(props) {
     const [selectedNav, setSelectedNav] = useState(0);
     const [selectedData, setSelectedData] = useState([]);
@@ -140,10 +157,10 @@ function ItemBox(props) {
         const localizedBasicComponents = localizeDeep(BasicComponents);
         switch (id) {
             case 1:
-                setSelectedData(localizedBasicComponents.filter((item) => item.moduleJson && item.moduleJson.children && item.moduleJson.children[0] && item.moduleJson.children[0].className !== 'Echart'));
+                setSelectedData(localizedBasicComponents.filter(isBasicPaletteComponent));
                 break;
             case 2:
-                setSelectedData(localizedBasicComponents.filter((item) => item.moduleJson && item.moduleJson.children && item.moduleJson.children[0] && item.moduleJson.children[0].className === 'Echart'));
+                setSelectedData(localizedBasicComponents.filter(isChartPaletteComponent));
                 break;
             case 3:
                 setSelectedData(localizeDeep(ScreenTemplate));

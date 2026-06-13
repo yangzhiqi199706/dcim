@@ -108,6 +108,413 @@ export const getBarDataLabelPosition = (chartInfo = {}) => (
     chartInfo.barDirection === 'horizontal' ? 'right' : 'top'
 );
 
+const getPositiveNumber = (value, fallback) => {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : fallback;
+};
+
+const pieBottomLegendCenter = ['50%', '42%'];
+
+const getPieCenterBlankInnerRadius = (chartInfo = {}) => {
+    if (chartInfo.centerBlankSwitch !== '2') return null;
+    return getPositiveNumber(chartInfo.centerBlankDiameter, 80) / 2;
+};
+
+export const buildPieSeriesOption = (chartInfo = {}) => {
+    const innerRadius = getPieCenterBlankInnerRadius(chartInfo);
+    const isRose = chartInfo.roseSwitch === '2';
+    const hasBottomLegend = chartInfo.iconSwitch === '2';
+    const pieOuterRadius = hasBottomLegend ? '58%' : '70%';
+    const series = {
+        type: 'pie',
+        radius: innerRadius === null ? pieOuterRadius : [innerRadius, pieOuterRadius],
+        ...(hasBottomLegend ? { center: pieBottomLegendCenter } : {}),
+        data: chartInfo.data,
+        label: {
+            show: chartInfo.dataSwitch === '2',
+            position: 'inside',
+            color: chartInfo.dataColor,
+            fontSize: chartInfo.dataFontSize
+        },
+    };
+
+    if (isRose) {
+        series.radius = [innerRadius === null ? 20 : innerRadius, hasBottomLegend ? 82 : 100];
+        series.roseType = 'radius';
+        series.itemStyle = {
+            borderRadius: 5
+        };
+    }
+
+    return series;
+};
+
+export const buildPieLegendOption = (chartInfo = {}) => ({
+    show: chartInfo.iconSwitch === '2',
+    left: 'center',
+    bottom: 0,
+    orient: 'horizontal',
+    textStyle: {
+        color: chartInfo.iconColor
+    },
+    align: chartInfo.algin
+});
+
+const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const getNumericValue = (value, fallback = 0) => {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
+    const match = String(value).match(/-?\d+(?:\.\d+)?/);
+    if (!match) return fallback;
+    const numberValue = Number(match[0]);
+    return Number.isFinite(numberValue) ? numberValue : fallback;
+};
+
+const getFirstWaterBallValue = (chartInfo = {}) => {
+    if (chartInfo.value !== undefined) return getNumericValue(chartInfo.value, 0);
+    const data = chartInfo.data;
+    if (Array.isArray(data) && data.length > 0) {
+        const first = data[0];
+        if (first && typeof first === 'object') {
+            if (first.value !== undefined) return getNumericValue(first.value, 0);
+            if (Array.isArray(first.data) && first.data.length > 0) return getNumericValue(first.data[0], 0);
+        }
+        return getNumericValue(first, 0);
+    }
+    return 0;
+};
+
+export const getWaterBallRatio = (chartInfo = {}) => {
+    const fixedValue = getPositiveNumber(chartInfo.waterBallFixedValue, 100);
+    return clampNumber(getFirstWaterBallValue(chartInfo) / fixedValue, 0, 1);
+};
+
+const buildWaterBallClipShape = (shapeKey, cx, cy, radius, name = 'water-ball-clip') => {
+    const left = cx - radius;
+    const top = cy - radius;
+    const size = radius * 2;
+    const base = { name, silent: true };
+    if (shapeKey === 'rect') {
+        return { ...base, type: 'rect', shape: { x: left, y: top, width: size, height: size } };
+    }
+    if (shapeKey === 'roundedRect') {
+        return { ...base, type: 'rect', shape: { x: left, y: top, width: size, height: size, r: radius * 0.18 } };
+    }
+    if (shapeKey === 'triangle') {
+        return { ...base, type: 'polygon', shape: { points: [[cx, top], [left, top + size], [left + size, top + size]] } };
+    }
+    if (shapeKey === 'diamond') {
+        return { ...base, type: 'polygon', shape: { points: [[cx, top], [left + size, cy], [cx, top + size], [left, cy]] } };
+    }
+    if (shapeKey === 'drop') {
+        return { ...base, type: 'polygon', shape: { points: [[cx, top], [left + size * 0.86, top + size * 0.42], [cx, top + size], [left + size * 0.14, top + size * 0.42]] } };
+    }
+    if (shapeKey === 'arrow') {
+        return { ...base, type: 'polygon', shape: { points: [[cx, top], [left + size, cy], [left + size * 0.64, cy], [left + size * 0.64, top + size], [left + size * 0.36, top + size], [left + size * 0.36, cy], [left, cy]] } };
+    }
+    return { ...base, type: 'circle', shape: { cx, cy, r: radius } };
+};
+
+const buildWaterBallWavePoints = (cx, cy, radius, ratio, phase = 0, horizontalPadding = 0) => {
+    const points = [];
+    const left = cx - radius - horizontalPadding;
+    const right = cx + radius + horizontalPadding;
+    const bottom = cy + radius;
+    const topY = bottom - radius * 2 * ratio;
+    const amplitude = Math.max(3, radius * 0.075);
+    const steps = 32;
+    for (let index = 0; index <= steps; index += 1) {
+        const percent = index / steps;
+        const x = left + (radius * 2 + horizontalPadding * 2) * percent;
+        const y = topY + Math.sin(percent * Math.PI * 2 + phase) * amplitude;
+        points.push([x, y]);
+    }
+    points.push([right, bottom + radius * 0.12], [left, bottom + radius * 0.12]);
+    return points;
+};
+
+const getWaterBallStyleTokens = (chartInfo = {}) => {
+    const styleKey = chartInfo.chartStyle || chartInfo.chartThemeStyle || 'original';
+    const preset = styleKey && styleKey !== 'original' ? chartStylePresets[styleKey] : null;
+    const waveColor = preset ? preset.colors[0] : (chartInfo.waterBallWaveColor || '#4992FF');
+    const waveColor2 = preset ? (preset.colors[2] || preset.colors[1] || preset.label) : (chartInfo.waterBallWaveColor2 || '#7CFFB2');
+    const shadowColor = preset ? preset.shadow : waveColor;
+    const labelColor = preset && isDefaultDarkLabelColor(chartInfo.dataColor)
+        ? preset.label
+        : (chartInfo.dataColor || '#ffffff');
+    const backgroundFill = preset ? {
+        type: 'linear',
+        x: 0,
+        y: 0,
+        x2: 1,
+        y2: 1,
+        colorStops: [
+            { offset: 0, color: hexToRgba(preset.colors[1] || preset.colors[0], 0.46) },
+            { offset: 0.55, color: 'rgba(4, 20, 38, 0.92)' },
+            { offset: 1, color: hexToRgba(preset.colors[0], 0.28) }
+        ]
+    } : (chartInfo.waterBallBackgroundColor || 'rgba(68, 181, 226, 0.3)');
+
+    return {
+        preset,
+        waveColor,
+        backgroundFill,
+        labelColor,
+        borderColor: preset ? hexToRgba(preset.axis, 0.72) : (chartInfo.waterBallBorderColor || 'rgba(255, 255, 255, 0.14)'),
+        highlightColor: chartInfo.waterBallWaveHighlightColor || waveColor2,
+        shadowColor,
+        accentColor: preset ? (preset.colors[1] || preset.colors[0]) : waveColor
+    };
+};
+
+const getWaterBallMotionGraphicLayer = (mode, tokens, cx, cy, radius) => {
+    if (mode === 'entrance') {
+        return [{
+            name: 'water-ball-motion-entrance',
+            type: 'ring',
+            silent: true,
+            z: 6,
+            origin: [cx, cy],
+            shape: { cx, cy, r: radius + 7, r0: radius + 3 },
+            style: {
+                fill: 'transparent',
+                stroke: tokens.borderColor,
+                lineWidth: 2,
+                opacity: 0.68,
+                shadowBlur: 20,
+                shadowColor: tokens.shadowColor
+            },
+            keyframeAnimation: {
+                duration: 1200,
+                loop: false,
+                keyframes: [
+                    { percent: 0, scaleX: 0.82, scaleY: 0.82, style: { opacity: 0 } },
+                    { percent: 0.55, scaleX: 1.08, scaleY: 1.08, style: { opacity: 0.78 } },
+                    { percent: 1, scaleX: 1, scaleY: 1, style: { opacity: 0.42 } }
+                ]
+            }
+        }];
+    }
+    if (mode === 'pulse') {
+        return [{
+            name: 'water-ball-motion-pulse',
+            type: 'ring',
+            silent: true,
+            z: 6,
+            origin: [cx, cy],
+            shape: { cx, cy, r: radius + 8, r0: Math.max(0, radius - 2) },
+            style: {
+                fill: 'transparent',
+                stroke: tokens.borderColor,
+                lineWidth: 2,
+                opacity: 0.28,
+                shadowBlur: 16,
+                shadowColor: tokens.shadowColor
+            },
+            keyframeAnimation: {
+                duration: 1500,
+                loop: true,
+                keyframes: [
+                    { percent: 0, scaleX: 0.98, scaleY: 0.98, style: { opacity: 0.18, shadowBlur: 10 } },
+                    { percent: 0.5, scaleX: 1.08, scaleY: 1.08, style: { opacity: 0.62, shadowBlur: 28 } },
+                    { percent: 1, scaleX: 0.98, scaleY: 0.98, style: { opacity: 0.18, shadowBlur: 10 } }
+                ]
+            }
+        }];
+    }
+    if (mode === 'flow') {
+        return [{
+            name: 'water-ball-motion-flow',
+            type: 'group',
+            silent: true,
+            z: 7,
+            origin: [cx, cy],
+            children: [
+                {
+                    name: 'water-ball-motion-flow-arc',
+                    type: 'arc',
+                    shape: {
+                        cx,
+                        cy,
+                        r: radius + 7,
+                        startAngle: -Math.PI * 0.22,
+                        endAngle: Math.PI * 0.42,
+                        clockwise: true
+                    },
+                    style: {
+                        stroke: tokens.labelColor,
+                        fill: null,
+                        opacity: 0.78,
+                        lineWidth: 4,
+                        lineCap: 'round',
+                        shadowBlur: 24,
+                        shadowColor: tokens.shadowColor
+                    }
+                },
+                {
+                    name: 'water-ball-motion-flow-tail',
+                    type: 'arc',
+                    shape: {
+                        cx,
+                        cy,
+                        r: radius + 4,
+                        startAngle: -Math.PI * 0.38,
+                        endAngle: -Math.PI * 0.06,
+                        clockwise: true
+                    },
+                    style: {
+                        stroke: tokens.accentColor,
+                        fill: null,
+                        opacity: 0.28,
+                        lineWidth: 2,
+                        lineCap: 'round',
+                        shadowBlur: 12,
+                        shadowColor: tokens.shadowColor
+                    }
+                }
+            ],
+            keyframeAnimation: {
+                duration: 1800,
+                loop: true,
+                keyframes: [
+                    { percent: 0, rotation: 0 },
+                    { percent: 1, rotation: Math.PI * 2 }
+                ]
+            }
+        }];
+    }
+    return [];
+};
+
+export const buildWaterBallOption = (chartInfo = {}) => {
+    const width = getPositiveNumber(chartInfo.width, 200);
+    const height = getPositiveNumber(chartInfo.height, 160);
+    const ratio = getWaterBallRatio(chartInfo);
+    const cx = Math.round(width / 2);
+    const cy = Math.round(height / 2);
+    const radius = Math.round(Math.min(width, height) * 0.42);
+    const shapeKey = chartInfo.waterBallShape || 'circle';
+    const tokens = getWaterBallStyleTokens(chartInfo);
+    const clipShape = buildWaterBallClipShape(shapeKey, cx, cy, radius);
+    const backgroundShape = {
+        ...buildWaterBallClipShape(shapeKey, cx, cy, radius, 'water-ball-background'),
+        style: {
+            fill: tokens.backgroundFill,
+            shadowBlur: 18,
+            shadowColor: tokens.shadowColor,
+            opacity: 0.95
+        },
+        z: 1
+    };
+    const waveClip = buildWaterBallClipShape(shapeKey, cx, cy, radius, 'water-ball-clip');
+    const wavePadding = radius * 0.35;
+    const waveShift = radius * 0.16;
+    const labelText = `${Math.round(ratio * 100)}%`;
+    const motionGraphics = getWaterBallMotionGraphicLayer(getAnimationMode(chartInfo), tokens, cx, cy, radius);
+
+    return {
+        animation: true,
+        backgroundColor: 'transparent',
+        series: [{
+            name: 'water-ball-value',
+            type: 'custom',
+            coordinateSystem: 'none',
+            silent: true,
+            data: [ratio],
+            renderItem: () => ({ type: 'group', children: [] })
+        }],
+        graphic: [
+            {
+                ...backgroundShape
+            },
+            {
+                ...clipShape,
+                style: {
+                    fill: 'transparent',
+                    stroke: tokens.borderColor,
+                    lineWidth: 1.5,
+                    shadowBlur: 8,
+                    shadowColor: tokens.shadowColor
+                },
+                z: 4
+            },
+            {
+                name: 'water-ball-wave-group',
+                type: 'group',
+                silent: true,
+                clipPath: waveClip,
+                z: 2,
+                children: [
+                    {
+                        name: 'water-ball-wave',
+                        type: 'polygon',
+                        z: 2,
+                        shape: {
+                            points: buildWaterBallWavePoints(cx, cy, radius, ratio, 0, wavePadding)
+                        },
+                        style: {
+                            fill: tokens.waveColor,
+                            opacity: tokens.preset ? 0.94 : 0.92,
+                            shadowBlur: 12,
+                            shadowColor: tokens.shadowColor
+                        },
+                        keyframeAnimation: {
+                            duration: 1800,
+                            loop: true,
+                            keyframes: [
+                                { percent: 0, x: -waveShift },
+                                { percent: 0.5, x: waveShift },
+                                { percent: 1, x: -waveShift }
+                            ]
+                        }
+                    },
+                    {
+                        name: 'water-ball-wave-highlight',
+                        type: 'polygon',
+                        z: 3,
+                        shape: {
+                            points: buildWaterBallWavePoints(cx, cy, radius, ratio, Math.PI * 0.7, wavePadding)
+                        },
+                        style: {
+                            fill: tokens.highlightColor,
+                            opacity: 0.48
+                        },
+                        keyframeAnimation: {
+                            duration: 2300,
+                            loop: true,
+                            keyframes: [
+                                { percent: 0, x: waveShift },
+                                { percent: 0.5, x: -waveShift },
+                                { percent: 1, x: waveShift }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                name: 'water-ball-label',
+                type: 'text',
+                z: 5,
+                style: {
+                    text: labelText,
+                    x: cx,
+                    y: cy,
+                    fill: tokens.labelColor,
+                    fontSize: getPositiveNumber(chartInfo.dataFontSize, 24),
+                    fontFamily: chartInfo.dataFontFamily || chartInfo.fontFamily || 'Arial',
+                    fontWeight: chartInfo.fontStyle && String(chartInfo.fontStyle).indexOf('bold') > -1 ? 700 : 600,
+                    textAlign: 'center',
+                    textVerticalAlign: 'middle',
+                    textShadowBlur: 10,
+                    textShadowColor: chartInfo.waterBallTextShadowColor || tokens.shadowColor
+                }
+            },
+            ...motionGraphics
+        ]
+    };
+};
+
 const chartResizeObserverMap = new WeakMap();
 
 const bindChartAutoResize = (chart, element) => {
@@ -389,10 +796,7 @@ const withCommonStyle = (option, preset) => {
         };
     }
     if (option.legend && option.legend.textStyle) {
-        option.legend.textStyle = {
-            ...option.legend.textStyle,
-            color: option.legend.textStyle.color || preset.label
-        };
+        option.legend.textStyle = styleLegendText(option.legend.textStyle, preset);
     }
     withAxisStyle(option, preset);
     withNoDataHint(option, preset);
@@ -414,6 +818,14 @@ const styleDataLabel = (label = {}, preset) => {
         textShadowBlur: label.textShadowBlur || 10
     };
 };
+
+const styleLegendText = (textStyle = {}, preset) => ({
+    ...textStyle,
+    color: isDefaultDarkLabelColor(textStyle.color) ? preset.label : textStyle.color,
+    fontWeight: textStyle.fontWeight || 600,
+    textShadowColor: textStyle.textShadowColor || preset.shadow,
+    textShadowBlur: textStyle.textShadowBlur || 8
+});
 
 const styleBarSeries = (series, preset, index) => ({
     ...series,
@@ -1341,16 +1753,40 @@ const getMotionGraphicLayer = (mode, preset, cat) => {
 
 const isPieLikeChart = (cat) => cat === 'pie' || cat === 'huan' || cat === 'alarmpie';
 
-const getPieMotionGraphicLayer = (mode, preset) => {
+const getPercentNumber = (value, fallback) => {
+    const match = String(value || '').match(/^(-?\d+(?:\.\d+)?)%$/);
+    return match ? Number(match[1]) : fallback;
+};
+
+const getPieMotionOuterRadius = (chartInfo = {}) => {
+    if (chartInfo.roseSwitch === '2') return chartInfo.iconSwitch === '2' ? 82 : 100;
+    const radiusPercent = chartInfo.iconSwitch === '2' ? 58 : 70;
+    const chartWidth = getPositiveNumber(chartInfo.width, 380);
+    const chartHeight = getPositiveNumber(chartInfo.height, 250);
+    return Math.round((radiusPercent / 100) * (Math.min(chartWidth, chartHeight) / 2));
+};
+
+const getPieMotionCenterPoint = (chartInfo = {}) => {
+    const center = chartInfo.iconSwitch === '2' ? pieBottomLegendCenter : ['50%', '50%'];
+    const chartWidth = getPositiveNumber(chartInfo.width, 380);
+    const chartHeight = getPositiveNumber(chartInfo.height, 250);
+    return [
+        Math.round((getPercentNumber(center[0], 50) / 100) * chartWidth),
+        Math.round((getPercentNumber(center[1], 50) / 100) * chartHeight)
+    ];
+};
+
+const getPieMotionGraphicLayer = (mode, preset, chartInfo = {}) => {
+    const [motionCx, motionCy] = getPieMotionCenterPoint(chartInfo);
+    const motionOuterRadius = getPieMotionOuterRadius(chartInfo);
     if (mode === 'entrance') {
         return [{
             name: 'pie-motion-entrance',
             type: 'ring',
-            left: 'center',
-            top: 'middle',
+            origin: [motionCx, motionCy],
             silent: true,
             z: 86,
-            shape: { r: 108, r0: 102 },
+            shape: { cx: motionCx, cy: motionCy, r: motionOuterRadius + 4, r0: motionOuterRadius },
             style: {
                 stroke: preset.axis,
                 fill: 'transparent',
@@ -1374,11 +1810,10 @@ const getPieMotionGraphicLayer = (mode, preset) => {
         return [{
             name: 'pie-motion-pulse',
             type: 'ring',
-            left: 'center',
-            top: 'middle',
+            origin: [motionCx, motionCy],
             silent: true,
             z: 86,
-            shape: { r: 112, r0: 94 },
+            shape: { cx: motionCx, cy: motionCy, r: motionOuterRadius + 7, r0: Math.max(0, motionOuterRadius - 7) },
             style: {
                 stroke: preset.axis,
                 fill: 'transparent',
@@ -1401,28 +1836,68 @@ const getPieMotionGraphicLayer = (mode, preset) => {
     if (mode === 'flow') {
         return [{
             name: 'pie-motion-flow',
-            type: 'arc',
-            left: 'center',
-            top: 'middle',
+            type: 'group',
+            origin: [motionCx, motionCy],
             silent: true,
             z: 88,
-            shape: {
-                cx: 0,
-                cy: 0,
-                r: 108,
-                startAngle: -Math.PI * 0.18,
-                endAngle: Math.PI * 0.34,
-                clockwise: true
-            },
-            style: {
-                stroke: preset.label,
-                fill: null,
-                opacity: 0.7,
-                lineWidth: 5,
-                lineCap: 'round',
-                shadowBlur: 24,
-                shadowColor: preset.shadow
-            },
+            children: [
+                {
+                    name: 'pie-motion-flow-bounds',
+                    type: 'circle',
+                    shape: {
+                        cx: motionCx,
+                        cy: motionCy,
+                        r: motionOuterRadius
+                    },
+                    style: {
+                        fill: 'transparent',
+                        stroke: 'transparent',
+                        opacity: 0
+                    }
+                },
+                {
+                    name: 'pie-motion-flow-arc',
+                    type: 'arc',
+                    shape: {
+                        cx: motionCx,
+                        cy: motionCy,
+                        r: motionOuterRadius,
+                        startAngle: -Math.PI * 0.18,
+                        endAngle: Math.PI * 0.34,
+                        clockwise: true
+                    },
+                    style: {
+                        stroke: preset.label,
+                        fill: null,
+                        opacity: 0.78,
+                        lineWidth: 5,
+                        lineCap: 'round',
+                        shadowBlur: 22,
+                        shadowColor: preset.shadow
+                    }
+                },
+                {
+                    name: 'pie-motion-flow-tail',
+                    type: 'arc',
+                    shape: {
+                        cx: motionCx,
+                        cy: motionCy,
+                        r: motionOuterRadius,
+                        startAngle: -Math.PI * 0.28,
+                        endAngle: -Math.PI * 0.02,
+                        clockwise: true
+                    },
+                    style: {
+                        stroke: preset.axis,
+                        fill: null,
+                        opacity: 0.22,
+                        lineWidth: 2,
+                        lineCap: 'round',
+                        shadowBlur: 12,
+                        shadowColor: preset.shadow
+                    }
+                }
+            ],
             keyframeAnimation: {
                 duration: 1800,
                 loop: true,
@@ -1536,7 +2011,7 @@ const withAnimationStyle = (option, chartInfo, preset) => {
         option.series = option.series.concat(barMotionSeries);
     }
     const motionGraphics = isPieLikeChart(chartInfo.cat)
-        ? getPieMotionGraphicLayer(mode, preset)
+        ? getPieMotionGraphicLayer(mode, preset, chartInfo)
         : getMotionGraphicLayer(mode, preset, chartInfo.cat);
     if (motionGraphics.length > 0) {
         option.graphic = [
@@ -2168,28 +2643,7 @@ function echart(images, selectedId,alarmData) {
                 } else if (chartInfo.cat === 'pie') {// Comment translated to English.
                     var pieChart = initChart(element);
                     bindChartAutoResize(pieChart, element);
-                    let data = [
-                        {
-                            type: 'pie',
-                            radius: '70%',
-                            data: chartInfo.data,
-                            label: {
-                                position: 'inside',
-                                color: chartInfo.dataColor
-                            },
-                        }
-                    ];
-                    if (chartInfo.roseSwitch === '2') {
-                        if (data) {
-                            data.forEach(ele => {
-                                ele['radius'] = [20, 100];
-                                ele['roseType'] = 'radius';
-                                ele['itemStyle'] = {
-                                    borderRadius: 5
-                                };
-                            })
-                        }
-                    }
+                    let data = [buildPieSeriesOption(chartInfo)];
                     var pieoption = {
                         tooltip: {
                             trigger: 'item'
@@ -2202,19 +2656,15 @@ function echart(images, selectedId,alarmData) {
                                 fontSize: chartInfo.titleFontSize
                             }
                         },
-                        legend: {// Comment translated to English.
-                            show: chartInfo.iconSwitch === '2' ? true : false,
-                            right: 10,
-                            textStyle: {
-                                color: chartInfo.iconColor
-                            },
-                            orient: chartInfo.orient,
-                            algin: chartInfo.algin
-                        },
+                        legend: buildPieLegendOption(chartInfo),
                         series: data
                     };
 
                     safeSetOption(pieChart, applyChartVisualStyle(pieoption, chartInfo));
+                } else if (chartInfo.cat === 'waterBall') {
+                    var waterBallChart = initChart(element);
+                    bindChartAutoResize(waterBallChart, element);
+                    safeSetOption(waterBallChart, buildWaterBallOption(chartInfo));
                 } else if (chartInfo.cat === 'alarmpie') {// Comment translated to English.
                     getAlarmData(element, chartInfo, alarmData);
                 } else if (chartInfo.cat === 'huan') {// Comment translated to English.

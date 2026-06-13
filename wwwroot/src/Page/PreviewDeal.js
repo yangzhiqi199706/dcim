@@ -770,6 +770,7 @@ export default {
                             if (newshapeProps.moduleJson.children[0].className === 'Echart' && (
                                 newshapeProps.moduleJson.children[0].attrs.cat === 'pie'
                                 || newshapeProps.moduleJson.children[0].attrs.cat === 'huan'
+                                || newshapeProps.moduleJson.children[0].attrs.cat === 'waterBall'
                             )) {
                                 let pielinedata = [];
                                 dataKey.forEach(async (element) => {
