@@ -137,17 +137,19 @@ function Home() {
         useSlaveIdRef.current = useSlaveId;
     }, [useSlaveId]);
 
-    const [saveStatusText, setSaveStatusText] = useState('已保存');
+    const savedStatus = t('designer.saved');
+    const modifiedStatus = t('designer.modified');
+    const [saveStatusText, setSaveStatusText] = useState(savedStatus);
     const lastSavedStageJsonRef = useRef('');
     const saveStatusTimerRef = useRef(null);
     // Dirty flag: true when there are unsaved changes since the last save / load.
     const dirtyRef = useRef(false);
-    // 页面加载令牌：每次 dealStringPage / newPage 切换页面时换一个新值，
-    // 用于跨页面复制粘贴时判断是否同一页面（草稿页 savePageId 都是 '0' 无法区分）
+    // \u9875\u9762\u52a0\u8f7d\u4ee4\u724c：\u6bcf\u6b21 dealStringPage / newPage \u5207\u6362\u9875\u9762\u65f6\u6362\u4e00\u4e2a\u65b0\u503c，
+    // \u7528\u4e8e\u8de8\u9875\u9762\u590d\u5236\u7c98\u8d34\u65f6\u5224\u65ad\u662f\u5426\u540c\u4e00\u9875\u9762（\u8349\u7a3f\u9875 savePageId \u90fd\u662f '0' \u65e0\u6cd5\u533a\u5206）
     const currentPageTokenRef = useRef('init-' + Date.now());
-    // 切换界面提示保存：当前页面有未保存改动时，点其它页面会弹确认框
+    // \u5207\u6362\u754c\u9762\u63d0\u793a\u4fdd\u5b58：\u5f53\u524d\u9875\u9762\u6709\u672a\u4fdd\u5b58\u6539\u52a8\u65f6，\u70b9\u5176\u5b83\u9875\u9762\u4f1a\u5f39\u786e\u8ba4\u6846
     const [switchConfirmBox, setSwitchConfirmBox] = useState(false);
-    const pendingSwitchRef = useRef(null);     // 暂存被打断的切换动作 {dragUrl, dragAttrs, type}
+    const pendingSwitchRef = useRef(null);     // \u6682\u5b58\u88ab\u6253\u65ad\u7684\u5207\u6362\u52a8\u4f5c {dragUrl, dragAttrs, type}
     const [tabFlash, setTabFlash] = useState('');
     const [hoverHighlightIds, setHoverHighlightIds] = useState([]);
 
@@ -156,15 +158,15 @@ function Home() {
     const [textReplaceFind, setTextReplaceFind] = useState('');
     const [textReplaceTo, setTextReplaceTo] = useState('');
 
-    const setSavedStatus = (text = '已保存') => {
+    const setSavedStatus = (text = savedStatus) => {
         if (saveStatusTimerRef.current) {
             clearTimeout(saveStatusTimerRef.current);
             saveStatusTimerRef.current = null;
         }
         setSaveStatusText(text);
-        if (text !== '已修改') {
+        if (text !== modifiedStatus) {
             saveStatusTimerRef.current = setTimeout(() => {
-                setSaveStatusText('已保存');
+                setSaveStatusText(savedStatus);
                 saveStatusTimerRef.current = null;
             }, 1800);
         }
@@ -217,7 +219,7 @@ function Home() {
                 clearTimeout(saveStatusTimerRef.current);
                 saveStatusTimerRef.current = null;
             }
-            setSaveStatusText('已保存');
+            setSaveStatusText(savedStatus);
         }, 0);
     };
 
@@ -304,22 +306,22 @@ function Home() {
     // ----------------------------------------------------------------------------
 
     useEffect(() => {
-        // 关闭网页 / 刷新 / 跳转外部链接前，如果还有未保存改动则弹原生提示
-        // 注意：现代浏览器出于安全考虑只显示固定文案（"离开此页面? / 系统可能不会保存您所做的更改"），
-        // returnValue 的字符串内容不会被使用，但必须设置才能触发对话框。
-        // Chrome / Edge / Firefox 都要求 preventDefault() + returnValue 双重保险。
-        // 关键：用 ref 读取最新的 savePageId / savePageType / savePageTxt，避免 useEffect [] 闭包陈旧
-        // 导致切到新页面后改东西关网页不弹提示。
+        // \u5173\u95ed\u7f51\u9875 / \u5237\u65b0 / \u8df3\u8f6c\u5916\u90e8\u94fe\u63a5\u524d，\u5982\u679c\u8fd8\u6709\u672a\u4fdd\u5b58\u6539\u52a8\u5219\u5f39\u539f\u751f\u63d0\u793a
+        // \u6ce8\u610f：\u73b0\u4ee3\u6d4f\u89c8\u5668\u51fa\u4e8e\u5b89\u5168\u8003\u8651\u53ea\u663e\u793a\u56fa\u5b9a\u6587\u6848（"\u79bb\u5f00\u6b64\u9875\u9762? / \u7cfb\u7edf\u53ef\u80fd\u4e0d\u4f1a\u4fdd\u5b58\u60a8\u6240\u505a\u7684\u66f4\u6539"），
+        // returnValue \u7684\u5b57\u7b26\u4e32\u5185\u5bb9\u4e0d\u4f1a\u88ab\u4f7f\u7528，\u4f46\u5fc5\u987b\u8bbe\u7f6e\u624d\u80fd\u89e6\u53d1\u5bf9\u8bdd\u6846。
+        // Chrome / Edge / Firefox \u90fd\u8981\u6c42 preventDefault() + returnValue \u53cc\u91cd\u4fdd\u9669。
+        // \u5173\u952e：\u7528 ref \u8bfb\u53d6\u6700\u65b0\u7684 savePageId / savePageType / savePageTxt，\u907f\u514d useEffect [] \u95ed\u5305\u9648\u65e7
+        // \u5bfc\u81f4\u5207\u5230\u65b0\u9875\u9762\u540e\u6539\u4e1c\u897f\u5173\u7f51\u9875\u4e0d\u5f39\u63d0\u793a。
         const handleBeforeUnload = (e) => {
-            if (isPreview) return;                                                     // 预览模式不拦截
-            if (!dirtyRef.current) return;                                             // 没有未保存改动不拦截
+            if (isPreview) return;                                                     // \u9884\u89c8\u6a21\u5f0f\u4e0d\u62e6\u622a
+            if (!dirtyRef.current) return;                                             // \u6ca1\u6709\u672a\u4fdd\u5b58\u6539\u52a8\u4e0d\u62e6\u622a
             const curPageId = savePageIdRef.current;
             const curPageType = savePageTypeRef.current;
             const curPageTxt = savePageTxtRef.current;
-            if (!curPageId || curPageId === '0') return;                               // 草稿页未新建过不拦截
-            if (curPageType !== '1' || !curPageTxt) return;                            // 非 PageType=1 不拦截
+            if (!curPageId || curPageId === '0') return;                               // \u8349\u7a3f\u9875\u672a\u65b0\u5efa\u8fc7\u4e0d\u62e6\u622a
+            if (curPageType !== '1' || !curPageTxt) return;                            // \u975e PageType=1 \u4e0d\u62e6\u622a
             e.preventDefault();
-            e.returnValue = '页面有未保存的修改，确定要离开吗？';
+            e.returnValue = t('designer.leaveUnsaved');
             return e.returnValue;
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -342,9 +344,9 @@ function Home() {
     }, [savePageId]);
 
     const initialImagesSnapshotRef = useRef(false);
-    const saveStatusTextRef = useRef('已保存');
-    // 用 ref 跟踪 savePageId / savePageType / savePageTxt 的最新值，
-    // 让 useEffect [] 内的 beforeunload 监听不会被初始挂载时的闭包冻结
+    const saveStatusTextRef = useRef(savedStatus);
+    // \u7528 ref \u8ddf\u8e2a savePageId / savePageType / savePageTxt \u7684\u6700\u65b0\u503c，
+    // \u8ba9 useEffect [] \u5185\u7684 beforeunload \u76d1\u542c\u4e0d\u4f1a\u88ab\u521d\u59cb\u6302\u8f7d\u65f6\u7684\u95ed\u5305\u51bb\u7ed3
     const savePageIdRef = useRef(savePageId);
     const savePageTypeRef = useRef(savePageType);
     const savePageTxtRef = useRef(savePageTxt);
@@ -361,12 +363,12 @@ function Home() {
         }
         // User made changes -> mark dirty (used by save-and-switch confirmation and beforeunload guard).
         dirtyRef.current = true;
-        if (saveStatusTextRef.current !== '已修改') {
+        if (saveStatusTextRef.current !== modifiedStatus) {
             if (saveStatusTimerRef.current) {
                 clearTimeout(saveStatusTimerRef.current);
                 saveStatusTimerRef.current = null;
             }
-            setSaveStatusText('已修改');
+            setSaveStatusText(modifiedStatus);
         }
     }, [images, backgroundImage]);
 
@@ -515,20 +517,20 @@ function Home() {
         return nextBox;
     };
 
-    // F6 多选拖动：跟随移动 / 提交 / 框选扩展（F7 时增强为组合扩展）
+    // F6 \u591a\u9009\u62d6\u52a8：\u8ddf\u968f\u79fb\u52a8 / \u63d0\u4ea4 / \u6846\u9009\u6269\u5c55（F7 \u65f6\u589e\u5f3a\u4e3a\u7ec4\u5408\u6269\u5c55）
     const multiDragRef = useRef({
         active: false,
         draggedId: null,
         startPositions: {},
         pendingPositions: null,
     });
-    // 多选/组合拖动 dragend 阶段，Konva 会让所有 nodes 各触发一次 onChange：
-    //   - 被拖元素 (draggedId) 走 commitMultiDragPositions（push 1 次 history）
-    //   - 其余跟随成员若也走 handleShapeChange 又会各 push 1 次 history → 撤销要按 N 次
-    // 用这个 ref 在 dragstart 时记录"非被拖的跟随成员 id"，dragend 时这些 id 的 onChange 直接 return 并自移除
+    // \u591a\u9009/\u7ec4\u5408\u62d6\u52a8 dragend \u9636\u6bb5，Konva \u4f1a\u8ba9\u6240\u6709 nodes \u5404\u89e6\u53d1\u4e00\u6b21 onChange：
+    //   - \u88ab\u62d6\u5143\u7d20 (draggedId) \u8d70 commitMultiDragPositions（push 1 \u6b21 history）
+    //   - \u5176\u4f59\u8ddf\u968f\u6210\u5458\u82e5\u4e5f\u8d70 handleShapeChange \u53c8\u4f1a\u5404 push 1 \u6b21 history → \u64a4\u9500\u8981\u6309 N \u6b21
+    // \u7528\u8fd9\u4e2a ref \u5728 dragstart \u65f6\u8bb0\u5f55"\u975e\u88ab\u62d6\u7684\u8ddf\u968f\u6210\u5458 id"，dragend \u65f6\u8fd9\u4e9b id \u7684 onChange \u76f4\u63a5 return \u5e76\u81ea\u79fb\u9664
     const pendingDragFollowerIdsRef = useRef(new Set());
 
-    // F7 组合：基于 shape.groupId 维护逻辑组
+    // F7 \u7ec4\u5408：\u57fa\u4e8e shape.groupId \u7ef4\u62a4\u903b\u8f91\u7ec4
     const getShapeGroupId = (shapeOrId) => {
         const shape = typeof shapeOrId === 'string'
             ? imagesRef.current.find((item) => item.id === shapeOrId)
@@ -556,7 +558,7 @@ function Home() {
         return `group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     };
 
-    // 组合扩展：拖动 / 选择某成员时把同组成员一并纳入（排除锁定元素）
+    // \u7ec4\u5408\u6269\u5c55：\u62d6\u52a8 / \u9009\u62e9\u67d0\u6210\u5458\u65f6\u628a\u540c\u7ec4\u6210\u5458\u4e00\u5e76\u7eb3\u5165（\u6392\u9664\u9501\u5b9a\u5143\u7d20）
     const expandDragSelectionIds = (ids, draggedShapeId) => {
         const result = new Set();
         const baseIds = Array.isArray(ids) ? ids : [];
@@ -604,7 +606,7 @@ function Home() {
         selectedIdsRef.current = memberIds;
     };
 
-    // F2 锁定保护：基于 shape.draggable === false 标记锁定
+    // F2 \u9501\u5b9a\u4fdd\u62a4：\u57fa\u4e8e shape.draggable === false \u6807\u8bb0\u9501\u5b9a
     const isShapeUnlocked = (shapeOrId) => {
         const shape = typeof shapeOrId === 'string'
             ? imagesRef.current.find((item) => item.id === shapeOrId)
@@ -668,9 +670,9 @@ function Home() {
     const canGroupSelection = selectedIds.length >= 2;
     const canUngroupSelection = isSelectionSingleGroup();
 
-    // 对齐锚点：用户最先选中的元素 / 组合，对齐时锚点不动，其他 unit 向锚点靠拢。
-    // - 单选 / 0 选：无锚点（空集），UI 不画紫色高亮
-    // - 多选：selectedIds[0] 所在的整个 group（若无 groupId 则就这一个 id）
+    // \u5bf9\u9f50\u951a\u70b9：\u7528\u6237\u6700\u5148\u9009\u4e2d\u7684\u5143\u7d20 / \u7ec4\u5408，\u5bf9\u9f50\u65f6\u951a\u70b9\u4e0d\u52a8，\u5176\u4ed6 unit \u5411\u951a\u70b9\u9760\u62e2。
+    // - \u5355\u9009 / 0 \u9009：\u65e0\u951a\u70b9（\u7a7a\u96c6），UI \u4e0d\u753b\u7d2b\u8272\u9ad8\u4eae
+    // - \u591a\u9009：selectedIds[0] \u6240\u5728\u7684\u6574\u4e2a group（\u82e5\u65e0 groupId \u5219\u5c31\u8fd9\u4e00\u4e2a id）
     const alignmentAnchorIds = useMemo(() => {
         if (!Array.isArray(selectedIds) || selectedIds.length < 2) return [];
         const anchorId = selectedIds[0];
@@ -679,18 +681,18 @@ function Home() {
         if (!anchorShape) return [];
         const anchorGroupId = getShapeGroupId(anchorShape);
         if (anchorGroupId) {
-            // 整组都算锚点：锁定成员也涂紫，便于用户直观看到哪个 unit 不会动
+            // \u6574\u7ec4\u90fd\u7b97\u951a\u70b9：\u9501\u5b9a\u6210\u5458\u4e5f\u6d82\u7d2b，\u4fbf\u4e8e\u7528\u6237\u76f4\u89c2\u770b\u5230\u54ea\u4e2a unit \u4e0d\u4f1a\u52a8
             return selectedIds.filter((id) => getShapeGroupId(id) === anchorGroupId);
         }
         return [anchorId];
     }, [selectedIds, images]);
 
-    // F13 界面结构树 + hover 高亮
+    // F13 \u754c\u9762\u7ed3\u6784\u6811 + hover \u9ad8\u4eae
     const getStructureItemLabel = (shape, index = 0) => {
-        if (!shape || !shape.moduleJson) return `元素 ${index + 1}`;
+        if (!shape || !shape.moduleJson) return `${t('designer.element')} ${index + 1}`;
         const firstChild = shape.moduleJson.children && shape.moduleJson.children[0] ? shape.moduleJson.children[0] : null;
         const attrs = firstChild && firstChild.attrs ? firstChild.attrs : {};
-        return attrs.text || attrs.name || (firstChild && firstChild.className) || `元素 ${index + 1}`;
+        return attrs.text || attrs.name || (firstChild && firstChild.className) || `${t('designer.element')} ${index + 1}`;
     };
 
     const getInterfaceStructure = () => {
@@ -706,7 +708,7 @@ function Home() {
                 if (!groupMap[shape.groupId]) {
                     groupMap[shape.groupId] = {
                         groupId: shape.groupId,
-                        label: `组合 ${Object.keys(groupMap).length + 1}`,
+                        label: `${t('designer.groupPrefix')} ${Object.keys(groupMap).length + 1}`,
                         members: [],
                     };
                 }
@@ -768,7 +770,7 @@ function Home() {
         setTimeout(() => setTabFlash(''), 650);
     };
 
-    // F8 剪贴板：copy / cut / paste（精简版：尚未引入锁定保护）
+    // F8 \u526a\u8d34\u677f：copy / cut / paste（\u7cbe\u7b80\u7248：\u5c1a\u672a\u5f15\u5165\u9501\u5b9a\u4fdd\u62a4）
     const getClipboardSelectionShapes = () => {
         let targetIds = [];
         if (Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0) {
@@ -785,7 +787,7 @@ function Home() {
             type: 'page-elements',
             copiedAt: Date.now(),
             sourcePageId: savePageId,
-            sourcePageToken: currentPageTokenRef.current,  // 即使 savePageId 都是 '0'，token 也能区分草稿页
+            sourcePageToken: currentPageTokenRef.current,  // \u5373\u4f7f savePageId \u90fd\u662f '0'，token \u4e5f\u80fd\u533a\u5206\u8349\u7a3f\u9875
             elements: JSON.parse(JSON.stringify(shapes || [])),
         };
         try { localStorage.setItem(PAGE_DESIGNER_CLIPBOARD_KEY, JSON.stringify(payload)); } catch (e) { }
@@ -803,7 +805,7 @@ function Home() {
         }
     };
 
-    // 简单 bounds：F1 落位后会换成基于 Konva node 的 metrics
+    // \u7b80\u5355 bounds：F1 \u843d\u4f4d\u540e\u4f1a\u6362\u6210\u57fa\u4e8e Konva node \u7684 metrics
     const getClipboardBoundsSimple = (elements) => {
         if (!Array.isArray(elements) || elements.length === 0) return null;
         const xs = []; const ys = []; const xs2 = []; const ys2 = [];
@@ -832,19 +834,19 @@ function Home() {
     };
 
     const copySelectionToClipboard = () => {
-        // 关键：先把 Konva 节点的真实位置同步回 imagesRef，避免拖动 / 浮点累积偏差导致复制体相对位置错乱
+        // \u5173\u952e：\u5148\u628a Konva \u8282\u70b9\u7684\u771f\u5b9e\u4f4d\u7f6e\u540c\u6b65\u56de imagesRef，\u907f\u514d\u62d6\u52a8 / \u6d6e\u70b9\u7d2f\u79ef\u504f\u5dee\u5bfc\u81f4\u590d\u5236\u4f53\u76f8\u5bf9\u4f4d\u7f6e\u9519\u4e71
         syncKonvaPositionsToImagesRef();
         const selectionShapes = getClipboardSelectionShapes();
         if (selectionShapes.length === 0) {
-            message.warning('当前没有可复制的元素');
+            message.warning(t('designer.noCopySelection'));
             return;
         }
         writeClipboard(selectionShapes);
-        message.success(`已复制 ${selectionShapes.length} 个元素`);
+        message.success(t('designer.copiedSelection').replace('{count}', selectionShapes.length));
     };
 
     const cutSelectionToClipboard = () => {
-        // 关键：先把 Konva 节点的真实位置同步回 imagesRef，避免剪切后粘贴位置错乱
+        // \u5173\u952e：\u5148\u628a Konva \u8282\u70b9\u7684\u771f\u5b9e\u4f4d\u7f6e\u540c\u6b65\u56de imagesRef，\u907f\u514d\u526a\u5207\u540e\u7c98\u8d34\u4f4d\u7f6e\u9519\u4e71
         syncKonvaPositionsToImagesRef();
         const selectionShapes = getClipboardSelectionShapes();
         if (selectionShapes.length === 0) return;
@@ -861,13 +863,13 @@ function Home() {
         selectedIdRef.current = null;
         setDragShape(null);
         settoolType(null);
-        message.success(`已剪切 ${selectionShapes.length} 个元素`);
+        message.success(t('designer.cutSelection').replace('{count}', selectionShapes.length));
     };
 
     const pasteClipboardSelection = () => {
         const payload = readClipboard();
         if (!payload || !payload.elements || payload.elements.length === 0) {
-            message.warning('暂无可粘贴内容');
+            message.warning(t('designer.noPasteContent'));
             return;
         }
         const groupIdMap = {};
@@ -875,13 +877,13 @@ function Home() {
         const nextImages = JSON.parse(JSON.stringify(imagesRef.current));
         const clipboardBounds = getClipboardBoundsSimple(payload.elements);
         const viewportCenter = getViewportCenterOnCanvas();
-        // 跨页面粘贴时保持原始位置（不偏移），同页面内粘贴才偏移到视口中心
-        // 优先用 token 判（草稿页 savePageId 都是 '0' 无法区分），fallback 到 savePageId
+        // \u8de8\u9875\u9762\u7c98\u8d34\u65f6\u4fdd\u6301\u539f\u59cb\u4f4d\u7f6e（\u4e0d\u504f\u79fb），\u540c\u9875\u9762\u5185\u7c98\u8d34\u624d\u504f\u79fb\u5230\u89c6\u53e3\u4e2d\u5fc3
+        // \u4f18\u5148\u7528 token \u5224（\u8349\u7a3f\u9875 savePageId \u90fd\u662f '0' \u65e0\u6cd5\u533a\u5206），fallback \u5230 savePageId
         let isCrossPagePaste = false;
         if (payload.sourcePageToken && payload.sourcePageToken !== currentPageTokenRef.current) {
             isCrossPagePaste = true;
         } else if (!payload.sourcePageToken && payload.sourcePageId && String(payload.sourcePageId) !== String(savePageId)) {
-            // 兼容旧的 localStorage 数据（没有 token）
+            // \u517c\u5bb9\u65e7\u7684 localStorage \u6570\u636e（\u6ca1\u6709 token）
             isCrossPagePaste = true;
         }
         const offsetX = isCrossPagePaste ? 0 : (clipboardBounds ? (viewportCenter.x - clipboardBounds.centerX + 8) : 8);
@@ -919,13 +921,13 @@ function Home() {
             const pastedShape = nextImages.find((shape) => shape.id === pastedIds[0]);
             setDragShape(pastedShape || null);
         }
-        message.success(`已粘贴 ${pastedIds.length} 个元素`);
+        message.success(t('designer.pastedSelection').replace('{count}', pastedIds.length));
     };
 
-    // F1 磁吸 + 参考线
+    // F1 \u78c1\u5438 + \u53c2\u8003\u7ebf
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [snapThreshold, setSnapThreshold] = useState(6);
-    // 引导线用 Konva 节点 ref + imperative 更新（避免 setState 触发 React 重渲染把多选拖动的 Konva 组员节点回拉）
+    // \u5f15\u5bfc\u7ebf\u7528 Konva \u8282\u70b9 ref + imperative \u66f4\u65b0（\u907f\u514d setState \u89e6\u53d1 React \u91cd\u6e32\u67d3\u628a\u591a\u9009\u62d6\u52a8\u7684 Konva \u7ec4\u5458\u8282\u70b9\u56de\u62c9）
     const snapGuideVRef = useRef(null);
     const snapGuideHRef = useRef(null);
     const updateSnapGuides = (guideData) => {
@@ -1058,9 +1060,9 @@ function Home() {
         };
     };
 
-    // 把选中 ids 折成"对齐单元"列表：同 groupId 的成员合并成 1 个 unit（用整组外包盒），
-    // 单 id 作为独立 unit。这样后续对齐按 unit 计算 offset，再把 offset 应用到 unit 内全部成员，
-    // 组合就能作为整体参与对齐（成员相对位置保持不变）。
+    // \u628a\u9009\u4e2d ids \u6298\u6210"\u5bf9\u9f50\u5355\u5143"\u5217\u8868：\u540c groupId \u7684\u6210\u5458\u5408\u5e76\u6210 1 \u4e2a unit（\u7528\u6574\u7ec4\u5916\u5305\u76d2），
+    // \u5355 id \u4f5c\u4e3a\u72ec\u7acb unit。\u8fd9\u6837\u540e\u7eed\u5bf9\u9f50\u6309 unit \u8ba1\u7b97 offset，\u518d\u628a offset \u5e94\u7528\u5230 unit \u5185\u5168\u90e8\u6210\u5458，
+    // \u7ec4\u5408\u5c31\u80fd\u4f5c\u4e3a\u6574\u4f53\u53c2\u4e0e\u5bf9\u9f50（\u6210\u5458\u76f8\u5bf9\u4f4d\u7f6e\u4fdd\u6301\u4e0d\u53d8）。
     const getAlignmentUnits = (ids) => {
         if (!Array.isArray(ids) || ids.length === 0) return [];
         const stage = stageRef.current ? stageRef.current.getStage() : null;
@@ -1072,7 +1074,7 @@ function Home() {
             if (!shape) return;
             const groupId = getShapeGroupId(shape);
             if (groupId) {
-                // 取选中 ids 中属于同一组的所有成员（不扩展未选成员，保持用户意图）
+                // \u53d6\u9009\u4e2d ids \u4e2d\u5c5e\u4e8e\u540c\u4e00\u7ec4\u7684\u6240\u6709\u6210\u5458（\u4e0d\u6269\u5c55\u672a\u9009\u6210\u5458，\u4fdd\u6301\u7528\u6237\u610f\u56fe）
                 const memberIds = ids.filter((selectedId) => getShapeGroupId(selectedId) === groupId);
                 memberIds.forEach((memberId) => visited.add(memberId));
                 const metrics = buildGroupMetricsFromIds(memberIds);
@@ -1091,7 +1093,7 @@ function Home() {
         return units;
     };
 
-    // 按 unit 粒度计算"水平等距 / 垂直等距"目标坐标
+    // \u6309 unit \u7c92\u5ea6\u8ba1\u7b97"\u6c34\u5e73\u7b49\u8ddd / \u5782\u76f4\u7b49\u8ddd"\u76ee\u6807\u5750\u6807
     const getDistributedUnitTargets = (units, axis) => {
         if (!Array.isArray(units) || units.length === 0) return {};
         if (units.length === 1) {
@@ -1245,7 +1247,7 @@ function Home() {
         clearSnapGuides();
     };
 
-    // F9 多选边界（依赖 buildGroupMetricsFromIds）
+    // F9 \u591a\u9009\u8fb9\u754c（\u4f9d\u8d56 buildGroupMetricsFromIds）
     const getBoundedMultiDragPositions = (positionMap, ids) => {
         if (!positionMap || !Array.isArray(ids) || ids.length === 0) return positionMap;
         const groupMetrics = buildGroupMetricsFromIds(ids, positionMap);
@@ -1279,17 +1281,17 @@ function Home() {
         if (touchedLayer) touchedLayer.batchDraw();
     };
 
-    // 把所有 Konva 节点的真实位置回写到 imagesRef.current（不触发 setState）。
-    // 用于复制 / 剪切 / 对齐 / 等距等批量操作前，确保 imagesRef 与 Konva 视觉位置一致，
-    // 避免拖动后偏差累积、刷新 / 复制后元素错位。
-    // 不写 history、不调 setImages，调用方按需后续 setImages + history.push。
+    // \u628a\u6240\u6709 Konva \u8282\u70b9\u7684\u771f\u5b9e\u4f4d\u7f6e\u56de\u5199\u5230 imagesRef.current（\u4e0d\u89e6\u53d1 setState）。
+    // \u7528\u4e8e\u590d\u5236 / \u526a\u5207 / \u5bf9\u9f50 / \u7b49\u8ddd\u7b49\u6279\u91cf\u64cd\u4f5c\u524d，\u786e\u4fdd imagesRef \u4e0e Konva \u89c6\u89c9\u4f4d\u7f6e\u4e00\u81f4，
+    // \u907f\u514d\u62d6\u52a8\u540e\u504f\u5dee\u7d2f\u79ef、\u5237\u65b0 / \u590d\u5236\u540e\u5143\u7d20\u9519\u4f4d。
+    // \u4e0d\u5199 history、\u4e0d\u8c03 setImages，\u8c03\u7528\u65b9\u6309\u9700\u540e\u7eed setImages + history.push。
     const syncKonvaPositionsToImagesRef = () => {
         const stage = stageRef.current ? stageRef.current.getStage() : null;
         if (!stage) return false;
         let mutated = false;
         const next = imagesRef.current.map((shape) => {
             if (!shape || !shape.id) return shape;
-            // 锁定元素：不同步（视觉与逻辑就不该飘）
+            // \u9501\u5b9a\u5143\u7d20：\u4e0d\u540c\u6b65（\u89c6\u89c9\u4e0e\u903b\u8f91\u5c31\u4e0d\u8be5\u98d8）
             if (shape.draggable === false) return shape;
             const node = stage.findOne('#' + shape.id);
             if (!node) return shape;
@@ -1297,7 +1299,7 @@ function Home() {
             const ny = node.y();
             const cx = Number(shape.x) || 0;
             const cy = Number(shape.y) || 0;
-            // 浮点容差：< 0.5px 视为相等，避免 Konva 内部浮点累积造成无意义抖动
+            // \u6d6e\u70b9\u5bb9\u5dee：< 0.5px \u89c6\u4e3a\u76f8\u7b49，\u907f\u514d Konva \u5185\u90e8\u6d6e\u70b9\u7d2f\u79ef\u9020\u6210\u65e0\u610f\u4e49\u6296\u52a8
             if (Math.abs(nx - cx) < 0.5 && Math.abs(ny - cy) < 0.5) return shape;
             mutated = true;
             return { ...shape, x: nx, y: ny };
@@ -1319,22 +1321,22 @@ function Home() {
         imagesRef.current = JSON.parse(JSON.stringify(nextImages));
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
         setChart(imagesRef.current, selectedIdRef.current, null);
-        // 拖动结束保留整组选中（your-feature 风格）：避免 setState 异步过程中
-        // 出现 selectedIds=[] 但 selectedId=被拖元素 的中间帧，否则那个成员会闪现蓝色单选框，
-        // 且 selectedIdsRef 与 state 不同步会让下一次拖动 startPositions 错算导致另一成员乱跑。
+        // \u62d6\u52a8\u7ed3\u675f\u4fdd\u7559\u6574\u7ec4\u9009\u4e2d（your-feature \u98ce\u683c）：\u907f\u514d setState \u5f02\u6b65\u8fc7\u7a0b\u4e2d
+        // \u51fa\u73b0 selectedIds=[] \u4f46 selectedId=\u88ab\u62d6\u5143\u7d20 \u7684\u4e2d\u95f4\u5e27，\u5426\u5219\u90a3\u4e2a\u6210\u5458\u4f1a\u95ea\u73b0\u84dd\u8272\u5355\u9009\u6846，
+        // \u4e14 selectedIdsRef \u4e0e state \u4e0d\u540c\u6b65\u4f1a\u8ba9\u4e0b\u4e00\u6b21\u62d6\u52a8 startPositions \u9519\u7b97\u5bfc\u81f4\u53e6\u4e00\u6210\u5458\u4e71\u8dd1。
         selectShapes([...selectedIdsRef.current]);
     };
 
-    // 键盘方向键移动选中元素 / 组合 / 多元素 / 多组合
-    // - 单选：扩展到整组（与拖动一致）
-    // - 多选：直接按 selectedIds 移动（已含整组）
-    // - 锁定元素：跳过
-    // - 复用 sync + applyMultiDragPositions + commitMultiDragPositions，与拖动同一套提交链路
-    // - 每次按键 = 1 次 history.push，撤销精度按 1 步
+    // \u952e\u76d8\u65b9\u5411\u952e\u79fb\u52a8\u9009\u4e2d\u5143\u7d20 / \u7ec4\u5408 / \u591a\u5143\u7d20 / \u591a\u7ec4\u5408
+    // - \u5355\u9009：\u6269\u5c55\u5230\u6574\u7ec4（\u4e0e\u62d6\u52a8\u4e00\u81f4）
+    // - \u591a\u9009：\u76f4\u63a5\u6309 selectedIds \u79fb\u52a8（\u5df2\u542b\u6574\u7ec4）
+    // - \u9501\u5b9a\u5143\u7d20：\u8df3\u8fc7
+    // - \u590d\u7528 sync + applyMultiDragPositions + commitMultiDragPositions，\u4e0e\u62d6\u52a8\u540c\u4e00\u5957\u63d0\u4ea4\u94fe\u8def
+    // - \u6bcf\u6b21\u6309\u952e = 1 \u6b21 history.push，\u64a4\u9500\u7cbe\u5ea6\u6309 1 \u6b65
     const moveSelectionByArrow = (dx, dy) => {
         if (isPreview) return;
         if (!dx && !dy) return;
-        // 收集要移动的 id
+        // \u6536\u96c6\u8981\u79fb\u52a8\u7684 id
         let targetIds = [];
         if (Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0) {
             targetIds = selectedIdsRef.current;
@@ -1342,12 +1344,12 @@ function Home() {
             targetIds = getExpandedSelectionIds(selectedIdRef.current);
         }
         if (targetIds.length === 0) return;
-        // 过滤锁定元素
+        // \u8fc7\u6ee4\u9501\u5b9a\u5143\u7d20
         const unlockedIds = targetIds.filter((id) => isShapeUnlocked(id));
         if (unlockedIds.length === 0) return;
-        // 先把 Konva 真实位置同步回 imagesRef，避免基于过期 x/y 计算（与对齐/复制同一套保护）
+        // \u5148\u628a Konva \u771f\u5b9e\u4f4d\u7f6e\u540c\u6b65\u56de imagesRef，\u907f\u514d\u57fa\u4e8e\u8fc7\u671f x/y \u8ba1\u7b97（\u4e0e\u5bf9\u9f50/\u590d\u5236\u540c\u4e00\u5957\u4fdd\u62a4）
         syncKonvaPositionsToImagesRef();
-        // 构造 positionMap：基于当前 imagesRef.x/y + dx/dy
+        // \u6784\u9020 positionMap：\u57fa\u4e8e\u5f53\u524d imagesRef.x/y + dx/dy
         const positionMap = {};
         unlockedIds.forEach((id) => {
             const shape = imagesRef.current.find((s) => s.id === id);
@@ -1357,28 +1359,28 @@ function Home() {
                 y: (Number(shape.y) || 0) + dy,
             };
         });
-        // 同步推到 Konva 节点（即时视觉反馈），再提交到 state + history
+        // \u540c\u6b65\u63a8\u5230 Konva \u8282\u70b9（\u5373\u65f6\u89c6\u89c9\u53cd\u9988），\u518d\u63d0\u4ea4\u5230 state + history
         applyMultiDragPositions(positionMap);
         commitMultiDragPositions(positionMap);
     };
 
-    // 拖动期间，每次 React 重渲染（例如 onSelect 触发的选中 setState）后立即把 Konva 节点位置重新对齐到 pendingPositions，
-    // 避免 <Group {...shapeProps}> 用 imagesRef 旧 x/y 回拉同组成员，造成漂移
-    // 用 useLayoutEffect 在浏览器绘制之前同步执行，避免用户看到错位的一帧
-    // 关键：只在 pendingPositions 已就绪（dragmove 至少跑过一次）时才 backstop；
-    // 否则 dragstart 后、首次 dragmove 前的重渲染会用 startPositions(=origin) 把被拖元素拽回原点，跟 Konva 内部 dragMove 形成对抗，
-    // 导致"先 click 再 drag → 拖不动"
+    // \u62d6\u52a8\u671f\u95f4，\u6bcf\u6b21 React \u91cd\u6e32\u67d3（\u4f8b\u5982 onSelect \u89e6\u53d1\u7684\u9009\u4e2d setState）\u540e\u7acb\u5373\u628a Konva \u8282\u70b9\u4f4d\u7f6e\u91cd\u65b0\u5bf9\u9f50\u5230 pendingPositions，
+    // \u907f\u514d <Group {...shapeProps}> \u7528 imagesRef \u65e7 x/y \u56de\u62c9\u540c\u7ec4\u6210\u5458，\u9020\u6210\u6f02\u79fb
+    // \u7528 useLayoutEffect \u5728\u6d4f\u89c8\u5668\u7ed8\u5236\u4e4b\u524d\u540c\u6b65\u6267\u884c，\u907f\u514d\u7528\u6237\u770b\u5230\u9519\u4f4d\u7684\u4e00\u5e27
+    // \u5173\u952e：\u53ea\u5728 pendingPositions \u5df2\u5c31\u7eea（dragmove \u81f3\u5c11\u8dd1\u8fc7\u4e00\u6b21）\u65f6\u624d backstop；
+    // \u5426\u5219 dragstart \u540e、\u9996\u6b21 dragmove \u524d\u7684\u91cd\u6e32\u67d3\u4f1a\u7528 startPositions(=origin) \u628a\u88ab\u62d6\u5143\u7d20\u62fd\u56de\u539f\u70b9，\u8ddf Konva \u5185\u90e8 dragMove \u5f62\u6210\u5bf9\u6297，
+    // \u5bfc\u81f4"\u5148 click \u518d drag → \u62d6\u4e0d\u52a8"
     useLayoutEffect(() => {
         if (!multiDragRef.current.active) return;
         const positions = multiDragRef.current.pendingPositions;
         if (positions) applyMultiDragPositions(positions);
     });
 
-    // 多选/组合拖动：dragstart 立即用 Konva 节点真实位置记录所有成员起点。
-    // 关键修复：startPositions 必须与 e.target.position() 同源（都来自 Konva 节点）。
-    // 旧实现用 imagesRef.current.x/y 做起点，一旦 React 状态与 Konva 节点不同步（如上次拖动 commit、
-    // useLayoutEffect backstop、自动保存 setState 等），首帧 delta 会把这部分历史偏差一次性吸收，
-    // 然后原封不动加到其他成员上，造成"鼠标选中元素稳，其他元素瞬间偏一下"的乱跑现象。
+    // \u591a\u9009/\u7ec4\u5408\u62d6\u52a8：dragstart \u7acb\u5373\u7528 Konva \u8282\u70b9\u771f\u5b9e\u4f4d\u7f6e\u8bb0\u5f55\u6240\u6709\u6210\u5458\u8d77\u70b9。
+    // \u5173\u952e\u4fee\u590d：startPositions \u5fc5\u987b\u4e0e e.target.position() \u540c\u6e90（\u90fd\u6765\u81ea Konva \u8282\u70b9）。
+    // \u65e7\u5b9e\u73b0\u7528 imagesRef.current.x/y \u505a\u8d77\u70b9，\u4e00\u65e6 React \u72b6\u6001\u4e0e Konva \u8282\u70b9\u4e0d\u540c\u6b65（\u5982\u4e0a\u6b21\u62d6\u52a8 commit、
+    // useLayoutEffect backstop、\u81ea\u52a8\u4fdd\u5b58 setState \u7b49），\u9996\u5e27 delta \u4f1a\u628a\u8fd9\u90e8\u5206\u5386\u53f2\u504f\u5dee\u4e00\u6b21\u6027\u5438\u6536，
+    // \u7136\u540e\u539f\u5c01\u4e0d\u52a8\u52a0\u5230\u5176\u4ed6\u6210\u5458\u4e0a，\u9020\u6210"\u9f20\u6807\u9009\u4e2d\u5143\u7d20\u7a33，\u5176\u4ed6\u5143\u7d20\u77ac\u95f4\u504f\u4e00\u4e0b"\u7684\u4e71\u8dd1\u73b0\u8c61。
     const handleShapeDragStart = (e, shape) => {
         const stage = stageRef.current ? stageRef.current.getStage() : null;
         if (!stage) return;
@@ -1387,7 +1389,7 @@ function Home() {
             const currentShape = imagesRef.current.find((item) => item.id === id);
             return currentShape && currentShape.draggable !== false;
         });
-        // 单拖：复位 multiDragRef，让 dragmove 走单元素分支（applySnapForShape）
+        // \u5355\u62d6：\u590d\u4f4d multiDragRef，\u8ba9 dragmove \u8d70\u5355\u5143\u7d20\u5206\u652f（applySnapForShape）
         if (!Array.isArray(dragSelectedIds) || dragSelectedIds.length <= 1 || !dragSelectedIds.includes(shape.id)) {
             multiDragRef.current = {
                 active: false,
@@ -1402,7 +1404,7 @@ function Home() {
         dragSelectedIds.forEach((id) => {
             const node = stage.findOne('#' + id);
             if (node) {
-                // 用 Konva 节点的真实位置作为起点，与被拖元素 e.target.position() 同源
+                // \u7528 Konva \u8282\u70b9\u7684\u771f\u5b9e\u4f4d\u7f6e\u4f5c\u4e3a\u8d77\u70b9，\u4e0e\u88ab\u62d6\u5143\u7d20 e.target.position() \u540c\u6e90
                 startPositions[id] = { x: node.x(), y: node.y() };
             } else {
                 const currentShape = imagesRef.current.find((item) => item.id === id);
@@ -1417,7 +1419,7 @@ function Home() {
             startPositions,
             pendingPositions: null,
         };
-        // 记录"跟随成员"：dragend 时这些 id 的 onChange 直接 return，避免每个成员都 push 一次 history
+        // \u8bb0\u5f55"\u8ddf\u968f\u6210\u5458"：dragend \u65f6\u8fd9\u4e9b id \u7684 onChange \u76f4\u63a5 return，\u907f\u514d\u6bcf\u4e2a\u6210\u5458\u90fd push \u4e00\u6b21 history
         const followers = new Set();
         dragSelectedIds.forEach((id) => {
             if (id !== shape.id) followers.add(id);
@@ -1425,8 +1427,8 @@ function Home() {
         pendingDragFollowerIdsRef.current = followers;
     };
 
-    // 多选/组合拖动：dragmove 计算 delta 并把所有成员定位到 startPositions[id] + delta
-    // dragstart 已经预记录起点；这里保留懒初始化作为兜底（万一 dragstart 未触发也能 fallback）
+    // \u591a\u9009/\u7ec4\u5408\u62d6\u52a8：dragmove \u8ba1\u7b97 delta \u5e76\u628a\u6240\u6709\u6210\u5458\u5b9a\u4f4d\u5230 startPositions[id] + delta
+    // dragstart \u5df2\u7ecf\u9884\u8bb0\u5f55\u8d77\u70b9；\u8fd9\u91cc\u4fdd\u7559\u61d2\u521d\u59cb\u5316\u4f5c\u4e3a\u515c\u5e95（\u4e07\u4e00 dragstart \u672a\u89e6\u53d1\u4e5f\u80fd fallback）
     const handleShapeDragMove = (e, shape) => {
         const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
         const dragSelectedIds = expandedSelectedIds.filter((id) => {
@@ -1447,8 +1449,8 @@ function Home() {
         if (!snapEnabled) {
             clearSnapGuides();
         }
-        // 懒初始化兜底：dragstart 未触发时（极少数情况），用 Konva 节点真实位置记录起点，
-        // 与 e.target.position() 同源，避免吸收 React/Konva 不同步的偏差导致其他成员乱跑
+        // \u61d2\u521d\u59cb\u5316\u515c\u5e95：dragstart \u672a\u89e6\u53d1\u65f6（\u6781\u5c11\u6570\u60c5\u51b5），\u7528 Konva \u8282\u70b9\u771f\u5b9e\u4f4d\u7f6e\u8bb0\u5f55\u8d77\u70b9，
+        // \u4e0e e.target.position() \u540c\u6e90，\u907f\u514d\u5438\u6536 React/Konva \u4e0d\u540c\u6b65\u7684\u504f\u5dee\u5bfc\u81f4\u5176\u4ed6\u6210\u5458\u4e71\u8dd1
         if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
             const stage = stageRef.current ? stageRef.current.getStage() : null;
             const startPositions = {};
@@ -1501,7 +1503,7 @@ function Home() {
                         };
                         return acc;
                     }, {});
-                    // 引导线用 ref imperative 绘制，不触发 React 重渲染，多选/组合拖动也能显示
+                    // \u5f15\u5bfc\u7ebf\u7528 ref imperative \u7ed8\u5236，\u4e0d\u89e6\u53d1 React \u91cd\u6e32\u67d3，\u591a\u9009/\u7ec4\u5408\u62d6\u52a8\u4e5f\u80fd\u663e\u793a
                     updateSnapGuides(buildSnapGuideLine(
                         matchX ? matchX.guide.value : null,
                         matchY ? matchY.guide.value : null,
@@ -1626,7 +1628,7 @@ function Home() {
 
         // Comment translated to English.
         const onKeyDown = (e) => {
-            // 输入框 / 文本域 / contenteditable 焦点时，不拦截任何按键（让用户正常输入）
+            // \u8f93\u5165\u6846 / \u6587\u672c\u57df / contenteditable \u7126\u70b9\u65f6，\u4e0d\u62e6\u622a\u4efb\u4f55\u6309\u952e（\u8ba9\u7528\u6237\u6b63\u5e38\u8f93\u5165）
             const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
             const isEditing = tag === 'input' || tag === 'textarea' || tag === 'select'
                 || (e.target && e.target.isContentEditable);
@@ -1650,9 +1652,9 @@ function Home() {
             } else if (e.ctrlKey && e.key === 'ArrowDown') {
                 handleToolChange('down');
             } else if (!e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-                // 方向键移动选中元素 / 组合 / 多元素 / 多组合
-                // Shift = 10px 加速，否则 1px 精细微调（Figma / Photoshop 标准）
-                // Ctrl + 方向键不在这里处理（Ctrl+↑/↓ 已被层级调整占用）
+                // \u65b9\u5411\u952e\u79fb\u52a8\u9009\u4e2d\u5143\u7d20 / \u7ec4\u5408 / \u591a\u5143\u7d20 / \u591a\u7ec4\u5408
+                // Shift = 10px \u52a0\u901f，\u5426\u5219 1px \u7cbe\u7ec6\u5fae\u8c03（Figma / Photoshop \u6807\u51c6）
+                // Ctrl + \u65b9\u5411\u952e\u4e0d\u5728\u8fd9\u91cc\u5904\u7406（Ctrl+↑/↓ \u5df2\u88ab\u5c42\u7ea7\u8c03\u6574\u5360\u7528）
                 e.preventDefault();
                 const step = e.shiftKey ? 10 : 1;
                 let dx = 0, dy = 0;
@@ -2341,23 +2343,23 @@ function Home() {
             checkDeselect();
             return;
         }
-        // 多选键：Ctrl（Win/Linux）或 Cmd（Mac）。Shift 不再触发多选
+        // \u591a\u9009\u952e：Ctrl（Win/Linux）\u6216 Cmd（Mac）。Shift \u4e0d\u518d\u89e6\u53d1\u591a\u9009
         const metaPressed = e.evt.ctrlKey || e.evt.metaKey;
         const clickedShapeId = e.target.parent.attrs.id;
-        // 把 "已选" 判断扩展到整组：onSelect 已经把同组成员装入 selectedIdsRef，这里要识别成已选
+        // \u628a "\u5df2\u9009" \u5224\u65ad\u6269\u5c55\u5230\u6574\u7ec4：onSelect \u5df2\u7ecf\u628a\u540c\u7ec4\u6210\u5458\u88c5\u5165 selectedIdsRef，\u8fd9\u91cc\u8981\u8bc6\u522b\u6210\u5df2\u9009
         const isSelected = tr.nodes().indexOf(e.target) >= 0
             || (selectedIdsRef.current && selectedIdsRef.current.includes(clickedShapeId));
         const isDrag = e.target.parent.attrs.draggable;
         if (!isDrag) { message.error(t('auto.k0361')); return; }
-        // 点击成员所在整组（组合则展开为整组成员，单元素则就是自身）
+        // \u70b9\u51fb\u6210\u5458\u6240\u5728\u6574\u7ec4（\u7ec4\u5408\u5219\u5c55\u5f00\u4e3a\u6574\u7ec4\u6210\u5458，\u5355\u5143\u7d20\u5219\u5c31\u662f\u81ea\u8eab）
         const clickedGroupIds = getUnlockedExpandedSelectionIds(clickedShapeId);
         if (!metaPressed && !isSelected) {
-            // 无修饰键 + 未选中：清空选区（具体单选/整组选交给 onSelect 处理）
+            // \u65e0\u4fee\u9970\u952e + \u672a\u9009\u4e2d：\u6e05\u7a7a\u9009\u533a（\u5177\u4f53\u5355\u9009/\u6574\u7ec4\u9009\u4ea4\u7ed9 onSelect \u5904\u7406）
             selectShapes([]);
             selectedIdsRef.current = [];
             return;
         } else if (metaPressed && isSelected) {
-            // Ctrl + 已选：把整组从选区中整体移除
+            // Ctrl + \u5df2\u9009：\u628a\u6574\u7ec4\u4ece\u9009\u533a\u4e2d\u6574\u4f53\u79fb\u9664
             selectShapes((oldShapes) => {
                 const removeSet = new Set(clickedGroupIds);
                 const ids = oldShapes.filter((oldId) => !removeSet.has(oldId));
@@ -2365,7 +2367,7 @@ function Home() {
                 return ids;
             });
         } else if (metaPressed && !isSelected) {
-            // Ctrl + 未选：把整组成员加入选区，并保留之前的 selectedId（若可拖）
+            // Ctrl + \u672a\u9009：\u628a\u6574\u7ec4\u6210\u5458\u52a0\u5165\u9009\u533a，\u5e76\u4fdd\u7559\u4e4b\u524d\u7684 selectedId（\u82e5\u53ef\u62d6）
             selectShapes((oldShapes) => {
                 let resShapes = oldShapes;
                 if (selectedId && oldShapes.indexOf(selectedId) === -1) {
@@ -2373,7 +2375,7 @@ function Home() {
                     if (isDragIndex !== -1) {
                         const prevDraggable = images[isDragIndex].draggable;
                         if (prevDraggable) {
-                            // 之前的 selectedId 也要按整组扩展
+                            // \u4e4b\u524d\u7684 selectedId \u4e5f\u8981\u6309\u6574\u7ec4\u6269\u5c55
                             const prevGroupIds = getUnlockedExpandedSelectionIds(selectedId);
                             prevGroupIds.forEach((id) => {
                                 if (!resShapes.includes(id)) resShapes = [...resShapes, id];
@@ -2440,7 +2442,7 @@ function Home() {
         selection.current.x2 = pos.x / stageDimensions.scalex;
         selection.current.y2 = pos.y / stageDimensions.scalex;
         updateSelectionRect();
-        // 实时计算与选框相交的可拖动元素 id
+        // \u5b9e\u65f6\u8ba1\u7b97\u4e0e\u9009\u6846\u76f8\u4ea4\u7684\u53ef\u62d6\u52a8\u5143\u7d20 id
         const selBox = selectionRectRef.current.getClientRect();
         const hoverIds = [];
         layerRef.current.find(".group").forEach((elementNode) => {
@@ -2489,7 +2491,7 @@ function Home() {
     // Comment translated to English.
     // Comment translated to English.
     const handleItemDragUrl = async (dragUrl, dragAttrs, type) => {
-        // 切换界面提示保存：当前页面有未保存改动 + 是已存在的正式页面 → 弹确认框
+        // \u5207\u6362\u754c\u9762\u63d0\u793a\u4fdd\u5b58：\u5f53\u524d\u9875\u9762\u6709\u672a\u4fdd\u5b58\u6539\u52a8 + \u662f\u5df2\u5b58\u5728\u7684\u6b63\u5f0f\u9875\u9762 → \u5f39\u786e\u8ba4\u6846
         if (
             type
             && dirtyRef.current
@@ -2498,7 +2500,7 @@ function Home() {
             && savePageType === '1'
             && savePageTxt
         ) {
-            // 暂存这次切换动作，等用户点弹窗里"保存并切换 / 不保存切换"再继续
+            // \u6682\u5b58\u8fd9\u6b21\u5207\u6362\u52a8\u4f5c，\u7b49\u7528\u6237\u70b9\u5f39\u7a97\u91cc"\u4fdd\u5b58\u5e76\u5207\u6362 / \u4e0d\u4fdd\u5b58\u5207\u6362"\u518d\u7ee7\u7eed
             pendingSwitchRef.current = { dragUrl, dragAttrs, type };
             setSwitchConfirmBox(true);
             return;
@@ -2506,7 +2508,7 @@ function Home() {
         await performItemDragUrl(dragUrl, dragAttrs, type);
     };
 
-    // 实际执行切换的内部函数（被 handleItemDragUrl 和确认弹窗按钮复用）
+    // \u5b9e\u9645\u6267\u884c\u5207\u6362\u7684\u5185\u90e8\u51fd\u6570（\u88ab handleItemDragUrl \u548c\u786e\u8ba4\u5f39\u7a97\u6309\u94ae\u590d\u7528）
     const performItemDragUrl = async (dragUrl, dragAttrs, type) => {
         setDragUrl(dragUrl);
         if (type) {
@@ -2587,7 +2589,7 @@ function Home() {
                 }
             });
         }
-        // F5 切换模板/页面前先清理多拖 / 磁吸 / 选择 / hover 状态
+        // F5 \u5207\u6362\u6a21\u677f/\u9875\u9762\u524d\u5148\u6e05\u7406\u591a\u62d6 / \u78c1\u5438 / \u9009\u62e9 / hover \u72b6\u6001
         multiDragRef.current = {
             active: false,
             draggedId: null,
@@ -2607,9 +2609,9 @@ function Home() {
         setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
         history = [];
         history.push(JSON.parse(JSON.stringify(imagesRef.current)));
-        // F11b 精简版：刚加载完页面，把 dirty 状态压回去（避免随之而来的 setImages 把刚加载的内容判脏）
+        // F11b \u7cbe\u7b80\u7248：\u521a\u52a0\u8f7d\u5b8c\u9875\u9762，\u628a dirty \u72b6\u6001\u538b\u56de\u53bb（\u907f\u514d\u968f\u4e4b\u800c\u6765\u7684 setImages \u628a\u521a\u52a0\u8f7d\u7684\u5185\u5bb9\u5224\u810f）
         markPageLoaded();
-        // 切换页面 → 换新 token（用于跨页面复制粘贴判定）
+        // \u5207\u6362\u9875\u9762 → \u6362\u65b0 token（\u7528\u4e8e\u8de8\u9875\u9762\u590d\u5236\u7c98\u8d34\u5224\u5b9a）
         currentPageTokenRef.current = 'page-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     }
     // Comment translated to English.
@@ -2665,12 +2667,12 @@ function Home() {
     // Comment translated to English.
     // Comment translated to English.
     const handleShapeChange = (newShapeProps, id) => {
-        // F6 多选拖动：跟随成员的 onChange 走到这里也直接丢弃（兜底，正常路径已在 JSX onChange 里 return）
+        // F6 \u591a\u9009\u62d6\u52a8：\u8ddf\u968f\u6210\u5458\u7684 onChange \u8d70\u5230\u8fd9\u91cc\u4e5f\u76f4\u63a5\u4e22\u5f03（\u515c\u5e95，\u6b63\u5e38\u8def\u5f84\u5df2\u5728 JSX onChange \u91cc return）
         if (pendingDragFollowerIdsRef.current.has(newShapeProps && newShapeProps.id)) {
             pendingDragFollowerIdsRef.current.delete(newShapeProps.id);
             return;
         }
-        // F6 多选拖动：如果当前正在多选拖动，由 commitMultiDragPositions 统一提交，单点 onChange 跳过
+        // F6 \u591a\u9009\u62d6\u52a8：\u5982\u679c\u5f53\u524d\u6b63\u5728\u591a\u9009\u62d6\u52a8，\u7531 commitMultiDragPositions \u7edf\u4e00\u63d0\u4ea4，\u5355\u70b9 onChange \u8df3\u8fc7
         if (multiDragRef.current.active && multiDragRef.current.pendingPositions) {
             const pending = multiDragRef.current.pendingPositions;
             multiDragRef.current = {
@@ -2738,7 +2740,7 @@ function Home() {
                 }
                 break;
             case 'del': {
-                // 删除目标元素；若属于组合，则整组一起删
+                // \u5220\u9664\u76ee\u6807\u5143\u7d20；\u82e5\u5c5e\u4e8e\u7ec4\u5408，\u5219\u6574\u7ec4\u4e00\u8d77\u5220
                 const delIds = new Set(getExpandedSelectionIds(newShapeProps.id));
                 if (delIds.size === 0) delIds.add(newShapeProps.id);
                 const delImageToUpdate = imagesRef.current.filter((img) => !delIds.has(img.id));
@@ -2766,11 +2768,11 @@ function Home() {
     };
     // Comment translated to English.
     const handleMultiToolBack = (type) => {
-        // 关键：先把 Konva 节点真实位置同步回 imagesRef，避免对齐 / 等距 / 复制基于错位的 imagesRef 计算，
-        // 导致视觉上"看似对齐"但保存到 chart 的 x/y 偏移、刷新后又错位的现象。
-        // del 也要同步，否则删除前临时偏移会丢失（虽然下面 del 分支立即 return，不会读 x/y，但保持调用一致更安全）。
+        // \u5173\u952e：\u5148\u628a Konva \u8282\u70b9\u771f\u5b9e\u4f4d\u7f6e\u540c\u6b65\u56de imagesRef，\u907f\u514d\u5bf9\u9f50 / \u7b49\u8ddd / \u590d\u5236\u57fa\u4e8e\u9519\u4f4d\u7684 imagesRef \u8ba1\u7b97，
+        // \u5bfc\u81f4\u89c6\u89c9\u4e0a"\u770b\u4f3c\u5bf9\u9f50"\u4f46\u4fdd\u5b58\u5230 chart \u7684 x/y \u504f\u79fb、\u5237\u65b0\u540e\u53c8\u9519\u4f4d\u7684\u73b0\u8c61。
+        // del \u4e5f\u8981\u540c\u6b65，\u5426\u5219\u5220\u9664\u524d\u4e34\u65f6\u504f\u79fb\u4f1a\u4e22\u5931（\u867d\u7136\u4e0b\u9762 del \u5206\u652f\u7acb\u5373 return，\u4e0d\u4f1a\u8bfb x/y，\u4f46\u4fdd\u6301\u8c03\u7528\u4e00\u81f4\u66f4\u5b89\u5168）。
         syncKonvaPositionsToImagesRef();
-        // 多选删除：批量删除 selectedIds（组合点击后 selectedIds 已含整组）
+        // \u591a\u9009\u5220\u9664：\u6279\u91cf\u5220\u9664 selectedIds（\u7ec4\u5408\u70b9\u51fb\u540e selectedIds \u5df2\u542b\u6574\u7ec4）
         if (type === 'del') {
             const delIds = new Set(selectedIdsRef.current);
             if (delIds.size === 0) {
@@ -2790,8 +2792,8 @@ function Home() {
             settoolType(null);
             return;
         }
-        // F7+ Unit 模型：把同 groupId 成员折成一个 unit，按 unit 计算对齐目标，再把 offset
-        // 应用到 unit 全部成员上，确保组合作为整体平移、内部相对位置不变。
+        // F7+ Unit \u6a21\u578b：\u628a\u540c groupId \u6210\u5458\u6298\u6210\u4e00\u4e2a unit，\u6309 unit \u8ba1\u7b97\u5bf9\u9f50\u76ee\u6807，\u518d\u628a offset
+        // \u5e94\u7528\u5230 unit \u5168\u90e8\u6210\u5458\u4e0a，\u786e\u4fdd\u7ec4\u5408\u4f5c\u4e3a\u6574\u4f53\u5e73\u79fb、\u5185\u90e8\u76f8\u5bf9\u4f4d\u7f6e\u4e0d\u53d8。
         const tr = transformRefids.current;
         const unlockedSelectedIds = getUnlockedSelectedIds();
         const alignmentUnits = getAlignmentUnits(unlockedSelectedIds);
@@ -2800,17 +2802,17 @@ function Home() {
             return;
         }
 
-        // 锚点：以"用户最先选中的元素 / 组合"为参考线，对齐时锚点不动，其他 unit 向锚点对齐
-        // alignmentUnits[0] 来自 selectedIds[0]，正好是用户首选项；如果首选项是组合，整组作为一个 unit
+        // \u951a\u70b9：\u4ee5"\u7528\u6237\u6700\u5148\u9009\u4e2d\u7684\u5143\u7d20 / \u7ec4\u5408"\u4e3a\u53c2\u8003\u7ebf，\u5bf9\u9f50\u65f6\u951a\u70b9\u4e0d\u52a8，\u5176\u4ed6 unit \u5411\u951a\u70b9\u5bf9\u9f50
+        // alignmentUnits[0] \u6765\u81ea selectedIds[0]，\u6b63\u597d\u662f\u7528\u6237\u9996\u9009\u9879；\u5982\u679c\u9996\u9009\u9879\u662f\u7ec4\u5408，\u6574\u7ec4\u4f5c\u4e3a\u4e00\u4e2a unit
         const anchorMetrics = alignmentUnits[0].metrics;
-        const xl = anchorMetrics.x;                                   // 锚点左边
-        const xr = anchorMetrics.x + anchorMetrics.width;             // 锚点右边
-        const yt = anchorMetrics.y;                                   // 锚点上边
-        const yb = anchorMetrics.y + anchorMetrics.height;            // 锚点下边
-        const xr2 = anchorMetrics.x + anchorMetrics.width / 2;        // 锚点水平中线
-        const yt2 = anchorMetrics.y + anchorMetrics.height / 2;       // 锚点垂直中线
+        const xl = anchorMetrics.x;                                   // \u951a\u70b9\u5de6\u8fb9
+        const xr = anchorMetrics.x + anchorMetrics.width;             // \u951a\u70b9\u53f3\u8fb9
+        const yt = anchorMetrics.y;                                   // \u951a\u70b9\u4e0a\u8fb9
+        const yb = anchorMetrics.y + anchorMetrics.height;            // \u951a\u70b9\u4e0b\u8fb9
+        const xr2 = anchorMetrics.x + anchorMetrics.width / 2;        // \u951a\u70b9\u6c34\u5e73\u4e2d\u7ebf
+        const yt2 = anchorMetrics.y + anchorMetrics.height / 2;       // \u951a\u70b9\u5782\u76f4\u4e2d\u7ebf
 
-        // equal 系列：以 unit（组合外包盒 / 单元素外包盒）为粒度统计 maxw/maxh
+        // equal \u7cfb\u5217：\u4ee5 unit（\u7ec4\u5408\u5916\u5305\u76d2 / \u5355\u5143\u7d20\u5916\u5305\u76d2）\u4e3a\u7c92\u5ea6\u7edf\u8ba1 maxw/maxh
         let maxh = 0, maxw = 0;
         if (type.indexOf('equal') >= 0) {
             alignmentUnits.forEach((unit) => {
@@ -2819,7 +2821,7 @@ function Home() {
             });
         }
 
-        // 排序：水平等距按 x 升序、垂直等距按 y 升序，其它对齐保持 units 原顺序
+        // \u6392\u5e8f：\u6c34\u5e73\u7b49\u8ddd\u6309 x \u5347\u5e8f、\u5782\u76f4\u7b49\u8ddd\u6309 y \u5347\u5e8f，\u5176\u5b83\u5bf9\u9f50\u4fdd\u6301 units \u539f\u987a\u5e8f
         let orderedUnitKeys = [];
         if (type === 'equallevel') {
             orderedUnitKeys = [...alignmentUnits]
@@ -2833,13 +2835,13 @@ function Home() {
             orderedUnitKeys = alignmentUnits.map((u) => u.key);
         }
 
-        // 等距：按 unit 计算每个 unit 的目标坐标
+        // \u7b49\u8ddd：\u6309 unit \u8ba1\u7b97\u6bcf\u4e2a unit \u7684\u76ee\u6807\u5750\u6807
         const equalLevelTargets = type === 'equallevel'
             ? getDistributedUnitTargets(alignmentUnits, 'x') : {};
         const equalVerticalTargets = type === 'equalvertical'
             ? getDistributedUnitTargets(alignmentUnits, 'y') : {};
 
-        // 复制：按 unit 收集 groupId 重映射，确保同一组的成员复制后仍属于同一新组
+        // \u590d\u5236：\u6309 unit \u6536\u96c6 groupId \u91cd\u6620\u5c04，\u786e\u4fdd\u540c\u4e00\u7ec4\u7684\u6210\u5458\u590d\u5236\u540e\u4ecd\u5c5e\u4e8e\u540c\u4e00\u65b0\u7ec4
         const copyGroupIdMap = {};
         if (type === 'copys') {
             unlockedSelectedIds.forEach((sid) => {
@@ -2862,7 +2864,7 @@ function Home() {
             const width = unit.metrics.width;
             const height = unit.metrics.height;
 
-            // 1. 先按 unit 算出整体目标坐标（unit 外包盒左上角应该到哪）
+            // 1. \u5148\u6309 unit \u7b97\u51fa\u6574\u4f53\u76ee\u6807\u5750\u6807（unit \u5916\u5305\u76d2\u5de6\u4e0a\u89d2\u5e94\u8be5\u5230\u54ea）
             let targetX = unit.metrics.x;
             let targetY = unit.metrics.y;
             switch (type) {
@@ -2883,7 +2885,7 @@ function Home() {
             const offsetX = targetX - unit.metrics.x;
             const offsetY = targetY - unit.metrics.y;
 
-            // 2. 把 offset / scale / 复制 应用到 unit 内全部成员（组合作为整体平移）
+            // 2. \u628a offset / scale / \u590d\u5236 \u5e94\u7528\u5230 unit \u5185\u5168\u90e8\u6210\u5458（\u7ec4\u5408\u4f5c\u4e3a\u6574\u4f53\u5e73\u79fb）
             unit.memberIds.forEach((memberId) => {
                 const findIndex = nextImages.findIndex((img) => img.id === memberId);
                 if (findIndex === -1) return;
@@ -2932,7 +2934,7 @@ function Home() {
                         break;
                     }
                     default: {
-                        // 对齐 / 等距：组合所有成员同步偏移，相对位置保持
+                        // \u5bf9\u9f50 / \u7b49\u8ddd：\u7ec4\u5408\u6240\u6709\u6210\u5458\u540c\u6b65\u504f\u79fb，\u76f8\u5bf9\u4f4d\u7f6e\u4fdd\u6301
                         if (offsetX !== 0 || offsetY !== 0) {
                             singleImageToUpdate = {
                                 ...singleImageToUpdate,
@@ -2999,9 +3001,9 @@ function Home() {
     };
     // Comment translated to English.
     const savePage = async (type) => {
-        // 关键：保存前先把 Konva 节点真实位置同步回 imagesRef，确保保存到 chart 的 x/y
-        // 永远等于视觉看到的位置。否则复制后视觉上对，但保存的是 imagesRef 的旧 x/y，
-        // 刷新加载后元素位置与保存时视觉不一致 → 复制体错位。
+        // \u5173\u952e：\u4fdd\u5b58\u524d\u5148\u628a Konva \u8282\u70b9\u771f\u5b9e\u4f4d\u7f6e\u540c\u6b65\u56de imagesRef，\u786e\u4fdd\u4fdd\u5b58\u5230 chart \u7684 x/y
+        // \u6c38\u8fdc\u7b49\u4e8e\u89c6\u89c9\u770b\u5230\u7684\u4f4d\u7f6e。\u5426\u5219\u590d\u5236\u540e\u89c6\u89c9\u4e0a\u5bf9，\u4f46\u4fdd\u5b58\u7684\u662f imagesRef \u7684\u65e7 x/y，
+        // \u5237\u65b0\u52a0\u8f7d\u540e\u5143\u7d20\u4f4d\u7f6e\u4e0e\u4fdd\u5b58\u65f6\u89c6\u89c9\u4e0d\u4e00\u81f4 → \u590d\u5236\u4f53\u9519\u4f4d。
         syncKonvaPositionsToImagesRef();
         stagejson = stageRef.current.toJSON();
         let newjson = JSON.parse(stagejson);
@@ -3080,7 +3082,7 @@ function Home() {
             scaley: 1,
         });
         setcanvasScale(100);
-        // 新建页面 → 换新 token（用于跨页面复制粘贴判定）
+        // \u65b0\u5efa\u9875\u9762 → \u6362\u65b0 token（\u7528\u4e8e\u8de8\u9875\u9762\u590d\u5236\u7c98\u8d34\u5224\u5b9a）
         currentPageTokenRef.current = 'page-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
     }
     // Comment translated to English.
@@ -3276,19 +3278,19 @@ function Home() {
                                         if (prev) clearSnapGuides();
                                         return !prev;
                                     });
-                                }}>{snapEnabled ? '磁吸开' : '磁吸关'}</Button>
+                                }}>{snapEnabled ? t('designer.snapOn') : t('designer.snapOff')}</Button>
                                 <select className="topControl" value={String(snapThreshold)} onChange={(e) => setSnapThreshold(Number(e.target.value))}>
                                     <option value="4">4px</option>
                                     <option value="6">6px</option>
                                     <option value="8">8px</option>
                                     <option value="10">10px</option>
                                 </select>
-                                <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>组合</Button>
-                                <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>取消组合</Button>
+                                <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>{t('designer.group')}</Button>
+                                <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>{t('designer.ungroup')}</Button>
                             </div>
                         </div>
                         <div className="topRight">
-                            <span className={`saveStatus ${saveStatusText === '已修改' ? 'dirty' : ''}`}>{saveStatusText}</span>
+                            <span className={`saveStatus ${saveStatusText === modifiedStatus ? 'dirty' : ''}`}>{saveStatusText}</span>
                             <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
@@ -3313,7 +3315,7 @@ function Home() {
                         <ul>
                             <li className={`${showIndex === 1 ? 'check' : ''} ${tabFlash === 'component' ? 'tabFlash' : ''}`.trim()} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
                             <li className={showIndex === 2 ? 'check' : ''} onClick={() => setshowIndex(2)}>{t('auto.k0395')}</li>
-                            <li className={showIndex === 3 ? 'check' : ''} onClick={() => setshowIndex(3)}>界面属性</li>
+                            <li className={showIndex === 3 ? 'check' : ''} onClick={() => setshowIndex(3)}>{t('designer.interfaceProperties')}</li>
                         </ul>
                         {showIndex === 1 &&
                             <ElementAttr
@@ -3339,8 +3341,8 @@ function Home() {
                             const structure = getInterfaceStructure();
                             return (
                                 <div className="interfaceAttrs">
-                                    <div className="attrTitle">未组合元素</div>
-                                    {structure.singles.length === 0 && <div className="attrBox">暂无未组合元素</div>}
+                                    <div className="attrTitle">{t('designer.ungroupedElements')}</div>
+                                    {structure.singles.length === 0 && <div className="attrBox">{t('designer.noUngroupedElements')}</div>}
                                     {structure.singles.map((item) => (
                                         <div
                                             key={item.id}
@@ -3353,8 +3355,8 @@ function Home() {
                                             <span>{item.id}</span>
                                         </div>
                                     ))}
-                                    <div className="attrTitle">组合元素</div>
-                                    {structure.groups.length === 0 && <div className="attrBox">暂无组合</div>}
+                                    <div className="attrTitle">{t('designer.groupedElements')}</div>
+                                    {structure.groups.length === 0 && <div className="attrBox">{t('designer.noGroups')}</div>}
                                     {structure.groups.map((group) => (
                                         <div key={group.groupId} className="interfaceGroup">
                                             <div
@@ -3364,7 +3366,7 @@ function Home() {
                                                 onClick={() => handleStructureItemClick(group.members.length > 0 ? group.members[0].id : '', true)}
                                             >
                                                 <label>{group.label}</label>
-                                                <span>{group.members.length} 个元素</span>
+                                                <span>{group.members.length} {t('designer.elementsSuffix')}</span>
                                             </div>
                                             {group.members.map((item) => (
                                                 <div
@@ -3466,14 +3468,14 @@ function Home() {
                                         isHoverHighlighted={hoverHighlightIds.includes(shape.id)}
                                         isElementHover={isElementHover}
                                         onHoverEnter={(s) => {
-                                            // 拖动期间禁用 hover 状态更新，避免 setState 触发 React 重渲染把同组成员的 Konva 节点回拉到旧位置
+                                            // \u62d6\u52a8\u671f\u95f4\u7981\u7528 hover \u72b6\u6001\u66f4\u65b0，\u907f\u514d setState \u89e6\u53d1 React \u91cd\u6e32\u67d3\u628a\u540c\u7ec4\u6210\u5458\u7684 Konva \u8282\u70b9\u56de\u62c9\u5230\u65e7\u4f4d\u7f6e
                                             if (multiDragRef.current.active) return;
-                                            // 锁定元素：只亮自身红边，不联动组
+                                            // \u9501\u5b9a\u5143\u7d20：\u53ea\u4eae\u81ea\u8eab\u7ea2\u8fb9，\u4e0d\u8054\u52a8\u7ec4
                                             if (s.draggable === false) {
                                                 setHoverElementIds([s.id]);
                                                 return;
                                             }
-                                            // 未锁定元素：整组联动，但过滤掉组内锁定成员
+                                            // \u672a\u9501\u5b9a\u5143\u7d20：\u6574\u7ec4\u8054\u52a8，\u4f46\u8fc7\u6ee4\u6389\u7ec4\u5185\u9501\u5b9a\u6210\u5458
                                             const groupIds = getExpandedSelectionIds(s.id).filter((id) => {
                                                 const member = imagesRef.current.find((m) => m.id === id);
                                                 return member && member.draggable !== false;
@@ -3491,18 +3493,18 @@ function Home() {
                                         onDragStart={(e, currentShape) => handleShapeDragStart(e, currentShape)}
                                         onDragMove={(e, currentShape) => handleShapeDragMove(e, currentShape)}
                                         onSelect={(evt) => {
-                                            // Ctrl / Cmd：交给 onClickTap 走多选逻辑
+                                            // Ctrl / Cmd：\u4ea4\u7ed9 onClickTap \u8d70\u591a\u9009\u903b\u8f91
                                             if (evt && evt.evt && (evt.evt.ctrlKey || evt.evt.metaKey)) {
                                                 return;
                                             }
-                                            // 拖动开始：dragmove 懒初始化 multiDragRef，这里跳过 setState 避免 React 重渲染拽回 Konva 节点
+                                            // \u62d6\u52a8\u5f00\u59cb：dragmove \u61d2\u521d\u59cb\u5316 multiDragRef，\u8fd9\u91cc\u8df3\u8fc7 setState \u907f\u514d React \u91cd\u6e32\u67d3\u62fd\u56de Konva \u8282\u70b9
                                             if (evt && evt.evt && evt.evt.__draggingSelection) {
                                                 return;
                                             }
-                                            // 组合成员被点中：整组同步纳入 selectedIds（按组整体选中）
+                                            // \u7ec4\u5408\u6210\u5458\u88ab\u70b9\u4e2d：\u6574\u7ec4\u540c\u6b65\u7eb3\u5165 selectedIds（\u6309\u7ec4\u6574\u4f53\u9009\u4e2d）
                                             const groupSelectionIds = getExpandedSelectionIds(shape.id);
                                             if (groupSelectionIds.length > 1) {
-                                                // 已经是同样的整组在选中：跳过 setState，避免重渲染回拉拖动中的 Konva 节点
+                                                // \u5df2\u7ecf\u662f\u540c\u6837\u7684\u6574\u7ec4\u5728\u9009\u4e2d：\u8df3\u8fc7 setState，\u907f\u514d\u91cd\u6e32\u67d3\u56de\u62c9\u62d6\u52a8\u4e2d\u7684 Konva \u8282\u70b9
                                                 const same = selectedIdsRef.current.length === groupSelectionIds.length
                                                     && groupSelectionIds.every((id) => selectedIdsRef.current.includes(id));
                                                 if (same && selectedIdRef.current === shape.id) {
@@ -3515,7 +3517,7 @@ function Home() {
                                                 setDragShape(shape);
                                                 return;
                                             }
-                                            // 普通单元素：保持原有单选行为
+                                            // \u666e\u901a\u5355\u5143\u7d20：\u4fdd\u6301\u539f\u6709\u5355\u9009\u884c\u4e3a
                                             if (selectedId !== shape.id) {
                                                 setSelectedId(null);
                                                 setDragShape(null);
@@ -3529,13 +3531,13 @@ function Home() {
                                             }
                                         }}
                                         onChange={(newShapeProps) => {
-                                            // 多选拖动 dragend：跟随成员 (非被拖那个) 的 onChange 直接 return，
-                                            // 避免每个成员都 push 一次 history 导致撤销要按 N 次
+                                            // \u591a\u9009\u62d6\u52a8 dragend：\u8ddf\u968f\u6210\u5458 (\u975e\u88ab\u62d6\u90a3\u4e2a) \u7684 onChange \u76f4\u63a5 return，
+                                            // \u907f\u514d\u6bcf\u4e2a\u6210\u5458\u90fd push \u4e00\u6b21 history \u5bfc\u81f4\u64a4\u9500\u8981\u6309 N \u6b21
                                             if (pendingDragFollowerIdsRef.current.has(shape.id)) {
                                                 pendingDragFollowerIdsRef.current.delete(shape.id);
                                                 return;
                                             }
-                                            // 多选拖动：被拖元素的 onChange 优先把 pendingPositions 一次性 commit，避免单点 handleShapeChange 把整组带歪
+                                            // \u591a\u9009\u62d6\u52a8：\u88ab\u62d6\u5143\u7d20\u7684 onChange \u4f18\u5148\u628a pendingPositions \u4e00\u6b21\u6027 commit，\u907f\u514d\u5355\u70b9 handleShapeChange \u628a\u6574\u7ec4\u5e26\u6b6a
                                             if (multiDragRef.current.active && multiDragRef.current.draggedId === shape.id && multiDragRef.current.pendingPositions) {
                                                 commitMultiDragPositions(multiDragRef.current.pendingPositions);
                                                 multiDragRef.current = {
@@ -3544,7 +3546,7 @@ function Home() {
                                                     startPositions: {},
                                                     pendingPositions: null,
                                                 };
-                                                // 被拖元素已 commit，剩余 follower 不需要再保留追踪
+                                                // \u88ab\u62d6\u5143\u7d20\u5df2 commit，\u5269\u4f59 follower \u4e0d\u9700\u8981\u518d\u4fdd\u7559\u8ffd\u8e2a
                                                 pendingDragFollowerIdsRef.current = new Set();
                                                 clearSnapGuides();
                                                 return;
@@ -3553,7 +3555,7 @@ function Home() {
                                         }} />
                                     );
                                 })}
-                                {/* 磁吸引导线：始终渲染，由 ref imperative 控制 visible/points/样式，不触发 React 重渲染 */}
+                                {/* \u78c1\u5438\u5f15\u5bfc\u7ebf：\u59cb\u7ec8\u6e32\u67d3，\u7531 ref imperative \u63a7\u5236 visible/points/\u6837\u5f0f，\u4e0d\u89e6\u53d1 React \u91cd\u6e32\u67d3 */}
                                 <Line
                                     ref={snapGuideVRef}
                                     visible={false}
@@ -3575,11 +3577,11 @@ function Home() {
                                 <Transformer
                                     ref={transformRefids}
                                     flipEnabled={false}
-                                    // 参考 your-feature 分支：通过隐藏视觉元素让 Stage 级 Transformer 不显示边框/锚点，
-                                    // 同时保留默认 listening=true 以保证 transformRefids.current.nodes(nodes) 正常工作。
-                                    // 元素自己的边框由 ConElement 内部的 transformRef 单独绘制（多选每个成员各自显示）。
-                                    // 之前用 listening={selectedIds.length<=1} 切换 listening 会破坏 Konva Transformer 内部
-                                    // nodes 跟踪 / 事件 hook 链路，导致"先点击组合 → 再拖动 → 拖不动"。
+                                    // \u53c2\u8003 your-feature \u5206\u652f：\u901a\u8fc7\u9690\u85cf\u89c6\u89c9\u5143\u7d20\u8ba9 Stage \u7ea7 Transformer \u4e0d\u663e\u793a\u8fb9\u6846/\u951a\u70b9，
+                                    // \u540c\u65f6\u4fdd\u7559\u9ed8\u8ba4 listening=true \u4ee5\u4fdd\u8bc1 transformRefids.current.nodes(nodes) \u6b63\u5e38\u5de5\u4f5c。
+                                    // \u5143\u7d20\u81ea\u5df1\u7684\u8fb9\u6846\u7531 ConElement \u5185\u90e8\u7684 transformRef \u5355\u72ec\u7ed8\u5236（\u591a\u9009\u6bcf\u4e2a\u6210\u5458\u5404\u81ea\u663e\u793a）。
+                                    // \u4e4b\u524d\u7528 listening={selectedIds.length<=1} \u5207\u6362 listening \u4f1a\u7834\u574f Konva Transformer \u5185\u90e8
+                                    // nodes \u8ddf\u8e2a / \u4e8b\u4ef6 hook \u94fe\u8def，\u5bfc\u81f4"\u5148\u70b9\u51fb\u7ec4\u5408 → \u518d\u62d6\u52a8 → \u62d6\u4e0d\u52a8"。
                                     borderEnabled={false}
                                     anchorSize={0}
                                     rotateEnabled={false}
@@ -3618,7 +3620,7 @@ function Home() {
                                 let savejson = await savePage('tpl');
                                 let res = await httpsend.getDataLocal('saveTpl', { name: saveTplName, tplcon: savejson });
                                 if (res) {
-                                    message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
+                                    message.success(t('auto.k0443')); setSavedStatus(savedStatus); dirtyRef.current = false;
                                 }
                                 setsaveTplName('');
                                 setshowsaveTplBox(0);
@@ -3730,12 +3732,12 @@ function Home() {
                                     if (savePageType === '1') {// Comment translated to English.
                                         let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
                                         if (fileres.code === 100) {
-                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
+                                            message.success(t('auto.k0443')); setSavedStatus(savedStatus); dirtyRef.current = false;
                                         } else {
                                             message.error(t('auto.k0444'));
                                         }
                                     } else {
-                                        message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
+                                        message.success(t('auto.k0443')); setSavedStatus(savedStatus); dirtyRef.current = false;
                                     }
                                 } else {
                                     message.error(t('auto.k0445'));
@@ -3773,12 +3775,12 @@ function Home() {
                                         if (savePageType === '1') {
                                             let res2 = await httpsend.getDataLocal('savePage', { name: savePageTxt, pagecon: savejson });
                                             if (res2.code === 100) {
-                                                message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
+                                                message.success(t('auto.k0443')); setSavedStatus(savedStatus); dirtyRef.current = false;
                                             } else {
                                                 message.error(t('auto.k0444'));
                                             }
                                         } else {
-                                            message.success(t('auto.k0443')); setSavedStatus('已保存'); dirtyRef.current = false;
+                                            message.success(t('auto.k0443')); setSavedStatus(savedStatus); dirtyRef.current = false;
                                         }
                                     } else {
                                         message.error(t('auto.k0445'));
@@ -3880,14 +3882,14 @@ function Home() {
                             }}>{t('auto.k0202')}</Button>
                         </div>
                     </div>
-                    {/* 切换界面提示保存：当前页面有未保存改动时切到其它页面会弹这个 */}
+                    {/* \u5207\u6362\u754c\u9762\u63d0\u793a\u4fdd\u5b58：\u5f53\u524d\u9875\u9762\u6709\u672a\u4fdd\u5b58\u6539\u52a8\u65f6\u5207\u5230\u5176\u5b83\u9875\u9762\u4f1a\u5f39\u8fd9\u4e2a */}
                     <div className="layui-layer" style={switchConfirmBox ? { 'display': 'block' } : { 'display': 'none' }}>
-                        <div className="layui-layer-title">提示</div>
+                        <div className="layui-layer-title">{t('designer.switchTitle')}</div>
                         <div className="layui-layer-content">
-                            当前页面《<span style={{ color: '#148cf1', fontSize: 18 }}>{savePageName}</span>》有未保存的修改，是否保存后再切换？
+                            {t('designer.switchCurrentPrefix')}<span style={{ color: '#148cf1', fontSize: 18 }}>{savePageName}</span>{t('designer.switchCurrentSuffix')}
                         </div>
                         <span className="layui-layer-setwin" onClick={() => {
-                            // 取消：留在当前页面，丢弃挂起的切换动作
+                            // \u53d6\u6d88：\u7559\u5728\u5f53\u524d\u9875\u9762，\u4e22\u5f03\u6302\u8d77\u7684\u5207\u6362\u52a8\u4f5c
                             pendingSwitchRef.current = null;
                             setSwitchConfirmBox(false);
                         }}>
@@ -3929,7 +3931,7 @@ function Home() {
                                     message.error(t('auto.k0444'));
                                     return;
                                 }
-                                setSavedStatus('已保存');
+                                setSavedStatus(savedStatus);
                                 dirtyRef.current = false;
                                 lastSavedStageJsonRef.current = savejson;
                                 pendingSwitchRef.current = null;
@@ -3937,7 +3939,7 @@ function Home() {
                                 if (pending) {
                                     await performItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type);
                                 }
-                            }}>保存并切换</Button>
+                            }}>{t('designer.saveAndSwitch')}</Button>
                             <Button onClick={async () => {
                                 // Discard-and-switch: drop dirty changes and proceed with the pending navigation.
                                 const pending = pendingSwitchRef.current;
@@ -3947,12 +3949,12 @@ function Home() {
                                 if (pending) {
                                     await performItemDragUrl(pending.dragUrl, pending.dragAttrs, pending.type);
                                 }
-                            }}>不保存切换</Button>
+                            }}>{t('designer.discardAndSwitch')}</Button>
                             <Button onClick={() => {
-                                // 取消：留在当前页面
+                                // \u53d6\u6d88：\u7559\u5728\u5f53\u524d\u9875\u9762
                                 pendingSwitchRef.current = null;
                                 setSwitchConfirmBox(false);
-                            }}>取消</Button>
+                            }}>{t('textReplace.cancel')}</Button>
                         </div>
                     </div>
                     {/* F22 Text replace dialog: find / replace within selected text-like shapes (Ctrl+H). */}

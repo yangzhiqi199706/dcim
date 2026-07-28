@@ -8,6 +8,7 @@ import {
     getBarDataLabelPosition
 } from './SetChart';
 import * as echarts from 'echarts';
+import { t } from '../i18n';
 
 describe('applyChartVisualStyle', () => {
     test('calculates water ball percent from collected value and fixed value', () => {
@@ -457,7 +458,7 @@ describe('applyChartVisualStyle', () => {
         const styled = applyChartVisualStyle(option, { cat: 'line', chartStyle: 'aurora' });
 
         expect(styled.series[0].data).toEqual([0, null, null, '']);
-        expect(styled.graphic.some(item => item.type === 'text' && item.style.text === '暂无数据')).toBe(true);
+        expect(styled.graphic.some(item => item.type === 'text' && item.style.text === t('chart.noData'))).toBe(true);
     });
 
     test('adds sci-fi gauge treatment without changing gauge value', () => {

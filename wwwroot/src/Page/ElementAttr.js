@@ -1231,26 +1231,26 @@ const ElementAttr = memo((props) => {
                 }
                 if (a.attrType === 'chartStyleSelect' || a.attrType === 'chartAnimationSelect' || a.attrType === 'chartBarStyleSelect') {
                     const chartStyleOptions = a.attrType === 'chartStyleSelect' ? [
-                        { value: 'original', label: '原始' },
-                        { value: 'neon', label: '霓虹' },
-                        { value: 'aurora', label: '蓝绿' },
-                        { value: 'amber', label: '金橙' }
+                        { value: 'original', label: t('chart.styleOriginal') },
+                        { value: 'neon', label: t('chart.styleNeon') },
+                        { value: 'aurora', label: t('chart.styleAurora') },
+                        { value: 'amber', label: t('chart.styleAmber') }
                     ] : (a.attrType === 'chartAnimationSelect' ? [
-                        { value: 'off', label: '关闭' },
-                        { value: 'entrance', label: '入场' },
-                        { value: 'pulse', label: '呼吸' },
-                        { value: 'flow', label: '流光' }
+                        { value: 'off', label: t('chart.animationOff') },
+                        { value: 'entrance', label: t('chart.animationEntrance') },
+                        { value: 'pulse', label: t('chart.animationPulse') },
+                        { value: 'flow', label: t('chart.animationFlow') }
                     ] : [
-                        { value: 'original', label: '原始' },
-                        { value: 'rounded', label: '圆角柱' },
-                        { value: 'cylinder', label: '圆柱体' },
-                        { value: 'diamond', label: '菱形柱' },
-                        { value: 'hexagon', label: '六边形柱' },
-                        { value: 'prism', label: '菱柱体' },
-                        { value: 'trapezoid', label: '梯形柱' },
-                        { value: 'pyramid', label: '金字塔柱' },
-                        { value: 'battery', label: '电池柱' },
-                        { value: 'stereoGroup', label: '立体组' }
+                        { value: 'original', label: t('chart.styleOriginal') },
+                        { value: 'rounded', label: t('chart.barStyleRounded') },
+                        { value: 'cylinder', label: t('chart.barStyleCylinder') },
+                        { value: 'diamond', label: t('chart.barStyleDiamond') },
+                        { value: 'hexagon', label: t('chart.barStyleHexagon') },
+                        { value: 'prism', label: t('chart.barStylePrism') },
+                        { value: 'trapezoid', label: t('chart.barStyleTrapezoid') },
+                        { value: 'pyramid', label: t('chart.barStylePyramid') },
+                        { value: 'battery', label: t('chart.barStyleBattery') },
+                        { value: 'stereoGroup', label: t('chart.barStyleStereoGroup') }
                     ]);
                     const defaultChartSelectValue = a.attrType === 'chartStyleSelect'
                         ? 'original'
@@ -1273,13 +1273,13 @@ const ElementAttr = memo((props) => {
                 }
                 if (a.attrType === 'waterBallShapeSelect') {
                     const waterBallShapeOptions = [
-                        { value: 'circle', label: '圆形' },
-                        { value: 'rect', label: '正方形' },
-                        { value: 'roundedRect', label: '带圆角的方形' },
-                        { value: 'triangle', label: '正三角形' },
-                        { value: 'diamond', label: '菱形' },
-                        { value: 'drop', label: '水滴' },
-                        { value: 'arrow', label: '箭头' }
+                        { value: 'circle', label: t('chart.waterBallCircle') },
+                        { value: 'rect', label: t('chart.waterBallRect') },
+                        { value: 'roundedRect', label: t('chart.waterBallRoundedRect') },
+                        { value: 'triangle', label: t('chart.waterBallTriangle') },
+                        { value: 'diamond', label: t('chart.waterBallDiamond') },
+                        { value: 'drop', label: t('chart.waterBallDrop') },
+                        { value: 'arrow', label: t('chart.waterBallArrow') }
                     ];
                     attrList.push(<div className="attrBox" key={unikey}>
                         <label>{a.attrName}</label>
@@ -1311,7 +1311,7 @@ const ElementAttr = memo((props) => {
                         </select>
                     </div>)
                 }
-                // 排序柱状图：显示前 N 个柱体（0 = 显示全部）
+                // \u6392\u5e8f\u67f1\u72b6\u56fe：\u663e\u793a\u524d N \u4e2a\u67f1\u4f53（0 = \u663e\u793a\u5168\u90e8）
                 if (a.attrType === 'sortTopN') {
                     attrList.push(<div className="attrBox" key={unikey}>
                         <label>{a.attrName}</label>
@@ -1319,7 +1319,7 @@ const ElementAttr = memo((props) => {
                             type="number"
                             min="0"
                             step="1"
-                            placeholder="0=全部"
+                            placeholder={t('chart.topNPlaceholder')}
                             defaultValue={val.attrs[a.attrCode] == null ? 0 : val.attrs[a.attrCode]}
                             onChange={handleValChange}
                             data-attrcode={a.attrCode}
@@ -1894,35 +1894,35 @@ const ElementAttr = memo((props) => {
                     if (ShowParasIndex === 0) {
                         params.forEach(element => {
                             console.log(element)
-                            // 安全解析：防止设备名/点位名中包含分隔符导致崩溃
+                            // \u5b89\u5168\u89e3\u6790：\u9632\u6b62\u8bbe\u5907\u540d/\u70b9\u4f4d\u540d\u4e2d\u5305\u542b\u5206\u9694\u7b26\u5bfc\u81f4\u5d29\u6e83
                             try {
                                 if (!element || typeof element !== 'string') return;
 
-                                // 按最后一个 | 分割 src
+                                // \u6309\u6700\u540e\u4e00\u4e2a | \u5206\u5272 src
                                 const lastPipeIndex = element.lastIndexOf('|');
                                 if (lastPipeIndex === -1) return;
                                 const src = element.substring(lastPipeIndex + 1);
                                 const beforeSrc = element.substring(0, lastPipeIndex);
 
-                                // 按第一个 & 分割 devkey
+                                // \u6309\u7b2c\u4e00\u4e2a & \u5206\u5272 devkey
                                 const firstAmpIndex = beforeSrc.indexOf('&');
                                 if (firstAmpIndex === -1) return;
                                 const devkey = beforeSrc.substring(0, firstAmpIndex);
                                 const afterDevkey = beforeSrc.substring(firstAmpIndex + 1);
 
-                                // 按最后一个 ~ 分割 type 和 cmdtype（因为 name 可能包含 /）
+                                // \u6309\u6700\u540e\u4e00\u4e2a ~ \u5206\u5272 type \u548c cmdtype（\u56e0\u4e3a name \u53ef\u80fd\u5305\u542b /）
                                 const lastTildeIndex = afterDevkey.lastIndexOf('~');
                                 if (lastTildeIndex === -1) return;
                                 const beforeType = afterDevkey.substring(0, lastTildeIndex);
                                 const afterType = afterDevkey.substring(lastTildeIndex + 1);
 
-                                // 按第一个 / 分割 dev 和 name（假设 dev 不含 /，name 可能含 /）
+                                // \u6309\u7b2c\u4e00\u4e2a / \u5206\u5272 dev \u548c name（\u5047\u8bbe dev \u4e0d\u542b /，name \u53ef\u80fd\u542b /）
                                 const firstSlashIndex = beforeType.indexOf('/');
                                 if (firstSlashIndex === -1) return;
                                 const dev = beforeType.substring(0, firstSlashIndex);
                                 const name = beforeType.substring(firstSlashIndex + 1);
 
-                                // 按第一个 % 分割 type 和 cmdtype
+                                // \u6309\u7b2c\u4e00\u4e2a % \u5206\u5272 type \u548c cmdtype
                                 const firstPercentIndex = afterType.indexOf('%');
                                 if (firstPercentIndex === -1) return;
                                 const type = afterType.substring(0, firstPercentIndex);
@@ -1930,12 +1930,12 @@ const ElementAttr = memo((props) => {
 
                                 desc.push({ devkey, dev, name, type, cmdtype, src });
                             } catch (err) {
-                                console.error('解析参数失败:', element, err);
+                                console.error('\u89e3\u6790\u53c2\u6570\u5931\u8d25:', element, err);
                             }
                         });
                     } else {
                         cusparams.forEach(element => {
-                            // 安全解析：按第一个 & 分割，允许 name 包含 &
+                            // \u5b89\u5168\u89e3\u6790：\u6309\u7b2c\u4e00\u4e2a & \u5206\u5272，\u5141\u8bb8 name \u5305\u542b &
                             try {
                                 if (!element || typeof element !== 'string') return;
                                 const firstAmpIndex = element.indexOf('&');
@@ -1944,7 +1944,7 @@ const ElementAttr = memo((props) => {
                                 const name = element.substring(firstAmpIndex + 1);
                                 desc.push({ paramskey, name });
                             } catch (err) {
-                                console.error('解析自定义参数失败:', element, err);
+                                console.error('\u89e3\u6790\u81ea\u5b9a\u4e49\u53c2\u6570\u5931\u8d25:', element, err);
                             }
                         });
                     }
@@ -1986,7 +1986,7 @@ const ElementAttr = memo((props) => {
                 <Button type="primary" onClick={async () => {
                     let desc = [];
                     pages.forEach(element => {
-                        // 安全解析：按第一个 - 分割，允许 name 包含 -
+                        // \u5b89\u5168\u89e3\u6790：\u6309\u7b2c\u4e00\u4e2a - \u5206\u5272，\u5141\u8bb8 name \u5305\u542b -
                         try {
                             if (!element || typeof element !== 'string') return;
                             const firstDashIndex = element.indexOf('-');
@@ -1995,7 +1995,7 @@ const ElementAttr = memo((props) => {
                             const name = element.substring(firstDashIndex + 1);
                             desc.push({ pagekey, name });
                         } catch (err) {
-                            console.error('解析页面失败:', element, err);
+                            console.error('\u89e3\u6790\u9875\u9762\u5931\u8d25:', element, err);
                         }
                     });
                     setparamData(JSON.stringify(desc));
@@ -2068,7 +2068,7 @@ const ElementAttr = memo((props) => {
                     let desc = [];
                     if (ShowEventIndex === 0) {
                         devevents.forEach(element => {
-                            // 安全解析：deveventskey & type / src
+                            // \u5b89\u5168\u89e3\u6790：deveventskey & type / src
                             try {
                                 if (!element || typeof element !== 'string') return;
                                 const firstAmpIndex = element.indexOf('&');
@@ -2083,47 +2083,47 @@ const ElementAttr = memo((props) => {
 
                                 desc.push({ deveventskey, type, src });
                             } catch (err) {
-                                console.error('解析设备事件失败:', element, err);
+                                console.error('\u89e3\u6790\u8bbe\u5907\u4e8b\u4ef6\u5931\u8d25:', element, err);
                             }
                         })
                     } else {
                         events.forEach(element => {
-                            // 安全解析：eventsdevname & eventskey / name ~ eventsdevkey % src
-                            // 格式：eventsdevname & eventskey / name ~ ? % eventsdevkey % src
+                            // \u5b89\u5168\u89e3\u6790：eventsdevname & eventskey / name ~ eventsdevkey % src
+                            // \u683c\u5f0f：eventsdevname & eventskey / name ~ ? % eventsdevkey % src
                             try {
                                 if (!element || typeof element !== 'string') return;
 
-                                // 按最后一个 % 分割 src
+                                // \u6309\u6700\u540e\u4e00\u4e2a % \u5206\u5272 src
                                 const lastPercentIndex = element.lastIndexOf('%');
                                 if (lastPercentIndex === -1) return;
                                 const src = element.substring(lastPercentIndex + 1);
                                 const beforeSrc = element.substring(0, lastPercentIndex);
 
-                                // 按倒数第二个 % 分割 eventsdevkey
+                                // \u6309\u5012\u6570\u7b2c\u4e8c\u4e2a % \u5206\u5272 eventsdevkey
                                 const secondLastPercentIndex = beforeSrc.lastIndexOf('%');
                                 if (secondLastPercentIndex === -1) return;
                                 const eventsdevkey = beforeSrc.substring(secondLastPercentIndex + 1);
                                 const beforeEventsdevkey = beforeSrc.substring(0, secondLastPercentIndex);
 
-                                // 按第一个 & 分割 eventsdevname
+                                // \u6309\u7b2c\u4e00\u4e2a & \u5206\u5272 eventsdevname
                                 const firstAmpIndex = beforeEventsdevkey.indexOf('&');
                                 if (firstAmpIndex === -1) return;
                                 const eventsdevname = beforeEventsdevkey.substring(0, firstAmpIndex);
                                 const afterAmp = beforeEventsdevkey.substring(firstAmpIndex + 1);
 
-                                // 按第一个 / 分割 eventskey 和 name（允许 name 包含 /）
+                                // \u6309\u7b2c\u4e00\u4e2a / \u5206\u5272 eventskey \u548c name（\u5141\u8bb8 name \u5305\u542b /）
                                 const firstSlashIndex = afterAmp.indexOf('/');
                                 if (firstSlashIndex === -1) return;
                                 const eventskey = afterAmp.substring(0, firstSlashIndex);
                                 const nameWithTilde = afterAmp.substring(firstSlashIndex + 1);
 
-                                // 按第一个 ~ 分割 name（允许 name 包含 ~）
+                                // \u6309\u7b2c\u4e00\u4e2a ~ \u5206\u5272 name（\u5141\u8bb8 name \u5305\u542b ~）
                                 const firstTildeIndex = nameWithTilde.indexOf('~');
                                 const name = firstTildeIndex === -1 ? nameWithTilde : nameWithTilde.substring(0, firstTildeIndex);
 
                                 desc.push({ eventsdevname, eventskey, name, eventsdevkey, src });
                             } catch (err) {
-                                console.error('解析事件失败:', element, err);
+                                console.error('\u89e3\u6790\u4e8b\u4ef6\u5931\u8d25:', element, err);
                             }
                         });
                     }
@@ -2176,7 +2176,7 @@ const ElementAttr = memo((props) => {
                     }
                 </div>
                 <div className="selImgPreview">
-                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>请选择左侧图片进行预览</span>}
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>{t('chart.imagePreviewHint')}</span>}
                 </div>
             </div>}
             {ShowImagesIndex === 1 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
@@ -2197,7 +2197,7 @@ const ElementAttr = memo((props) => {
                     }
                 </div>
                 <div className="selImgPreview">
-                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>请选择左侧图片进行预览</span>}
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>{t('chart.imagePreviewHint')}</span>}
                 </div>
             </div>}
             <span className="layui-layer-setwin" onClick={() => { setshowImgBox(0); setimgUrlId(0); }}>
@@ -2235,7 +2235,7 @@ const ElementAttr = memo((props) => {
                     }
                 </div>
                 <div className="selImgPreview">
-                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>图片预览</span>}
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>{t('chart.imagePreview')}</span>}
                 </div>
             </div>
             <span className="layui-layer-setwin" onClick={() => { setshowGifImgBox(0); setimgUrlId(0); }}>

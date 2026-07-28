@@ -761,13 +761,13 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
@@ -958,13 +958,13 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
@@ -1233,19 +1233,19 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表样式",
+                "attrName": "\u56fe\u8868\u6837\u5f0f",
                 "attrCode": "chartBarStyle",
                 "attrType": "chartBarStyleSelect",
                 "attrWhere": "Echart"
@@ -1453,7 +1453,7 @@
     }
   },
   {
-    "moduleName": "横向柱状图",
+    "moduleName": "\u6a2a\u5411\u67f1\u72b6\u56fe",
     "iconBase64": "Images/icon/3.png",
     "moduleJson": {
       "attrs": {
@@ -1486,19 +1486,19 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表样式",
+                "attrName": "\u56fe\u8868\u6837\u5f0f",
                 "attrCode": "chartBarStyle",
                 "attrType": "chartBarStyleSelect",
                 "attrWhere": "Echart"
@@ -1642,7 +1642,7 @@
       "children": [
         {
           "attrs": {
-            "title": "横向柱状图",
+            "title": "\u6a2a\u5411\u67f1\u72b6\u56fe",
             "titleSwitch": "1",
             "titleFontSize": 24,
             "titleFontFamily": "__i18n__.auto.k0011",
@@ -1672,7 +1672,7 @@
             "cat": "bar",
             "data": [
               {
-                "name": "UPS负载",
+                "name": "UPS\u8d1f\u8f7d",
                 "data": [
                   120,
                   80,
@@ -1732,19 +1732,19 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表样式",
+                "attrName": "\u56fe\u8868\u6837\u5f0f",
                 "attrCode": "chartBarStyle",
                 "attrType": "chartBarStyleSelect",
                 "attrWhere": "Echart"
@@ -1864,7 +1864,7 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "显示前N个",
+                "attrName": "\u663e\u793a\u524dN\u4e2a",
                 "attrCode": "sortTopN",
                 "attrType": "sortTopN",
                 "attrWhere": "Echart"
@@ -2007,13 +2007,13 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
@@ -2073,13 +2073,13 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "中心空白",
+                "attrName": "\u4e2d\u5fc3\u7a7a\u767d",
                 "attrCode": "centerBlankSwitch",
                 "attrType": "showSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "中心直径",
+                "attrName": "\u4e2d\u5fc3\u76f4\u5f84",
                 "attrCode": "centerBlankDiameter",
                 "attrType": "number",
                 "attrWhere": "Echart"
@@ -2183,13 +2183,13 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
@@ -2306,7 +2306,7 @@
     }
   },
   {
-    "moduleName": "水球",
+    "moduleName": "\u6c34\u7403",
     "iconBase64": "Images/icon/5.png",
     "moduleJson": {
       "attrs": {
@@ -2339,43 +2339,43 @@
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表外观",
+                "attrName": "\u56fe\u8868\u5916\u89c2",
                 "attrCode": "chartStyle",
                 "attrType": "chartStyleSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "图表动效",
+                "attrName": "\u56fe\u8868\u52a8\u6548",
                 "attrCode": "chartAnimation",
                 "attrType": "chartAnimationSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "固定值",
+                "attrName": "\u56fa\u5b9a\u503c",
                 "attrCode": "waterBallFixedValue",
                 "attrType": "number",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "形状",
+                "attrName": "\u5f62\u72b6",
                 "attrCode": "waterBallShape",
                 "attrType": "waterBallShapeSelect",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "背景颜色",
+                "attrName": "\u80cc\u666f\u989c\u8272",
                 "attrCode": "waterBallBackgroundColor",
                 "attrType": "color",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "水波纹颜色1",
+                "attrName": "\u6c34\u6ce2\u7eb9\u989c\u82721",
                 "attrCode": "waterBallWaveColor",
                 "attrType": "color",
                 "attrWhere": "Echart"
               },
               {
-                "attrName": "水波纹颜色2",
+                "attrName": "\u6c34\u6ce2\u7eb9\u989c\u82722",
                 "attrCode": "waterBallWaveColor2",
                 "attrType": "color",
                 "attrWhere": "Echart"
@@ -2418,7 +2418,7 @@
             "data": [
               {
                 "value": 50,
-                "name": "水球"
+                "name": "\u6c34\u7403"
               }
             ],
             "waterBallFixedValue": 100,

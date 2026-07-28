@@ -2,7 +2,7 @@ import BasicComponents from './Data/BasicComponents.json';
 
 describe('BasicComponents chart templates', () => {
     test('includes horizontal bar chart with the same bar data interface', () => {
-        const horizontalBar = BasicComponents.find(item => item.moduleName === '横向柱状图');
+        const horizontalBar = BasicComponents.find(item => item.moduleName === '\u6a2a\u5411\u67f1\u72b6\u56fe');
         const chartAttrs = horizontalBar.moduleJson.children[0].attrs;
 
         expect(horizontalBar).toBeTruthy();
@@ -10,7 +10,7 @@ describe('BasicComponents chart templates', () => {
         expect(chartAttrs.barDirection).toBe('horizontal');
         expect(chartAttrs.xdata).toEqual(['UPS1', 'UPS2', 'UPS3']);
         expect(chartAttrs.data).toEqual([{
-            name: 'UPS负载',
+            name: 'UPS\u8d1f\u8f7d',
             data: [120, 80, 50],
             type: 'bar'
         }]);
@@ -38,7 +38,7 @@ describe('BasicComponents chart templates', () => {
             .flatMap(group => group.attrGroupContent)
             .map(item => item.attrCode);
 
-        expect(waterBall.moduleName).toBe('水球');
+        expect(waterBall.moduleName).toBe('\u6c34\u7403');
         expect(chartAttrs.name).toBe('Echart');
         expect(chartAttrs.chartStyle).toBe('original');
         expect(chartAttrs.chartAnimation).toBe('off');

@@ -740,7 +740,7 @@ const withNoDataHint = (option, preset) => {
             silent: true,
             z: 20,
             style: {
-                text: '暂无数据',
+                text: t('chart.noData'),
                 fill: preset.label,
                 fontSize: 16,
                 fontWeight: 600,
@@ -2560,7 +2560,7 @@ function echart(images, selectedId,alarmData) {
                             }
                             return chartInfo.sortOrder === 'asc' ? a.sortValue - b.sortValue : b.sortValue - a.sortValue;
                         });
-                        // 显示前 N 个柱体：sortTopN > 0 时截取，否则保留全部
+                        // \u663e\u793a\u524d N \u4e2a\u67f1\u4f53：sortTopN > 0 \u65f6\u622a\u53d6，\u5426\u5219\u4fdd\u7559\u5168\u90e8
                         const topNRaw = parseInt(chartInfo.sortTopN, 10);
                         const topN = Number.isFinite(topNRaw) && topNRaw > 0 ? topNRaw : 0;
                         const limitedRows = topN > 0 ? rows.slice(0, topN) : rows;

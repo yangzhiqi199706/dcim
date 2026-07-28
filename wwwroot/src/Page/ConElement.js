@@ -136,7 +136,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
         if (e && e.evt) {
             e.evt.__draggingSelection = true;
         }
-        // 先让父级有机会预初始化多选拖动状态，再走 onSelect
+        // \u5148\u8ba9\u7236\u7ea7\u6709\u673a\u4f1a\u9884\u521d\u59cb\u5316\u591a\u9009\u62d6\u52a8\u72b6\u6001，\u518d\u8d70 onSelect
         if (onDragStartProp) onDragStartProp(e, shapeProps);
         onSelect(e);
     };

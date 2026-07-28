@@ -56,7 +56,7 @@ function ItemBox(props) {
         .replace(/\.txt$/i, '')
         .trim();
 
-    const duplicateMsgHints = ['已存在', 'already exists', 'duplicate', '重复'];
+    const duplicateMsgHints = ['\u5df2\u5b58\u5728', 'already exists', 'duplicate', '\u91cd\u590d'];
     const isDuplicateCreateError = (res) => {
         if (!res || res.code === 100) return false;
         const msg = String((res.msg || '')).toLowerCase();
@@ -724,7 +724,7 @@ function ItemBox(props) {
             </div>
         </div>
 
-        {/* 删除确认弹窗 - 移到 .left 外面避免被容器裁剪 */}
+        {/* \u5220\u9664\u786e\u8ba4\u5f39\u7a97 - \u79fb\u5230 .left \u5916\u9762\u907f\u514d\u88ab\u5bb9\u5668\u88c1\u526a */}
         <div className="layui-layer" style={isdelModalOpen ? { display: 'block' } : { display: 'none' }}>
             <div className="layui-layer-title">{t('common.reminder')}</div>
             <div className="layui-layer-content">{t('itemBox.deleteConfirmPrefix')}<span style={{ color: '#1E9FFF', fontSize: 18 }}>{editPageName}</span>{t('itemBox.deleteConfirmSuffix')}</div>
@@ -759,7 +759,7 @@ function ItemBox(props) {
             </div>
         </div>
 
-        {/* 编辑页面弹窗 - 移到 .left 外面避免被容器裁剪 */}
+        {/* \u7f16\u8f91\u9875\u9762\u5f39\u7a97 - \u79fb\u5230 .left \u5916\u9762\u907f\u514d\u88ab\u5bb9\u5668\u88c1\u526a */}
         <div className="layui-layer" id="editPage" style={showeditPageBox ? { display: 'block' } : { display: 'none' }} key={editPageId}>
             <div className="layui-layer-title">{t('itemBox.editPage')}</div>
             <div className="layui-layer-content">
