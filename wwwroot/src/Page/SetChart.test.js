@@ -5,9 +5,22 @@ import {
     buildPieSeriesOption,
     buildWaterBallOption,
     getWaterBallRatio,
-    getBarDataLabelPosition
+    getBarDataLabelPosition,
+    shouldRenderChart
 } from './SetChart';
 import * as echarts from 'echarts';
+import { t } from '../i18n';
+
+describe('shouldRenderChart', () => {
+    test('keeps full rendering when no changed chart list is supplied', () => {
+        expect(shouldRenderChart('chart-a')).toBe(true);
+    });
+
+    test('renders only chart ids from the changed chart list', () => {
+        expect(shouldRenderChart('chart-a', ['chart-a'])).toBe(true);
+        expect(shouldRenderChart('chart-b', ['chart-a'])).toBe(false);
+    });
+});
 
 describe('applyChartVisualStyle', () => {
     test('calculates water ball percent from collected value and fixed value', () => {
@@ -457,7 +470,7 @@ describe('applyChartVisualStyle', () => {
         const styled = applyChartVisualStyle(option, { cat: 'line', chartStyle: 'aurora' });
 
         expect(styled.series[0].data).toEqual([0, null, null, '']);
-        expect(styled.graphic.some(item => item.type === 'text' && item.style.text === '暂无数据')).toBe(true);
+        expect(styled.graphic.some(item => item.type === 'text' && item.style.text === t('chart.noData'))).toBe(true);
     });
 
     test('adds sci-fi gauge treatment without changing gauge value', () => {

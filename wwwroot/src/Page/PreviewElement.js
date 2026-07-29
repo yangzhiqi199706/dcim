@@ -10,6 +10,7 @@ import PreviewImage from "./PreviewImage";
 import axios from 'axios';
 import { buildMainApiUrl } from '../config/endpoints';
 import PreviewGif from "./PreviewGif.js";
+import { arePreviewElementPropsEqual } from './previewElementMemo';
 
 const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResize, isSwiper, useSlaveId }) => {
     // console.log(shapeProps);
@@ -837,4 +838,4 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
     );
 };
 
-export default PreviewElement;
+export default React.memo(PreviewElement, arePreviewElementPropsEqual);

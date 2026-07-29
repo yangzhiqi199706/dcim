@@ -4,10 +4,10 @@ describe('ensureChartAttributeControls', () => {
     test('adds chart style and animation controls for old Echart module attributes', () => {
         const moduleAttr = [
             {
-                attrGroupName: '样式',
+                attrGroupName: 'Style',
                 attrGroupContent: [
                     {
-                        attrName: '标题',
+                        attrName: 'Title',
                         attrCode: 'titleSwitch',
                         attrType: 'showSelect',
                         attrWhere: 'Echart'
@@ -27,16 +27,16 @@ describe('ensureChartAttributeControls', () => {
     test('does not duplicate chart controls', () => {
         const moduleAttr = [
             {
-                attrGroupName: '样式',
+                attrGroupName: 'Style',
                 attrGroupContent: [
                     {
-                        attrName: '图表外观',
+                        attrName: 'Chart appearance',
                         attrCode: 'chartStyle',
                         attrType: 'chartStyleSelect',
                         attrWhere: 'Echart'
                     },
                     {
-                        attrName: '图表动效',
+                        attrName: 'Chart animation',
                         attrCode: 'chartAnimation',
                         attrType: 'chartAnimationSelect',
                         attrWhere: 'Echart'
@@ -55,16 +55,16 @@ describe('ensureChartAttributeControls', () => {
     test('adds chart bar style control only for bar charts after animation control', () => {
         const moduleAttr = [
             {
-                attrGroupName: '鏍峰紡',
+                attrGroupName: 'Style',
                 attrGroupContent: [
                     {
-                        attrName: '鍥捐〃澶栬',
+                        attrName: 'Chart appearance',
                         attrCode: 'chartStyle',
                         attrType: 'chartStyleSelect',
                         attrWhere: 'Echart'
                     },
                     {
-                        attrName: '鍥捐〃鍔ㄦ晥',
+                        attrName: 'Chart animation',
                         attrCode: 'chartAnimation',
                         attrType: 'chartAnimationSelect',
                         attrWhere: 'Echart'
@@ -86,10 +86,10 @@ describe('ensureChartAttributeControls', () => {
     test('does not add chart bar style control for non-bar charts', () => {
         const moduleAttr = [
             {
-                attrGroupName: '鏍峰紡',
+                attrGroupName: 'Style',
                 attrGroupContent: [
                     {
-                        attrName: '鍥捐〃鍔ㄦ晥',
+                        attrName: 'Chart animation',
                         attrCode: 'chartAnimation',
                         attrType: 'chartAnimationSelect',
                         attrWhere: 'Echart'
@@ -106,10 +106,10 @@ describe('ensureChartAttributeControls', () => {
     test('does not add chart controls to non-chart module attributes', () => {
         const moduleAttr = [
             {
-                attrGroupName: '样式',
+                attrGroupName: 'Style',
                 attrGroupContent: [
                     {
-                        attrName: '宽度',
+                        attrName: 'Width',
                         attrCode: 'width',
                         attrType: 'number',
                         attrWhere: 'Text'

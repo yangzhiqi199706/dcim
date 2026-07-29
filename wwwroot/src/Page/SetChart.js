@@ -740,7 +740,7 @@ const withNoDataHint = (option, preset) => {
             silent: true,
             z: 20,
             style: {
-                text: '暂无数据',
+                text: t('chart.noData'),
                 fill: preset.label,
                 fontSize: 16,
                 fontWeight: 600,
@@ -2332,7 +2332,13 @@ const getAlarmData = async (element, chartInfo, alarmDataList) => {
     safeSetOption(alarmpieChart, applyChartVisualStyle(alarmpieoption, chartInfo));
 }
 // Comment translated to English.
-function echart(images, selectedId,alarmData) {
+export const shouldRenderChart = (chartId, changedChartIds) => {
+    return !Array.isArray(changedChartIds) || changedChartIds.includes(chartId);
+};
+
+function echart(images, selectedId,alarmData, options = {}) {
+    const changedChartIds = options.changedChartIds;
+    const delay = typeof options.delay === 'number' ? options.delay : 1000;
     setTimeout(() => {
         if (!document.querySelectorAll(".chart")) return;
         let chartlist = document.querySelectorAll(".chart");
@@ -2340,6 +2346,7 @@ function echart(images, selectedId,alarmData) {
             var element = chartlist[i];
             let findimg = getImgIndex(images, element);
             if (findimg > -1 && images[findimg] && images[findimg].id) {
+                if (!shouldRenderChart(images[findimg].id, changedChartIds)) continue;
                 // Comment translated to English.
                 const moduleJson = images[findimg].moduleJson;
                 const firstChild = moduleJson && Array.isArray(moduleJson.children) ? moduleJson.children[0] : null;
@@ -2560,7 +2567,7 @@ function echart(images, selectedId,alarmData) {
                             }
                             return chartInfo.sortOrder === 'asc' ? a.sortValue - b.sortValue : b.sortValue - a.sortValue;
                         });
-                        // 显示前 N 个柱体：sortTopN > 0 时截取，否则保留全部
+                        // \u663e\u793a\u524d N \u4e2a\u67f1\u4f53：sortTopN > 0 \u65f6\u622a\u53d6，\u5426\u5219\u4fdd\u7559\u5168\u90e8
                         const topNRaw = parseInt(chartInfo.sortTopN, 10);
                         const topN = Number.isFinite(topNRaw) && topNRaw > 0 ? topNRaw : 0;
                         const limitedRows = topN > 0 ? rows.slice(0, topN) : rows;
@@ -2825,7 +2832,7 @@ function echart(images, selectedId,alarmData) {
                 }
             }
         }
-    }, 1000)
+    }, delay)
 }
 // Comment translated to English.
 function getImgIndex(images, element) {

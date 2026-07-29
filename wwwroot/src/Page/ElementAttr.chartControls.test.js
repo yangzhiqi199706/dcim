@@ -11,15 +11,15 @@ describe('ElementAttr chart control rendering', () => {
         expect(chartControlBlock[0]).toContain('onChange={handleValChange}');
         expect(chartControlBlock[0]).toContain('data-attrcode={a.attrCode}');
         expect(chartControlBlock[0]).toContain("a.attrType === 'chartBarStyleSelect'");
-        expect(chartControlBlock[0]).toContain("{ value: 'rounded', label: '圆角柱' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'cylinder', label: '圆柱体' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'diamond', label: '菱形柱' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'hexagon', label: '六边形柱' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'prism', label: '菱柱体' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'trapezoid', label: '梯形柱' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'pyramid', label: '金字塔柱' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'battery', label: '电池柱' }");
-        expect(chartControlBlock[0]).toContain("{ value: 'stereoGroup'");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleRounded')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleCylinder')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleDiamond')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleHexagon')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStylePrism')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleTrapezoid')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStylePyramid')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleBattery')");
+        expect(chartControlBlock[0]).toContain("t('chart.barStyleStereoGroup')");
         expect(chartControlBlock[0]).not.toContain('chartStyleButtons');
     });
 

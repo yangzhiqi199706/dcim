@@ -1,8 +1,179 @@
 import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 
+const normalizeValue = (value) => (value === undefined || value === null ? '' : value.toString().trim());
+
+export const normalizeProtocol = (protocol) => {
+    const normalizedItems = [];
+    let protocolList = [];
+
+    if (Array.isArray(protocol && protocol.data)) {
+        protocolList = protocol.data;
+    } else if (protocol && protocol.data && typeof protocol.data === 'object') {
+        protocolList = [protocol.data];
+    } else if (protocol && typeof protocol.data === 'string') {
+        const rawData = protocol.data.trim();
+        if (rawData && (rawData[0] === '{' || rawData[0] === '[')) {
+            try {
+                const parsedData = JSON.parse(rawData);
+                protocolList = Array.isArray(parsedData) ? parsedData : [parsedData];
+            } catch (error) {
+                protocolList = [protocol];
+            }
+        } else {
+            protocolList = [protocol];
+        }
+    } else if (protocol) {
+        protocolList = [protocol];
+    }
+
+    const pushProtocolItem = (item) => {
+        if (!item || !item.ProtocolCode || !item.comType || !item.keyName || !Array.isArray(item.keyDesc) || item.keyDesc.length === 0) {
+            return;
+        }
+        const normalizedItem = {
+            ProtocolCode: normalizeValue(item.ProtocolCode),
+            comType: normalizeValue(item.comType),
+            keyName: normalizeValue(item.keyName),
+            keyDesc: item.keyDesc.map(value => normalizeValue(value)).filter(value => value && value.indexOf('=') > -1),
+            dataType: normalizeValue(item.dataType)
+        };
+        if (!normalizedItem.ProtocolCode || !normalizedItem.comType || !normalizedItem.keyName || normalizedItem.keyDesc.length === 0) {
+            return;
+        }
+        const foundIndex = normalizedItems.findIndex(value => (
+            normalizeValue(value.ProtocolCode) === normalizedItem.ProtocolCode
+            && normalizeValue(value.comType) === normalizedItem.comType
+            && normalizeValue(value.keyName) === normalizedItem.keyName
+        ));
+        if (foundIndex === -1) {
+            normalizedItems.push(normalizedItem);
+        } else {
+            normalizedItems[foundIndex] = normalizedItem;
+        }
+    };
+
+    const parseV2Protocol = (protocolObject, fallbackCode = '') => {
+        if (!protocolObject || !Array.isArray(protocolObject.parseModels)) return;
+        const protocolCode = fallbackCode
+            || (protocolObject.protocolMeta && protocolObject.protocolMeta.ProtocolCode)
+            || protocolObject.ProtocolCode
+            || '';
+        protocolObject.parseModels.forEach((model) => {
+            if (!model) return;
+            const type = model.CommandType ? model.CommandType.toString() : '';
+            const params = Array.isArray(model.Params) ? model.Params : [];
+            params.forEach((param) => {
+                if (!param) return;
+                const keyName = normalizeValue(param.AlarmKey || param.ParamName || '');
+                if (!keyName) return;
+                const dataType = normalizeValue(param.DataType);
+                let rawDescription = '';
+                if (typeof param.Unit === 'string' && param.Unit.indexOf('=') > -1) {
+                    rawDescription = param.Unit;
+                } else if (typeof param.DataList === 'string' && param.DataList.indexOf('=') > -1) {
+                    rawDescription = param.DataList;
+                }
+                const keyDesc = normalizeValue(rawDescription)
+                    .replace(/\\\//g, '/')
+                    .split('/')
+                    .map(value => normalizeValue(value))
+                    .filter(value => value && value.indexOf('=') > -1);
+                pushProtocolItem({
+                    ProtocolCode: protocolCode,
+                    comType: type,
+                    keyName,
+                    keyDesc,
+                    dataType
+                });
+            });
+        });
+    };
+
+    const tryParseV2Protocol = (rawProtocol, fallbackCode = '') => {
+        if (!rawProtocol) return false;
+        if (Array.isArray(rawProtocol)) {
+            let matched = false;
+            rawProtocol.forEach((item) => {
+                if (item && Array.isArray(item.parseModels)) {
+                    parseV2Protocol(item, fallbackCode);
+                    matched = true;
+                }
+            });
+            return matched;
+        }
+        if (typeof rawProtocol === 'object') {
+            if (Array.isArray(rawProtocol.parseModels)) {
+                parseV2Protocol(rawProtocol, fallbackCode);
+                return true;
+            }
+            return false;
+        }
+        if (typeof rawProtocol === 'string') {
+            const text = rawProtocol.trim();
+            if (!text || (text[0] !== '{' && text[0] !== '[')) return false;
+            try {
+                return tryParseV2Protocol(JSON.parse(text), fallbackCode);
+            } catch (error) {
+                return false;
+            }
+        }
+        return false;
+    };
+
+    protocolList.forEach((value) => {
+        if (!value) return;
+        const fallbackCode = value.ProtocolCode || '';
+        if (tryParseV2Protocol(value, fallbackCode)
+            || tryParseV2Protocol(value.ProtocolJson, fallbackCode)
+            || tryParseV2Protocol(value.ProtocolData, fallbackCode)) {
+            return;
+        }
+        const protocolData = value.ProtocolData;
+        if (!protocolData) return;
+        const commands = typeof protocolData === 'string' && protocolData.indexOf('|') > -1
+            ? protocolData.split('|')
+            : [protocolData];
+        commands.forEach((command) => {
+            if (!command || typeof command !== 'string') return;
+            const commandParts = command.split('&');
+            if (commandParts.length < 3 || !commandParts[1] || !commandParts[2]) return;
+            const type = commandParts[0];
+            const dealType = commandParts[1].indexOf('<') > -1 ? commandParts[1].split('<')[0] : commandParts[1];
+            const descriptorIndex = ['2', '4'].includes(dealType) ? 2 : ['3', '5', '8'].includes(dealType) ? 4 : 3;
+            commandParts[2].split(':').forEach((parameter) => {
+                if (!parameter) return;
+                const parameterParts = parameter.split(',');
+                if (!parameterParts[descriptorIndex] || parameterParts[descriptorIndex].indexOf('/') === -1) return;
+                pushProtocolItem({
+                    ProtocolCode: normalizeValue(value.ProtocolCode),
+                    comType: normalizeValue(type),
+                    keyName: normalizeValue(parameterParts[1]),
+                    keyDesc: parameterParts[descriptorIndex].split('/').map(item => normalizeValue(item)).filter(item => item && item.indexOf('=') > -1),
+                    dataType: normalizeValue(parameterParts[parameterParts.length - 1])
+                });
+            });
+        });
+    });
+
+    return normalizedItems;
+};
+
+export const createProtocolNormalizer = (normalize = normalizeProtocol) => {
+    let previousProtocol;
+    let previousNormalized;
+    return (protocol) => {
+        if (protocol === previousProtocol) return previousNormalized;
+        previousProtocol = protocol;
+        previousNormalized = normalize(protocol);
+        return previousNormalized;
+    };
+};
+
 export default {
-    PreviewDeal(iamges, procotol, allDevcom, histroydata, paramdata, snmplist, historyparamdata, alarmdata) {
+    normalizeProtocol,
+    createProtocolNormalizer,
+    PreviewDeal(iamges, procotol, allDevcom, histroydata, paramdata, snmplist, historyparamdata, alarmdata, normalizedProtocol) {
         // Comment translated to English.
         // console.log(JSON.stringify(histroydata))
         // console.log(paramdata)
@@ -241,7 +412,7 @@ export default {
             return resArr;
         }
 
-        let newProcotol = dealProcotol();// Comment translated to English.
+        let newProcotol = normalizedProtocol || dealProcotol();// Comment translated to English.
         // Comment translated to English.
         // Comment translated to English.
         // console.log('newProcotol-----------------------');
@@ -414,7 +585,7 @@ export default {
         }
 
         // Comment translated to English.
-        async function fetchData(element, newshapeProps, dataWhere) {
+        function fetchData(element, newshapeProps, dataWhere) {
             if (!newCommandData) return newshapeProps;
             // console.log(newCommandData);
             let findNewValIndex = newCommandData.findIndex(v => sameId(v.DevID, element.key) && hasOwnValue(v.collectData, element.name));// Comment translated to English.
@@ -484,7 +655,7 @@ export default {
             }
         }
         // Comment translated to English.
-        async function fetchparData(element, newshapeProps, dataWhere) {
+        function fetchparData(element, newshapeProps, dataWhere) {
             // let res = await httpsend.getData('GetParamDetailKey', {
             //     id: element.parkey,
             // })
@@ -530,7 +701,7 @@ export default {
         // console.log(newHistoryData)
 
         let newimages = [];
-        iamges.forEach(async (shapeProps) => {
+        iamges.forEach((shapeProps) => {
             if (shapeProps.moduleJson) {
                 let newshapeProps = JSON.parse(JSON.stringify(shapeProps));
                 const firstChild = newshapeProps.moduleJson && Array.isArray(newshapeProps.moduleJson.children) ? newshapeProps.moduleJson.children[0] : null;
@@ -556,9 +727,9 @@ export default {
                     switch (dataType) {
                         case 'dataKey':// Comment translated to English.
                             if (dataKey[0].parkey) {// Comment translated to English.
-                                newshapeProps = await fetchparData(dataKey[0], newshapeProps, dataWhere);
+                                newshapeProps = fetchparData(dataKey[0], newshapeProps, dataWhere);
                             } else {// Comment translated to English.
-                                newshapeProps = await fetchData(dataKey[0], newshapeProps, dataWhere);
+                                newshapeProps = fetchData(dataKey[0], newshapeProps, dataWhere);
                             }
                             newimages.push(JSON.parse(JSON.stringify(newshapeProps)));
                             break;
