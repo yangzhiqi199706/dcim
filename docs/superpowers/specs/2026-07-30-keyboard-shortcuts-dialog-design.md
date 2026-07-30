@@ -19,7 +19,7 @@ editor commands without changing the canvas state.
 
 ## Shortcut Content
 
-The dialog documents only commands currently implemented in `Home.js`:
+The dialog documents only commands currently implemented in `DesignerApp.js`:
 
 1. Selection and movement: multi-select, arrow-key movement, and Shift-arrow
    accelerated movement.
