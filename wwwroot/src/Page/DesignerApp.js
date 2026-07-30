@@ -11,7 +11,9 @@ import SvgBackground from "./SvgBackground";
 import { Select, message, Button, Cascader } from 'antd';
 import setChart from "./SetChart";
 import { Close } from '@mui/icons-material';
+import { KeyboardOutlined } from '@ant-design/icons';
 import { t } from '../i18n';
+import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import '../Assets/base.css';
 import '../Assets/designer.css';
 
@@ -150,6 +152,7 @@ function DesignerApp() {
     const [textReplaceBox, setTextReplaceBox] = useState(false);
     const [textReplaceFind, setTextReplaceFind] = useState('');
     const [textReplaceTo, setTextReplaceTo] = useState('');
+    const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
 
     const setSavedStatus = (text = savedStatus) => {
         if (saveStatusTimerRef.current) {
@@ -2608,6 +2611,13 @@ function DesignerApp() {
                                     }} />
                             </div>
                             <div className="topGroup topControls">
+                                <Button
+                                    type="default"
+                                    icon={<KeyboardOutlined />}
+                                    aria-label={t('designer.shortcuts.title')}
+                                    title={t('designer.shortcuts.title')}
+                                    onClick={() => setKeyboardShortcutsOpen(true)}
+                                >{t('designer.shortcuts.trigger')}</Button>
                                 <Button type={snapEnabled ? 'primary' : 'default'} onClick={() => {
                                     setSnapEnabled((prev) => {
                                         if (prev) clearSnapGuides();
@@ -2939,6 +2949,10 @@ function DesignerApp() {
                             </Layer>
                         </Stage>)}
                     </div>
+                    <KeyboardShortcutsModal
+                        open={keyboardShortcutsOpen}
+                        onClose={() => setKeyboardShortcutsOpen(false)}
+                    />
                     <div className="layui-layer" id="saveTpl" style={showsaveTplBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
                         <div className="layui-layer-title">{t('auto.k0396')}</div>
                         <div className="layui-layer-content">
