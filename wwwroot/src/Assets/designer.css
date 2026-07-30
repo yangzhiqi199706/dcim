@@ -1,1 +1,52 @@
 @import './style.css';
+
+.keyboardShortcutsModal .ant-modal-body {
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.keyboardShortcutsGroup {
+    padding: 0 0 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.keyboardShortcutsGroup + .keyboardShortcutsGroup {
+    padding-top: 14px;
+}
+
+.keyboardShortcutsGroup:last-child {
+    border-bottom: 0;
+}
+
+.keyboardShortcutsGroup h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.keyboardShortcutsRow {
+    display: grid;
+    grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 30px;
+}
+
+.keyboardShortcutsRow kbd {
+    width: fit-content;
+    padding: 2px 7px;
+    color: #1f2937;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+@media (max-width: 640px) {
+    .keyboardShortcutsRow {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        padding: 5px 0;
+    }
+}
