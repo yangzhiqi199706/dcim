@@ -5,7 +5,7 @@ describe('designer keyboard shortcuts help', () => {
     const source = fs.readFileSync(path.join(__dirname, 'DesignerApp.js'), 'utf8');
 
     test('opens and closes the shortcut dialog from the top controls', () => {
-        expect(source).toContain("import { KeyboardOutlined } from '@ant-design/icons';");
+        expect(source).toContain("import { KeyOutlined } from '@ant-design/icons';");
         expect(source).toContain("import KeyboardShortcutsModal from './KeyboardShortcutsModal';");
         expect(source).toContain('const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);');
         expect(source).toContain('onClick={() => setKeyboardShortcutsOpen(true)}');

@@ -11,7 +11,7 @@ import SvgBackground from "./SvgBackground";
 import { Select, message, Button, Cascader } from 'antd';
 import setChart from "./SetChart";
 import { Close } from '@mui/icons-material';
-import { KeyboardOutlined } from '@ant-design/icons';
+import { KeyOutlined } from '@ant-design/icons';
 import { t } from '../i18n';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import '../Assets/base.css';
@@ -2613,7 +2613,7 @@ function DesignerApp() {
                             <div className="topGroup topControls">
                                 <Button
                                     type="default"
-                                    icon={<KeyboardOutlined />}
+                                    icon={<KeyOutlined />}
                                     aria-label={t('designer.shortcuts.title')}
                                     title={t('designer.shortcuts.title')}
                                     onClick={() => setKeyboardShortcutsOpen(true)}
