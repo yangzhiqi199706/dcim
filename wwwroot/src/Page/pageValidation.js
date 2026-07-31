@@ -58,13 +58,15 @@ const createFinding = (code, severity, elementId, index) => ({
 });
 
 export const validatePageElements = (elements, options = {}) => {
-    const source = Array.isArray(elements) ? elements : [];
+    const source = (Array.isArray(elements) ? elements : [])
+        .map((element, index) => ({ element, index }))
+        .filter(({ element }) => element && element.moduleJson && typeof element.moduleJson === 'object');
     const findings = [];
     const ids = new Map();
     const stageWidth = toFiniteNumber(options.stageWidth);
     const stageHeight = toFiniteNumber(options.stageHeight);
 
-    source.forEach((element, index) => {
+    source.forEach(({ element, index }) => {
         const elementId = element && element.id !== undefined && element.id !== null
             ? String(element.id).trim()
             : '';
@@ -79,7 +81,7 @@ export const validatePageElements = (elements, options = {}) => {
         ids.set(elementId, index);
     });
 
-    source.forEach((element, index) => {
+    source.forEach(({ element, index }) => {
         const elementId = element && element.id !== undefined && element.id !== null
             ? String(element.id).trim()
             : '';

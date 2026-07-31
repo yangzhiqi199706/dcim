@@ -96,4 +96,15 @@ describe('validatePageElements', () => {
         expect(findings.map((finding) => finding.code)).toEqual(['chart-data-mismatch']);
         expect(findings[0].elementId).toBe('bar-chart');
     });
+
+    test('ignores persisted Konva runtime nodes without a module model', () => {
+        const findings = validatePageElements([
+            shape({ id: 'real-element' }),
+            {},
+            {},
+            {},
+        ], { stageWidth: 1920, stageHeight: 1080 });
+
+        expect(findings).toEqual([]);
+    });
 });
