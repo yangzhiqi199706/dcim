@@ -8,9 +8,11 @@ describe('designer diagnostics integration', () => {
         const source = fs.readFileSync(file, 'utf8');
 
         expect(source).toContain("import { validatePageElements } from './pageValidation';");
+        expect(source).toContain("import { validateDataBindingAvailability } from './dataBindingAvailability';");
         expect(source).toContain("import { applySimulationOverrides, getSimulatableElements } from './simulationOverrides';");
         expect(source).toContain('const renderImages = useMemo(');
         expect(source).toContain('validatePageElements(imagesRef.current');
+        expect(source).toContain('validateDataBindingAvailability(imagesRef.current');
         expect(source).toContain('setChart(renderImages');
         expect(source).toContain('<PreflightModal');
         expect(source).toContain('<DataSimulationModal');

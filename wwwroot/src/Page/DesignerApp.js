@@ -18,6 +18,7 @@ import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import PreflightModal from './PreflightModal';
 import DataSimulationModal from './DataSimulationModal';
 import { validatePageElements } from './pageValidation';
+import { validateDataBindingAvailability } from './dataBindingAvailability';
 import { applySimulationOverrides, getSimulatableElements } from './simulationOverrides';
 import {
     normalizeStageForPersistence,
@@ -164,6 +165,7 @@ function DesignerApp() {
     const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
     const [preflightOpen, setPreflightOpen] = useState(false);
     const [preflightFindings, setPreflightFindings] = useState([]);
+    const preflightRequestIdRef = useRef(0);
     const [simulationOpen, setSimulationOpen] = useState(false);
     const [simulationEnabled, setSimulationEnabled] = useState(false);
     const [simulationValues, setSimulationValues] = useState({});
@@ -1322,13 +1324,24 @@ function DesignerApp() {
         return mutated;
     };
 
-    const openPreflight = () => {
+    const openPreflight = async () => {
         syncKonvaPositionsToImagesRef();
-        setPreflightFindings(validatePageElements(imagesRef.current, {
+        const findings = validatePageElements(imagesRef.current, {
             stageWidth: safeStageWidth,
             stageHeight: safeStageHeight,
-        }));
+        });
+        const requestId = preflightRequestIdRef.current + 1;
+        preflightRequestIdRef.current = requestId;
+        setPreflightFindings(findings);
         setPreflightOpen(true);
+
+        try {
+            const response = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            if (preflightRequestIdRef.current !== requestId || !response || !Array.isArray(response.data)) return;
+            setPreflightFindings(findings.concat(validateDataBindingAvailability(imagesRef.current, response.data)));
+        } catch (error) {
+            // Keep the deterministic preflight findings when a live source check is unavailable.
+        }
     };
 
     const locatePreflightElement = (elementId) => {
