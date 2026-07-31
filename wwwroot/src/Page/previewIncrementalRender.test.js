@@ -62,4 +62,16 @@ describe('reconcilePreviewElements', () => {
         expect(result.changedIds).toEqual(['chart']);
         expect(result.changedChartIds).toEqual(['chart']);
     });
+
+    test('reports a changed PUE dial as a chart that needs rendering', () => {
+        const model = createPreparedPreviewModel([
+            createShape({ id: 'pue', bindingType: 'dataKey', className: 'pueHtml', cat: 'pue' })
+        ]);
+        const previous = { ...model.sources[0], renderedValue: 1.2 };
+        const candidate = { ...previous, renderedValue: 1.5 };
+
+        const result = reconcilePreviewElements(model, [previous], [candidate]);
+
+        expect(result.changedChartIds).toEqual(['pue']);
+    });
 });

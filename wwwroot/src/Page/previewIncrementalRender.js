@@ -49,7 +49,7 @@ export const createPreparedPreviewModel = (sources) => {
             source,
             id: source.id,
             dependencies: getDependencies(source),
-            isChart: Boolean(firstChild && firstChild.className === 'Echart')
+            isChart: Boolean(firstChild && (firstChild.className === 'Echart' || firstChild.className === 'pueHtml'))
         };
     });
     return { sources: safeSources, entries };
