@@ -17,4 +17,15 @@ describe('designer diagnostics integration', () => {
         expect(source).toContain('<PreflightModal');
         expect(source).toContain('<DataSimulationModal');
     });
+
+    test('opens a refreshable data source health panel without changing the page model', () => {
+        const source = fs.readFileSync(file, 'utf8');
+
+        expect(source).toContain("import { getDataSourceHealthReport } from './dataSourceHealth';");
+        expect(source).toContain("import DataSourceHealthModal from './DataSourceHealthModal';");
+        expect(source).toContain('const openDataSourceHealth = async () =>');
+        expect(source).toContain("httpsend.getData('GetDeviceListKey', { ComboBox: 'all' })");
+        expect(source).toContain('<DataSourceHealthModal');
+        expect(source).toContain('onRefresh={refreshDataSourceHealth}');
+    });
 });

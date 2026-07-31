@@ -12,14 +12,16 @@ import { Select, message, Button, Cascader } from 'antd';
 import setChart from "./SetChart";
 import { Close } from '@mui/icons-material';
 import { KeyOutlined } from '@ant-design/icons';
-import { ExperimentOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, ExperimentOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { t } from '../i18n';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import PreflightModal from './PreflightModal';
 import DataSimulationModal from './DataSimulationModal';
+import DataSourceHealthModal from './DataSourceHealthModal';
 import { validatePageElements } from './pageValidation';
 import { validateDataBindingAvailability } from './dataBindingAvailability';
 import { applySimulationOverrides, getSimulatableElements } from './simulationOverrides';
+import { getDataSourceHealthReport } from './dataSourceHealth';
 import {
     normalizeStageForPersistence,
     resolveLogicalStageSize
@@ -166,6 +168,11 @@ function DesignerApp() {
     const [preflightOpen, setPreflightOpen] = useState(false);
     const [preflightFindings, setPreflightFindings] = useState([]);
     const preflightRequestIdRef = useRef(0);
+    const [dataSourceHealthOpen, setDataSourceHealthOpen] = useState(false);
+    const [dataSourceHealthReport, setDataSourceHealthReport] = useState(null);
+    const [dataSourceHealthLoading, setDataSourceHealthLoading] = useState(false);
+    const [dataSourceHealthLoadError, setDataSourceHealthLoadError] = useState(false);
+    const dataSourceHealthRequestIdRef = useRef(0);
     const [simulationOpen, setSimulationOpen] = useState(false);
     const [simulationEnabled, setSimulationEnabled] = useState(false);
     const [simulationValues, setSimulationValues] = useState({});
@@ -1344,6 +1351,33 @@ function DesignerApp() {
         }
     };
 
+    const refreshDataSourceHealth = async () => {
+        const requestId = dataSourceHealthRequestIdRef.current + 1;
+        dataSourceHealthRequestIdRef.current = requestId;
+        setDataSourceHealthLoading(true);
+        setDataSourceHealthLoadError(false);
+
+        try {
+            const response = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            if (dataSourceHealthRequestIdRef.current !== requestId) return;
+            if (!response || !Array.isArray(response.data)) {
+                setDataSourceHealthLoadError(true);
+                return;
+            }
+            setDataSourceHealthReport(getDataSourceHealthReport(imagesRef.current, response.data));
+        } catch (error) {
+            if (dataSourceHealthRequestIdRef.current === requestId) setDataSourceHealthLoadError(true);
+        } finally {
+            if (dataSourceHealthRequestIdRef.current === requestId) setDataSourceHealthLoading(false);
+        }
+    };
+
+    const openDataSourceHealth = async () => {
+        syncKonvaPositionsToImagesRef();
+        setDataSourceHealthOpen(true);
+        await refreshDataSourceHealth();
+    };
+
     const locatePreflightElement = (elementId) => {
         const shape = imagesRef.current.find((item) => item && item.id === elementId);
         if (!shape) return;
@@ -1354,6 +1388,18 @@ function DesignerApp() {
         setDragShape(shape);
         setshowIndex(1);
         setPreflightOpen(false);
+    };
+
+    const locateDataSourceHealthElement = (elementId) => {
+        const shape = imagesRef.current.find((item) => item && item.id === elementId);
+        if (!shape) return;
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(shape.id);
+        selectedIdRef.current = shape.id;
+        setDragShape(shape);
+        setshowIndex(1);
+        setDataSourceHealthOpen(false);
     };
 
     const commitMultiDragPositions = (positionMap) => {
@@ -2704,6 +2750,7 @@ function DesignerApp() {
                         <div className="topRight">
                             <span className={`saveStatus ${saveStatusText === modifiedStatus ? 'dirty' : ''}`}>{saveStatusText}</span>
                             <Button type="default" className="topActionBtn" icon={<SafetyCertificateOutlined />} onClick={openPreflight}>{t('designer.preflight.trigger')}</Button>
+                            <Button type="default" className="topActionBtn" icon={<DatabaseOutlined />} onClick={openDataSourceHealth}>{t('designer.dataSourceHealth.trigger')}</Button>
                             <Button type={simulationEnabled ? 'primary' : 'default'} className="topActionBtn" icon={<ExperimentOutlined />} onClick={() => setSimulationOpen(true)}>{t('designer.simulation.trigger')}</Button>
                             <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
@@ -3029,6 +3076,15 @@ function DesignerApp() {
                         findings={preflightFindings}
                         onClose={() => setPreflightOpen(false)}
                         onLocate={locatePreflightElement}
+                    />
+                    <DataSourceHealthModal
+                        open={dataSourceHealthOpen}
+                        report={dataSourceHealthReport}
+                        loading={dataSourceHealthLoading}
+                        loadError={dataSourceHealthLoadError}
+                        onClose={() => setDataSourceHealthOpen(false)}
+                        onLocate={locateDataSourceHealthElement}
+                        onRefresh={refreshDataSourceHealth}
                     />
                     <DataSimulationModal
                         open={simulationOpen}

@@ -268,6 +268,136 @@
     background: #1d4ed8;
 }
 
+.dataSourceHealthDialog {
+    width: min(680px, 100%);
+}
+
+.dataSourceHealthActions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.dataSourceHealthCounts {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.dataSourceHealthCount {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.dataSourceHealthCount span:first-child {
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.dataSourceHealthCount-missing,
+.dataSourceHealthCount-invalid,
+.dataSourceHealthCount-unavailable {
+    border-color: #fecaca;
+}
+
+.dataSourceHealthCount-unknown {
+    border-color: #fed7aa;
+}
+
+.dataSourceHealthNotice {
+    margin: 0 0 12px;
+    padding: 9px 10px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.dataSourceHealthNotice-error {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fcd34d;
+}
+
+.dataSourceHealthItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 6px 12px;
+    align-items: center;
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    text-align: left;
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-left-width: 3px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dataSourceHealthItem:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #93c5fd;
+}
+
+.dataSourceHealthItem:disabled {
+    cursor: default;
+    opacity: 0.65;
+}
+
+.dataSourceHealthItem-missing,
+.dataSourceHealthItem-invalid,
+.dataSourceHealthItem-unavailable {
+    border-left-color: #dc2626;
+}
+
+.dataSourceHealthItem-unknown {
+    border-left-color: #d97706;
+}
+
+.dataSourceHealthItem-available {
+    border-left-color: #16a34a;
+}
+
+.dataSourceHealthItemTitle,
+.dataSourceHealthItemMeta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dataSourceHealthItemTitle {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dataSourceHealthItemStatus {
+    padding: 2px 7px;
+    color: #475569;
+    background: #f1f5f9;
+    border-radius: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.dataSourceHealthItemMeta {
+    grid-column: 1 / -1;
+    color: #64748b;
+    font-size: 12px;
+}
+
 @media (max-width: 640px) {
     .keyboardShortcutsRow {
         grid-template-columns: 1fr;
@@ -289,5 +419,9 @@
     .simulationValueRow {
         grid-template-columns: 1fr;
         gap: 5px;
+    }
+
+    .dataSourceHealthCounts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
