@@ -58,4 +58,66 @@ describe('simulation overrides', () => {
         expect(result[0].moduleJson.children[0].attrs.text).toBe('[not-json');
         expect(result[1].moduleJson.children[0].attrs.data).toBe(18.2);
     });
+
+    test('keeps chart option schemas while simulating water ball and axis chart values', () => {
+        const chartElements = [
+            {
+                id: 'water-ball',
+                moduleJson: {
+                    attrs: { dataKey: [{ key: '44', name: 'Water level' }] },
+                    children: [{
+                        className: 'Echart',
+                        attrs: {
+                            cat: 'waterBall',
+                            data: [{ value: 50, name: 'Water level' }],
+                        },
+                    }],
+                },
+            },
+            {
+                id: 'trend-line',
+                moduleJson: {
+                    attrs: { dataKey: [{ key: '45', name: 'Temperature' }] },
+                    children: [{
+                        className: 'Echart',
+                        attrs: {
+                            cat: 'line',
+                            xdata: ['Mon', 'Tue', 'Wed'],
+                            data: [{ name: 'Temperature', type: 'line', data: [10, 20, 30] }],
+                        },
+                    }],
+                },
+            },
+            {
+                id: 'load-bar',
+                moduleJson: {
+                    attrs: { dataKey: [{ key: '46', name: 'Load' }] },
+                    children: [{
+                        className: 'Echart',
+                        attrs: {
+                            cat: 'bar',
+                            xdata: ['A', 'B'],
+                            data: [{ name: 'Load', type: 'bar', data: [10, 20] }],
+                        },
+                    }],
+                },
+            },
+        ];
+
+        const result = applySimulationOverrides(chartElements, {
+            'water-ball': '75',
+            'trend-line': '2',
+            'load-bar': '[3, 4]',
+        });
+
+        expect(result[0].moduleJson.children[0].attrs.data).toEqual([
+            { value: 75, name: 'Water level' },
+        ]);
+        expect(result[1].moduleJson.children[0].attrs.data).toEqual([
+            { name: 'Temperature', type: 'line', data: [2, 2, 2] },
+        ]);
+        expect(result[2].moduleJson.children[0].attrs.data).toEqual([
+            { name: 'Load', type: 'bar', data: [3, 4] },
+        ]);
+    });
 });

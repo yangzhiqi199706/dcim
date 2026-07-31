@@ -45,6 +45,69 @@ export const parseSimulationValue = (value) => {
     return Number.isFinite(numberValue) ? numberValue : value;
 };
 
+const getSimulationValues = (value, length) => {
+    const source = Array.isArray(value) ? value : [value];
+    const targetLength = Math.max(length || 0, source.length, 1);
+    return Array.from({ length: targetLength }, (_, index) => (
+        source[index] === undefined ? source[source.length - 1] : source[index]
+    ));
+};
+
+const getSeriesLength = (attrs = {}) => {
+    if (Array.isArray(attrs.xdata) && attrs.xdata.length > 0) return attrs.xdata.length;
+    if (!Array.isArray(attrs.data)) return 0;
+    return attrs.data.reduce((length, series) => Math.max(
+        length,
+        Array.isArray(series && series.data) ? series.data.length : 0
+    ), 0);
+};
+
+const getAxisChartSimulationData = (attrs, value) => {
+    const values = getSimulationValues(value, getSeriesLength(attrs));
+    const series = Array.isArray(attrs.data)
+        ? attrs.data.filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+        : [];
+    if (series.length === 0) {
+        return [{ type: attrs.cat, data: values }];
+    }
+    return series.map((item) => ({ ...item, data: [...values] }));
+};
+
+const getWaterBallSimulationData = (attrs, value) => {
+    const source = Array.isArray(attrs.data) && attrs.data[0] && typeof attrs.data[0] === 'object'
+        ? attrs.data[0]
+        : {};
+    const simulationValue = Array.isArray(value) ? value[0] : value;
+    return [{ ...source, value: simulationValue }];
+};
+
+const getPieSimulationData = (attrs, value) => {
+    const source = Array.isArray(attrs.data)
+        ? attrs.data.filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+        : [];
+    const values = getSimulationValues(value, source.length);
+    if (source.length === 0) {
+        return values.map((item, index) => ({ value: item, name: String(index + 1) }));
+    }
+    return source.map((item, index) => ({ ...item, value: values[index] }));
+};
+
+const getChartSimulationData = (attrs, value) => {
+    if (!attrs || attrs.cat === 'gauge' || attrs.cat === 'pue') {
+        return Array.isArray(value) ? value[0] : value;
+    }
+    if (attrs.cat === 'line' || attrs.cat === 'bar') {
+        return getAxisChartSimulationData(attrs, value);
+    }
+    if (attrs.cat === 'waterBall') {
+        return getWaterBallSimulationData(attrs, value);
+    }
+    if (attrs.cat === 'pie' || attrs.cat === 'huan') {
+        return getPieSimulationData(attrs, value);
+    }
+    return value;
+};
+
 export const applySimulationOverrides = (elements, overrides = {}) => (Array.isArray(elements) ? elements : [])
     .map((element) => {
         if (!element || !element.id || !hasOwn(overrides, element.id)) return element;
@@ -56,9 +119,12 @@ export const applySimulationOverrides = (elements, overrides = {}) => (Array.isA
             ? parseSimulationValue(rawValue)
             : (rawValue === undefined || rawValue === null ? '' : String(rawValue));
         const attrKey = isChartLike(firstChild) ? 'data' : 'text';
+        const simulatedValue = isChartLike(firstChild)
+            ? getChartSimulationData(firstChild.attrs, value)
+            : value;
         const children = element.moduleJson.children.map((child, index) => (
             index === 0
-                ? { ...child, attrs: { ...child.attrs, [attrKey]: value } }
+                ? { ...child, attrs: { ...child.attrs, [attrKey]: simulatedValue } }
                 : child
         ));
 
