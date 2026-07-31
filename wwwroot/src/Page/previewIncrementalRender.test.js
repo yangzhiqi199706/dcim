@@ -1,3 +1,4 @@
+import * as previewIncrementalRender from './previewIncrementalRender';
 import {
     PREVIEW_REALTIME_INTERVAL_MS,
     createPreparedPreviewModel,
@@ -73,5 +74,13 @@ describe('reconcilePreviewElements', () => {
         const result = reconcilePreviewElements(model, [previous], [candidate]);
 
         expect(result.changedChartIds).toEqual(['pue']);
+    });
+});
+
+describe('mergePreviewChartRenderIds', () => {
+    test('keeps chart ids from concurrent preview batches until the shared render runs', () => {
+        expect(typeof previewIncrementalRender.mergePreviewChartRenderIds).toBe('function');
+        expect(previewIncrementalRender.mergePreviewChartRenderIds(['pue'], ['line', 'pie', 'pue']))
+            .toEqual(['pue', 'line', 'pie']);
     });
 });

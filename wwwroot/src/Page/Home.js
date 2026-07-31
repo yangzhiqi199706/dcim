@@ -22,6 +22,7 @@ import {
 import {
     PREVIEW_REALTIME_INTERVAL_MS,
     createPreparedPreviewModel,
+    mergePreviewChartRenderIds,
     reconcilePreviewElements,
     selectPreviewSources
 } from './previewIncrementalRender';
@@ -1615,6 +1616,7 @@ function Home() {
         const intervalTimers = [];
         const timeoutTimers = [];
         let previewChartTimer = null;
+        let pendingPreviewChartIds = [];
         const registerInterval = (callback, delay) => {
             const id = setInterval(() => {
                 if (!isDisposed) {
@@ -2036,10 +2038,13 @@ function Home() {
             };
             const schedulePreviewChartRender = (changedChartIds) => {
                 if (!changedChartIds.length) return;
+                pendingPreviewChartIds = mergePreviewChartRenderIds(pendingPreviewChartIds, changedChartIds);
                 if (previewChartTimer !== null) clearTimeout(previewChartTimer);
                 previewChartTimer = registerTimeout(() => {
                     previewChartTimer = null;
-                    setChart(imagesRef.current, null, alarmData, { changedChartIds, delay: 0 });
+                    const renderIds = pendingPreviewChartIds;
+                    pendingPreviewChartIds = [];
+                    setChart(imagesRef.current, null, alarmData, { changedChartIds: renderIds, delay: 0 });
                 }, 100);
             };
             const loadPreviewData = (runner, options) => runner(async () => {
@@ -2216,6 +2221,7 @@ function Home() {
             isDisposed = true;
             window.removeEventListener("keydown", onKeyDown);
             if (previewChartTimer !== null) clearTimeout(previewChartTimer);
+            pendingPreviewChartIds = [];
             clearAllTimers();
         }
     }, []);// Comment translated to English.

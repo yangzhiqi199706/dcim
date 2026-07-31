@@ -83,3 +83,11 @@ export const reconcilePreviewElements = (model, previousElements, candidates) =>
     });
     return { elements, changedIds, changedChartIds };
 };
+
+export const mergePreviewChartRenderIds = (pendingIds, changedIds) => {
+    const merged = new Set(Array.isArray(pendingIds) ? pendingIds : []);
+    (Array.isArray(changedIds) ? changedIds : []).forEach(id => {
+        if (id) merged.add(id);
+    });
+    return Array.from(merged);
+};
