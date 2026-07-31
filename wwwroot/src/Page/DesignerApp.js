@@ -12,8 +12,13 @@ import { Select, message, Button, Cascader } from 'antd';
 import setChart from "./SetChart";
 import { Close } from '@mui/icons-material';
 import { KeyOutlined } from '@ant-design/icons';
+import { ExperimentOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { t } from '../i18n';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import PreflightModal from './PreflightModal';
+import DataSimulationModal from './DataSimulationModal';
+import { validatePageElements } from './pageValidation';
+import { applySimulationOverrides, getSimulatableElements } from './simulationOverrides';
 import {
     normalizeStageForPersistence,
     resolveLogicalStageSize
@@ -157,6 +162,26 @@ function DesignerApp() {
     const [textReplaceFind, setTextReplaceFind] = useState('');
     const [textReplaceTo, setTextReplaceTo] = useState('');
     const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
+    const [preflightOpen, setPreflightOpen] = useState(false);
+    const [preflightFindings, setPreflightFindings] = useState([]);
+    const [simulationOpen, setSimulationOpen] = useState(false);
+    const [simulationEnabled, setSimulationEnabled] = useState(false);
+    const [simulationValues, setSimulationValues] = useState({});
+    const simulationEnabledRef = useRef(false);
+    const simulatableElements = useMemo(() => getSimulatableElements(images), [images]);
+    const renderImages = useMemo(
+        () => simulationEnabled ? applySimulationOverrides(images, simulationValues) : images,
+        [images, simulationEnabled, simulationValues]
+    );
+
+    useEffect(() => {
+        simulationEnabledRef.current = simulationEnabled;
+    }, [simulationEnabled]);
+
+    useEffect(() => {
+        if (savePageId === '0' || renderImages.length === 0) return;
+        setChart(renderImages, selectedIdRef.current, null);
+    }, [renderImages, savePageId]);
 
     const setSavedStatus = (text = savedStatus) => {
         if (saveStatusTimerRef.current) {
@@ -1297,6 +1322,27 @@ function DesignerApp() {
         return mutated;
     };
 
+    const openPreflight = () => {
+        syncKonvaPositionsToImagesRef();
+        setPreflightFindings(validatePageElements(imagesRef.current, {
+            stageWidth: safeStageWidth,
+            stageHeight: safeStageHeight,
+        }));
+        setPreflightOpen(true);
+    };
+
+    const locatePreflightElement = (elementId) => {
+        const shape = imagesRef.current.find((item) => item && item.id === elementId);
+        if (!shape) return;
+        selectShapes([]);
+        selectedIdsRef.current = [];
+        setSelectedId(shape.id);
+        selectedIdRef.current = shape.id;
+        setDragShape(shape);
+        setshowIndex(1);
+        setPreflightOpen(false);
+    };
+
     const commitMultiDragPositions = (positionMap) => {
         if (!positionMap) return;
         const nextImages = imagesRef.current.map((shape) => {
@@ -1520,6 +1566,7 @@ function DesignerApp() {
             const isEditing = tag === 'input' || tag === 'textarea' || tag === 'select'
                 || (e.target && e.target.isContentEditable);
             if (isEditing) return;
+            if (simulationEnabledRef.current) return;
             if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
                 e.preventDefault();
                 ungroupSelectedShapes();
@@ -1959,6 +2006,7 @@ function DesignerApp() {
     }
     // Comment translated to English.
     const handleOnDrop = (e) => {
+        if (simulationEnabledRef.current) return;
         // Comment translated to English.
         if (e) {
             e.preventDefault();
@@ -2312,6 +2360,7 @@ function DesignerApp() {
     }
     // Comment translated to English.
     const handleToolChange = async (type) => {
+        if (simulationEnabledRef.current) return;
         if (type === 'undo') {
             if (history.length <= 1) {
                 return;
@@ -2635,12 +2684,14 @@ function DesignerApp() {
                                     <option value="8">8px</option>
                                     <option value="10">10px</option>
                                 </select>
-                                <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>{t('designer.group')}</Button>
-                                <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>{t('designer.ungroup')}</Button>
+                                <Button type="default" disabled={simulationEnabled || !canGroupSelection} onClick={groupSelectedShapes}>{t('designer.group')}</Button>
+                                <Button type="default" disabled={simulationEnabled || !canUngroupSelection} onClick={ungroupSelectedShapes}>{t('designer.ungroup')}</Button>
                             </div>
                         </div>
                         <div className="topRight">
                             <span className={`saveStatus ${saveStatusText === modifiedStatus ? 'dirty' : ''}`}>{saveStatusText}</span>
+                            <Button type="default" className="topActionBtn" icon={<SafetyCertificateOutlined />} onClick={openPreflight}>{t('designer.preflight.trigger')}</Button>
+                            <Button type={simulationEnabled ? 'primary' : 'default'} className="topActionBtn" icon={<ExperimentOutlined />} onClick={() => setSimulationOpen(true)}>{t('designer.simulation.trigger')}</Button>
                             <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
                             {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
@@ -2802,8 +2853,9 @@ function DesignerApp() {
                                         width={safeStageWidth}
                                         height={safeStageHeight} />
                                 )}
-                                {images.map((shape) => {
-                                    const isUnlocked = shape.draggable !== false;
+                                {images.map((shape, index) => {
+                                    const renderShape = renderImages[index] || shape;
+                                    const isUnlocked = !simulationEnabled && shape.draggable !== false;
                                     const isPrimarySelected = isUnlocked && shape.id === selectedId && selectedIds.length === 0;
                                     const hasSelectionFrame = isUnlocked && (selectedIds.includes(shape.id) || marqueeHoverIds.includes(shape.id) || (shape.id === selectedId && selectedIds.length === 0));
                                     const isElementHover = hoverElementIds.includes(shape.id);
@@ -2811,7 +2863,8 @@ function DesignerApp() {
                                     return (<ConElement
                                         id={shape.id}
                                         key={shape.id}
-                                        shapeProps={shape}
+                                        shapeProps={renderShape}
+                                        isSimulationMode={simulationEnabled}
                                         isSelected={isPrimarySelected}
                                         showSelectionFrame={hasSelectionFrame}
                                         isAlignmentAnchor={isAlignmentAnchor}
@@ -2957,6 +3010,25 @@ function DesignerApp() {
                     <KeyboardShortcutsModal
                         open={keyboardShortcutsOpen}
                         onClose={() => setKeyboardShortcutsOpen(false)}
+                    />
+                    <PreflightModal
+                        open={preflightOpen}
+                        findings={preflightFindings}
+                        onClose={() => setPreflightOpen(false)}
+                        onLocate={locatePreflightElement}
+                    />
+                    <DataSimulationModal
+                        open={simulationOpen}
+                        enabled={simulationEnabled}
+                        elements={simulatableElements}
+                        values={simulationValues}
+                        onClose={() => setSimulationOpen(false)}
+                        onEnabledChange={setSimulationEnabled}
+                        onReset={() => {
+                            setSimulationValues({});
+                            setSimulationEnabled(false);
+                        }}
+                        onValuesChange={setSimulationValues}
                     />
                     <div className="layui-layer" id="saveTpl" style={showsaveTplBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
                         <div className="layui-layer-title">{t('auto.k0396')}</div>
