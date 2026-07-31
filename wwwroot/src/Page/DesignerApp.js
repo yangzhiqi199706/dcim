@@ -14,6 +14,10 @@ import { Close } from '@mui/icons-material';
 import { KeyOutlined } from '@ant-design/icons';
 import { t } from '../i18n';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import {
+    normalizeStageForPersistence,
+    resolveLogicalStageSize
+} from './stagePersistence';
 import '../Assets/base.css';
 import '../Assets/designer.css';
 
@@ -177,7 +181,7 @@ function DesignerApp() {
         let raw = stageRef.current.toJSON();
         let newjson;
         try {
-            newjson = JSON.parse(raw);
+            newjson = normalizeStageForPersistence(JSON.parse(raw), safeStageWidth, safeStageHeight);
         } catch (e) {
             return '';
         }
@@ -1898,11 +1902,12 @@ function DesignerApp() {
         }
 
         if (dargJson && dargJson.children && dargJson.children[0] && dargJson.children[0].children) {
-            setstageWidth(dargJson.attrs.width);
-            setstageHeight(dargJson.attrs.height);
+            const logicalStageSize = resolveLogicalStageSize(dargJson);
+            setstageWidth(logicalStageSize.width);
+            setstageHeight(logicalStageSize.height);
             setStageDimensions({
-                width: stageWidth,
-                height: stageHeight,
+                width: logicalStageSize.width,
+                height: logicalStageSize.height,
                 scalex: 1,
                 scaley: 1,
             });
@@ -2344,7 +2349,7 @@ function DesignerApp() {
         // \u5237\u65b0\u52a0\u8f7d\u540e\u5143\u7d20\u4f4d\u7f6e\u4e0e\u4fdd\u5b58\u65f6\u89c6\u89c9\u4e0d\u4e00\u81f4 → \u590d\u5236\u4f53\u9519\u4f4d。
         syncKonvaPositionsToImagesRef();
         stagejson = stageRef.current.toJSON();
-        let newjson = JSON.parse(stagejson);
+        let newjson = normalizeStageForPersistence(JSON.parse(stagejson), safeStageWidth, safeStageHeight);
         const shapeMap = {};
         imagesRef.current.forEach((shape) => {
             shapeMap[shape.id] = shape;
@@ -3079,7 +3084,8 @@ function DesignerApp() {
                                     setChart(JSON.parse(JSON.stringify(imagesRef.current)), null, null);
                                     history = [];
                                     if (savePageType === '1') {// Comment translated to English.
-                                        let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(stageRef.current.toJSON()) });
+                                        const pageJson = buildPageJson();
+                                        let fileres = await httpsend.getDataLocal('savePage', { name: savefilename, pagecon: JSON.stringify(pageJson) });
                                         if (fileres.code === 100) {
                                             message.success(t('auto.k0443')); setSavedStatus(savedStatus); dirtyRef.current = false;
                                         } else {
