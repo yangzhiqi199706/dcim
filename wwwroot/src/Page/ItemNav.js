@@ -5,6 +5,7 @@ import PhotoIcon from '@mui/icons-material/Photo';
 import WallpaperIcon from '@mui/icons-material/Wallpaper';
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import BorderAllIcon from '@mui/icons-material/BorderAll';
+import StarIcon from '@mui/icons-material/Star';
 import { t } from '../i18n';
 
 export const nav = [
@@ -35,5 +36,9 @@ export const nav = [
   {
     title: t('itemBox.myGallery'),
     icon: <UploadFileRoundedIcon />
+  },
+  {
+    title: t('itemBox.favorites'),
+    icon: <StarIcon />
   }
 ];

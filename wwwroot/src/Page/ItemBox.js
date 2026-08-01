@@ -5,8 +5,16 @@ import ScreenTemplate from './Data/ScreenTemplate';
 import httpsend from '../Assets/httpsend';
 import { localizeDeep, t } from '../i18n';
 import { CloseCircleOutlined, FileExclamationOutlined, FileOutlined, FileProtectOutlined } from '@ant-design/icons';
+import { StarFilled, StarOutlined } from '@ant-design/icons';
 import { Button, Cascader, message, Tree, Upload } from 'antd';
 import { Close } from '@mui/icons-material';
+import {
+    createPaletteItem,
+    filterPaletteItems,
+    readPaletteFavorites,
+    togglePaletteFavorite,
+    writePaletteFavorites,
+} from './paletteLibrary';
 
 export const isWaterBallComponent = (item) => (
     item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
@@ -28,6 +36,8 @@ export const isBasicPaletteComponent = (item) => (
 function ItemBox(props) {
     const [selectedNav, setSelectedNav] = useState(0);
     const [selectedData, setSelectedData] = useState([]);
+    const [paletteQuery, setPaletteQuery] = useState('');
+    const [paletteFavorites, setPaletteFavorites] = useState(() => readPaletteFavorites());
     const [pagedata, setpagedata] = useState([]);
     const [savePagePidSel, setsavePagePidSel] = useState();
 
@@ -48,6 +58,31 @@ function ItemBox(props) {
 
     const [isdelModalOpen, setIsdelModalOpen] = useState(false);
     const [showeditPageBox, setshoweditPageBox] = useState(false);
+
+    const visiblePaletteData = React.useMemo(() => filterPaletteItems(selectedData, paletteQuery), [selectedData, paletteQuery]);
+
+    useEffect(() => {
+        writePaletteFavorites(paletteFavorites);
+    }, [paletteFavorites]);
+
+    useEffect(() => {
+        if (selectedNav === 7) setSelectedData(paletteFavorites);
+    }, [paletteFavorites, selectedNav]);
+
+    const setPaletteData = (items, source) => {
+        setSelectedData((Array.isArray(items) ? items : []).map((item) => createPaletteItem(item, source)));
+    };
+
+    const isPaletteFavorite = (item) => paletteFavorites.some((favorite) => favorite && favorite.favoriteId === item.favoriteId);
+
+    const toggleFavorite = (item) => {
+        setPaletteFavorites((current) => togglePaletteFavorite(current, item));
+    };
+
+    const removeFavorite = (favoriteId) => {
+        if (!favoriteId) return;
+        setPaletteFavorites((current) => current.filter((favorite) => favorite.favoriteId !== favoriteId));
+    };
 
     const normalizePageTxt = (val) => String(val || '')
         .replace(/\\/g, '/')
@@ -154,16 +189,17 @@ function ItemBox(props) {
 
     const changeSelectedNav = (id) => {
         setSelectedNav(id);
+        setPaletteQuery('');
         const localizedBasicComponents = localizeDeep(BasicComponents);
         switch (id) {
             case 1:
-                setSelectedData(localizedBasicComponents.filter(isBasicPaletteComponent));
+                setPaletteData(localizedBasicComponents.filter(isBasicPaletteComponent), 'basic');
                 break;
             case 2:
-                setSelectedData(localizedBasicComponents.filter(isChartPaletteComponent));
+                setPaletteData(localizedBasicComponents.filter(isChartPaletteComponent), 'chart');
                 break;
             case 3:
-                setSelectedData(localizeDeep(ScreenTemplate));
+                setPaletteData(localizeDeep(ScreenTemplate), 'template');
                 break;
             case 4:
                 getImgData('tpl');
@@ -176,6 +212,9 @@ function ItemBox(props) {
                 break;
             case 0:
                 getImgData('page');
+                break;
+            case 7:
+                setSelectedData(paletteFavorites);
                 break;
             default:
                 break;
@@ -278,7 +317,7 @@ function ItemBox(props) {
                     imgData = Array.isArray(res.data) ? localizeDeep(res.data) : [];
                 } else {
                 if (!Array.isArray(res.data)) {
-                    setSelectedData(imgData);
+                    setPaletteData(imgData, type);
                     return;
                 }
                 res.data.forEach((element) => {
@@ -327,7 +366,7 @@ function ItemBox(props) {
             }
         }
 
-        setSelectedData(imgData);
+        setPaletteData(imgData, type);
     };
 
     const toBase64DataUrl = (file) => new Promise((resolve, reject) => {
@@ -381,7 +420,7 @@ function ItemBox(props) {
         },
     };
 
-    const delThisImg = async (txt, type) => {
+    const delThisImg = async (txt, type, favoriteId) => {
         let delinfo = {};
         if (type === 'img') {
             delinfo = { action: 'del', img: txt };
@@ -405,8 +444,9 @@ function ItemBox(props) {
         }
 
         let res = await httpsend.getDataLocal('imgData', delinfo);
-        if (res) {
+        if (res && (res.code === undefined || res.code === 100)) {
             message.success(t('itemBox.deleteSuccess'));
+            removeFavorite(favoriteId);
             if (type === 'img') getImgData('upload');
             if (type === 'tpl') getImgData('tpl');
         }
@@ -618,6 +658,18 @@ function ItemBox(props) {
                 ))}
             </ul>
             <div>
+                {selectedNav !== 0 && (
+                    <div className={`paletteSearchToolbar ${selectedNav === 4 || selectedNav === 6 ? 'paletteSearchToolbar-withActions' : ''}`}>
+                        <input
+                            type="search"
+                            data-palette-search
+                            value={paletteQuery}
+                            onChange={(event) => setPaletteQuery(event.target.value)}
+                            placeholder={t('itemBox.searchPlaceholder')}
+                            aria-label={t('itemBox.searchPlaceholder')}
+                        />
+                    </div>
+                )}
                 {selectedNav === 6 && (
                     <>
                         <div className="galleryToolbar uploadBtn">
@@ -631,10 +683,20 @@ function ItemBox(props) {
                                 <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
                             </div>
                         </div>
-                        <div className="galleryListOnly" style={{ marginTop: '42px' }} onMouseLeave={() => setHoverPreviewImg('')}>
-                            {selectedData.map((v, index) => (
-                                <div className="itmeOne" key={index}>
-                                    <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img')} />
+                        <div className="galleryListOnly" style={{ marginTop: '4px' }} onMouseLeave={() => setHoverPreviewImg('')}>
+                            {visiblePaletteData.map((v) => (
+                                <div className="itmeOne" key={v.favoriteId}>
+                                    <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img', v.favoriteId)} />
+                                    <button
+                                        type="button"
+                                        className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''} ${showDelbtn === 1 ? 'hidden' : ''}`}
+                                        data-palette-favorite={v.favoriteId}
+                                        title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        onClick={() => toggleFavorite(v)}
+                                    >
+                                        {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                                    </button>
                                     <img
                                         src={v.iconBase64}
                                         alt={JSON.stringify(v.moduleJson)}
@@ -664,10 +726,20 @@ function ItemBox(props) {
                             <Button className="delBtn" type="primary" danger onClick={() => setshowTplDelbtn(1)} style={showTplDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
                             <Button className="delBtn" danger onClick={() => setshowTplDelbtn(0)} style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
                         </div>
-                        <div style={{ marginTop: '42px' }}>
-                            {selectedData.map((v, index) => (
-                                <div className="itmeOne" key={index}>
-                                    <CloseCircleOutlined className="delOne" style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.moduleName, 'tpl')} />
+                        <div style={{ marginTop: '4px' }}>
+                            {visiblePaletteData.map((v) => (
+                                <div className="itmeOne" key={v.favoriteId}>
+                                    <CloseCircleOutlined className="delOne" style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.moduleName, 'tpl', v.favoriteId)} />
+                                    <button
+                                        type="button"
+                                        className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''} ${showTplDelbtn === 1 ? 'hidden' : ''}`}
+                                        data-palette-favorite={v.favoriteId}
+                                        title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        onClick={() => toggleFavorite(v)}
+                                    >
+                                        {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                                    </button>
                                     <img
                                         src="Images/icon/tpl.png"
                                         alt={JSON.stringify(v.moduleJson)}
@@ -707,11 +779,21 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5) && selectedData.map((v, index) => (
-                    <div className="itmeOne" key={index}>
+                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5 || selectedNav === 7) && visiblePaletteData.map((v) => (
+                    <div className="itmeOne" key={v.favoriteId}>
+                        <button
+                            type="button"
+                            className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''}`}
+                            data-palette-favorite={v.favoriteId}
+                            title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                            aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                            onClick={() => toggleFavorite(v)}
+                        >
+                            {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                        </button>
                         <img
                             className="galleryThumb"
-                            src={v.iconBase64}
+                            src={v.iconBase64 || (v.paletteSource === 'tpl' ? 'Images/icon/tpl.png' : '')}
                             alt={JSON.stringify(v.moduleJson)}
                             onDragStart={(e) => {
                                 const moduleJson = parseDragModuleFromAlt(e.target.alt);
@@ -721,6 +803,7 @@ function ItemBox(props) {
                         {v.moduleName && <div>{v.moduleName}</div>}
                     </div>
                 ))}
+                {selectedNav !== 0 && paletteQuery && visiblePaletteData.length === 0 && <div className="paletteEmptyState">{t('itemBox.noSearchResults')}</div>}
             </div>
         </div>
 
