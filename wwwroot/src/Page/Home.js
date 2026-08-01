@@ -35,6 +35,11 @@ import {
 } from './multiDragRuntime';
 import { buildMainApiUrl } from '../config/endpoints';
 import { t } from '../i18n';
+import {
+    createMasterControlDefinition,
+    instantiateMasterControl,
+    isMasterControlDefinition,
+} from './masterControlLibrary';
 
 import Konva from "konva";
 
@@ -114,6 +119,9 @@ function Home() {
     // Comment translated to English.
     const [showsaveTplBox, setshowsaveTplBox] = useState(0);
     const [saveTplName, setsaveTplName] = useState();
+    const [showMasterControlBox, setShowMasterControlBox] = useState(false);
+    const [masterControlName, setMasterControlName] = useState('');
+    const masterControlSelectionRef = useRef([]);
     // Comment translated to English.
     const [savePagePidSel, setsavePagePidSel] = useState();// Comment translated to English.
     const [showsavePageBox, setshowsavePageBox] = useState(0);
@@ -689,6 +697,7 @@ function Home() {
 
     const canGroupSelection = selectedIds.length >= 2;
     const canUngroupSelection = isSelectionSingleGroup();
+    const canSaveMasterControl = selectedId !== null || selectedIds.length > 0;
 
     // \u5bf9\u9f50\u951a\u70b9：\u7528\u6237\u6700\u5148\u9009\u4e2d\u7684\u5143\u7d20 / \u7ec4\u5408，\u5bf9\u9f50\u65f6\u951a\u70b9\u4e0d\u52a8，\u5176\u4ed6 unit \u5411\u951a\u70b9\u9760\u62e2。
     // - \u5355\u9009 / 0 \u9009：\u65e0\u951a\u70b9（\u7a7a\u96c6），UI \u4e0d\u753b\u7d2b\u8272\u9ad8\u4eae
@@ -800,6 +809,46 @@ function Home() {
         }
         if (!Array.isArray(targetIds) || targetIds.length === 0) return [];
         return imagesRef.current.filter((shape) => targetIds.includes(shape.id));
+    };
+
+    const openMasterControlSaveDialog = () => {
+        syncKonvaPositionsToImagesRef();
+        const selectionShapes = getClipboardSelectionShapes();
+        if (selectionShapes.length === 0) {
+            message.warning(t('masterControls.selectionRequired'));
+            return;
+        }
+        masterControlSelectionRef.current = JSON.parse(JSON.stringify(selectionShapes));
+        setMasterControlName('');
+        setShowMasterControlBox(true);
+    };
+
+    const saveMasterControl = async () => {
+        const name = masterControlName.trim();
+        if (!name) {
+            message.warning(t('masterControls.nameRequired'));
+            return;
+        }
+
+        const definition = createMasterControlDefinition(name, masterControlSelectionRef.current);
+        if (!definition) {
+            message.warning(t('masterControls.selectionRequired'));
+            return;
+        }
+
+        try {
+            const result = await httpsend.getDataLocal('saveMasterControl', { name, definition });
+            if (result && result.code === 100) {
+                message.success(t('masterControls.saveSuccess'));
+                masterControlSelectionRef.current = [];
+                setMasterControlName('');
+                setShowMasterControlBox(false);
+                return;
+            }
+            message.error((result && result.msg) || t('masterControls.saveFailed'));
+        } catch (error) {
+            message.error(t('masterControls.saveFailed'));
+        }
     };
 
     const writeClipboard = (shapes) => {
@@ -2594,6 +2643,41 @@ function Home() {
             e.preventDefault();
             stageRef.current.setPointersPositions(e);// Comment translated to English.
         }
+        if (isMasterControlDefinition(dragAttrs)) {
+            const stage = stageRef.current;
+            const pointer = stage && stage.getPointerPosition ? stage.getPointerPosition() : null;
+            if (!pointer) return;
+
+            const scaleX = Number(stageDimensions.scalex) || 1;
+            const scaleY = Number(stageDimensions.scaley) || 1;
+            const existingIds = new Set(imagesRef.current.map((shape) => String(shape.id)));
+            const createCanvasShapeId = (index) => {
+                let id = '';
+                do {
+                    id = `master_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`;
+                } while (existingIds.has(id));
+                existingIds.add(id);
+                return id;
+            };
+            const instance = instantiateMasterControl(dragAttrs, {
+                x: pointer.x / scaleX,
+                y: pointer.y / scaleY,
+            }, createCanvasShapeId);
+            if (instance.shapes.length === 0) return;
+
+            const nextImages = imagesRef.current.concat(instance.shapes);
+            setImages(nextImages);
+            imagesRef.current = nextImages;
+            history.push(JSON.parse(JSON.stringify(nextImages)));
+            selectShapes(instance.ids);
+            selectedIdsRef.current = instance.ids;
+            const firstShape = instance.shapes[0];
+            setSelectedId(firstShape.id);
+            selectedIdRef.current = firstShape.id;
+            setDragShape(firstShape);
+            setTimeout(() => setChart(JSON.parse(JSON.stringify(imagesRef.current)), firstShape.id, null));
+            return;
+        }
         if (typeof dragAttrs === 'string' || (dragAttrs && typeof dragAttrs === 'object' && dragAttrs.className === 'Stage')) {
             // Comment translated to English.
             setsavePageType('1');
@@ -3260,6 +3344,7 @@ function Home() {
                                 </select>
                                 <Button type="default" disabled={!canGroupSelection} onClick={groupSelectedShapes}>{t('designer.group')}</Button>
                                 <Button type="default" disabled={!canUngroupSelection} onClick={ungroupSelectedShapes}>{t('designer.ungroup')}</Button>
+                                <Button type="default" disabled={!canSaveMasterControl} onClick={openMasterControlSaveDialog}>{t('masterControls.save')}</Button>
                             </div>
                         </div>
                         <div className="topRight">
@@ -3598,6 +3683,36 @@ function Home() {
                                 setsaveTplName('');
                                 setshowsaveTplBox(0);
                             }}>{t('auto.k0202')}</Button>
+                        </div>
+                    </div>
+                    <div className="layui-layer" id="saveMasterControl" style={showMasterControlBox ? { 'display': 'block' } : { 'display': 'none' }}>
+                        <div className="layui-layer-title">{t('masterControls.saveTitle')}</div>
+                        <div className="layui-layer-content">
+                            <div>
+                                <label>{t('masterControls.name')}</label>
+                                <input
+                                    style={{ width: '167px' }}
+                                    type="text"
+                                    value={masterControlName}
+                                    onChange={(e) => setMasterControlName(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <span className="layui-layer-setwin" onClick={() => {
+                            masterControlSelectionRef.current = [];
+                            setMasterControlName('');
+                            setShowMasterControlBox(false);
+                        }}>
+                            <Close />
+                        </span>
+                        <div className="layui-layer-btn">
+                            <Button type="primary" onClick={saveMasterControl}>{t('common.confirm')}</Button>
+                            <Button onClick={() => {
+                                masterControlSelectionRef.current = [];
+                                setMasterControlName('');
+                                setShowMasterControlBox(false);
+                            }}>{t('textReplace.cancel')}</Button>
                         </div>
                     </div>
                     <div className="layui-layer" id="savePage" style={showsavePageBox === 1 ? { 'display': 'block' } : { 'display': 'none' }} key={showsavePageBox}>

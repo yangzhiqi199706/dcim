@@ -62,6 +62,7 @@
     basicComponents: '基础组件',
     chartComponents: '图表组件',
     templateComponents: '模板组件',
+    masterControls: '主控件',
     uploadImage: '上传图片',
     deleteConfirmPrefix: '确认删除《',
     deleteConfirmSuffix: '》页面及其子页面？',
@@ -122,6 +123,15 @@
     nothingMatched: '没有匹配的参数可替换',
     selectionChanged: '选区已变化，请重新打开参数替换',
     replacedCount: '已替换 {count} 个元素的参数',
+  },
+  masterControls: {
+    save: '保存为主控件',
+    saveTitle: '保存主控件',
+    name: '主控件名称',
+    nameRequired: '请输入主控件名称',
+    selectionRequired: '请先选择至少一个元素',
+    saveSuccess: '主控件已保存',
+    saveFailed: '主控件保存失败',
   },
   designer: {
     saved: '已保存',

@@ -62,6 +62,7 @@
     basicComponents: 'Basic Components',
     chartComponents: 'Chart Components',
     templateComponents: 'Template Components',
+    masterControls: 'Master Controls',
     uploadImage: 'Upload Image',
     deleteConfirmPrefix: 'Confirm deleting "',
     deleteConfirmSuffix: '" and its child pages?',
@@ -122,6 +123,15 @@
     nothingMatched: 'No matching parameter could be replaced.',
     selectionChanged: 'The selection changed. Open parameter replacement again.',
     replacedCount: 'Replaced the parameter on {count} element(s).',
+  },
+  masterControls: {
+    save: 'Save as Master Control',
+    saveTitle: 'Save Master Control',
+    name: 'Master control name',
+    nameRequired: 'Enter a master control name.',
+    selectionRequired: 'Select at least one element first.',
+    saveSuccess: 'Master control saved.',
+    saveFailed: 'Failed to save the master control.',
   },
   designer: {
     saved: 'Saved',

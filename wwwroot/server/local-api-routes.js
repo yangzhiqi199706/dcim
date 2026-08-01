@@ -1,14 +1,17 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { createMasterControlStore } = require('./masterControlStore');
 
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const IMAGES_DIR = path.join(PUBLIC_DIR, 'Images');
 const SYSTEM_DIR = path.join(IMAGES_DIR, 'dcim');
 const UPLOAD_DIR = path.join(IMAGES_DIR, 'uploads');
 const TEMPLATE_DIR = path.join(IMAGES_DIR, 'pagetpl');
+const MASTER_CONTROL_DIR = path.join(IMAGES_DIR, 'master-controls');
 const PAGE_DIR = path.join(IMAGES_DIR, 'page');
 const EXPORT_DIR = path.join(IMAGES_DIR, 'exports');
+const masterControlStore = createMasterControlStore(MASTER_CONTROL_DIR);
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp']);
 const MIME_EXTENSION_MAP = {
@@ -644,6 +647,7 @@ function createImgDataHandler() {
       ensureDirectory(UPLOAD_DIR);
       ensureDirectory(PAGE_DIR);
       ensureDirectory(TEMPLATE_DIR);
+      ensureDirectory(MASTER_CONTROL_DIR);
       ensureDirectory(EXPORT_DIR);
 
       if (action === 'system') {
@@ -662,6 +666,10 @@ function createImgDataHandler() {
 
       if (action === 'tpl') {
         return ok(res, listTemplateData());
+      }
+
+      if (action === 'master-control') {
+        return ok(res, masterControlStore.list());
       }
 
       if (action === 'page') {
@@ -686,6 +694,14 @@ function createImgDataHandler() {
         const filePath = resolveExistingFile(TEMPLATE_DIR, payload.name);
         if (!deleteFileIfExists(filePath)) {
           return fail(res, 'template not found');
+        }
+        return ok(res, [], 'deleted');
+      }
+
+      if (action === 'delmastercontrol') {
+        const result = masterControlStore.remove(payload.name);
+        if (!result.ok) {
+          return fail(res, result.message);
         }
         return ok(res, [], 'deleted');
       }
@@ -731,6 +747,21 @@ function createSavePageHandler() {
       return ok(res, toPublicImageUrl(filePath), 'saved');
     } catch (error) {
       return fail(res, `savePage local api error: ${error.message}`);
+    }
+  };
+}
+
+function createSaveMasterControlHandler() {
+  return (req, res) => {
+    try {
+      const payload = req.body || {};
+      const result = masterControlStore.save(payload.name, payload.definition);
+      if (!result.ok) {
+        return fail(res, result.message);
+      }
+      return ok(res, result.data, 'saved');
+    } catch (error) {
+      return fail(res, `saveMasterControl local api error: ${error.message}`);
     }
   };
 }
@@ -889,6 +920,7 @@ function attachLocalApiRoutes(app, basePath = '/api/local') {
   app.post(routePath(basePath, 'imgData'), createImgDataHandler());
   app.post(routePath(basePath, 'saveTpl'), createSaveTplHandler());
   app.post(routePath(basePath, 'savePage'), createSavePageHandler());
+  app.post(routePath(basePath, 'saveMasterControl'), createSaveMasterControlHandler());
   app.post(routePath(basePath, 'export'), createExportHandler());
   app.post(routePath(basePath, 'upload'), createUploadHandler());
   app.post(routePath(basePath, 'exportImport'), createExportImportHandler());
