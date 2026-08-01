@@ -62,6 +62,7 @@
     basicComponents: '基础组件',
     chartComponents: '图表组件',
     templateComponents: '模板组件',
+    masterControls: '主控件',
     uploadImage: '上传图片',
     deleteConfirmPrefix: '确认删除《',
     deleteConfirmSuffix: '》页面及其子页面？',

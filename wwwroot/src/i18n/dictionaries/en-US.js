@@ -62,6 +62,7 @@
     basicComponents: 'Basic Components',
     chartComponents: 'Chart Components',
     templateComponents: 'Template Components',
+    masterControls: 'Master Controls',
     uploadImage: 'Upload Image',
     deleteConfirmPrefix: 'Confirm deleting "',
     deleteConfirmSuffix: '" and its child pages?',

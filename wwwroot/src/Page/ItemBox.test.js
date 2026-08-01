@@ -49,4 +49,15 @@ describe('ItemBox palette classification', () => {
         expect(source).toContain('selectedNav === 7');
         expect(navSource).toContain("t('itemBox.favorites')");
     });
+
+    test('integrates server-persisted master controls into the material library', () => {
+        const source = fs.readFileSync(path.join(__dirname, 'ItemBox.js'), 'utf8');
+        const navSource = fs.readFileSync(path.join(__dirname, 'ItemNav.js'), 'utf8');
+
+        expect(source).toContain("getImgData('master-control')");
+        expect(source).toContain("action: 'delmastercontrol'");
+        expect(source).toContain('selectedNav === 7');
+        expect(source).toContain('selectedNav === 8');
+        expect(navSource).toContain("t('itemBox.masterControls')");
+    });
 });

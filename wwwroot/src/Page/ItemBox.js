@@ -66,7 +66,7 @@ function ItemBox(props) {
     }, [paletteFavorites]);
 
     useEffect(() => {
-        if (selectedNav === 7) setSelectedData(paletteFavorites);
+        if (selectedNav === 8) setSelectedData(paletteFavorites);
     }, [paletteFavorites, selectedNav]);
 
     const setPaletteData = (items, source) => {
@@ -207,15 +207,18 @@ function ItemBox(props) {
             case 5:
                 getImgData('system');
                 break;
-            case 6:
-                getImgData('upload');
-                break;
-            case 0:
-                getImgData('page');
-                break;
-            case 7:
-                setSelectedData(paletteFavorites);
-                break;
+                case 6:
+                    getImgData('upload');
+                    break;
+                case 7:
+                    getImgData('master-control');
+                    break;
+                case 0:
+                    getImgData('page');
+                    break;
+                case 8:
+                    setSelectedData(paletteFavorites);
+                    break;
             default:
                 break;
         }
@@ -313,7 +316,7 @@ function ItemBox(props) {
 
         let res = await httpsend.getDataLocal('imgData', { action: type });
             if (res) {
-                if (type === 'tpl') {
+                if (type === 'tpl' || type === 'master-control') {
                     imgData = Array.isArray(res.data) ? localizeDeep(res.data) : [];
                 } else {
                 if (!Array.isArray(res.data)) {
@@ -442,6 +445,9 @@ function ItemBox(props) {
             }
             delinfo = { action: 'deltpl', name: txt };
         }
+        if (type === 'master-control') {
+            delinfo = { action: 'delmastercontrol', name: txt };
+        }
 
         let res = await httpsend.getDataLocal('imgData', delinfo);
         if (res && (res.code === undefined || res.code === 100)) {
@@ -449,6 +455,7 @@ function ItemBox(props) {
             removeFavorite(favoriteId);
             if (type === 'img') getImgData('upload');
             if (type === 'tpl') getImgData('tpl');
+            if (type === 'master-control') getImgData('master-control');
         }
         return true;
     };
@@ -659,7 +666,7 @@ function ItemBox(props) {
             </ul>
             <div>
                 {selectedNav !== 0 && (
-                    <div className={`paletteSearchToolbar ${selectedNav === 4 || selectedNav === 6 ? 'paletteSearchToolbar-withActions' : ''}`}>
+                    <div className={`paletteSearchToolbar ${selectedNav === 4 || selectedNav === 6 || selectedNav === 7 ? 'paletteSearchToolbar-withActions' : ''}`}>
                         <input
                             type="search"
                             data-palette-search
@@ -720,7 +727,7 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {selectedNav === 4 && (
+                {(selectedNav === 4 || selectedNav === 7) && (
                     <>
                         <div className="uploadBtn">
                             <Button className="delBtn" type="primary" danger onClick={() => setshowTplDelbtn(1)} style={showTplDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
@@ -729,7 +736,7 @@ function ItemBox(props) {
                         <div style={{ marginTop: '4px' }}>
                             {visiblePaletteData.map((v) => (
                                 <div className="itmeOne" key={v.favoriteId}>
-                                    <CloseCircleOutlined className="delOne" style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.moduleName, 'tpl', v.favoriteId)} />
+                                    <CloseCircleOutlined className="delOne" style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.moduleName, selectedNav === 7 ? 'master-control' : 'tpl', v.favoriteId)} />
                                     <button
                                         type="button"
                                         className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''} ${showTplDelbtn === 1 ? 'hidden' : ''}`}
@@ -779,7 +786,7 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5 || selectedNav === 7) && visiblePaletteData.map((v) => (
+                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5 || selectedNav === 8) && visiblePaletteData.map((v) => (
                     <div className="itmeOne" key={v.favoriteId}>
                         <button
                             type="button"
