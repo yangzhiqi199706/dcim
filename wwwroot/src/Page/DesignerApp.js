@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useMemo } from "re
 import { flushSync } from "react-dom";
 import { Stage, Layer, Rect, Transformer, Text, Group, Line } from "react-konva";
 import httpsend from '../Assets/httpsend';
-import ToolList from "./ToolList";
+import DesignerRibbonToolbar from './DesignerRibbonToolbar';
 import ItemBox from "./ItemBox";
 import ConElement from "./ConElement";
 import ElementAttr from "./ElementAttr";
@@ -11,8 +11,6 @@ import SvgBackground from "./SvgBackground";
 import { Select, message, Button, Cascader } from 'antd';
 import setChart from "./SetChart";
 import { Close } from '@mui/icons-material';
-import { KeyOutlined } from '@ant-design/icons';
-import { DatabaseOutlined, ExperimentOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { t } from '../i18n';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import PreflightModal from './PreflightModal';
@@ -2812,71 +2810,68 @@ function DesignerApp() {
         <>
             {!isPreview &&
                 <main className="designerShell" aria-label={t('auto.k0387')}>
-                    <div className="top designerHeader">
-                        <div className="topLeft">
-                            <label>{t('auto.k0387')}</label>
-                        </div>
-                        <div className="topCenter">
-                            <div className="topGroup topToolList designerEditTools">
-                                <ToolList
-                                    MultiSelect={selectedIds.length !== 0}
-                                    handleTool={(type) => {
-                                        handleToolChange(type);
-                                    }} />
-                            </div>
-                            <div className="topGroup topControls designerSelectionTools">
-                                <Button
-                                    type="default"
-                                    icon={<KeyOutlined />}
-                                    aria-label={t('designer.shortcuts.title')}
-                                    title={t('designer.shortcuts.title')}
-                                    onClick={() => setKeyboardShortcutsOpen(true)}
-                                >{t('designer.shortcuts.trigger')}</Button>
-                                <Button type={snapEnabled ? 'primary' : 'default'} onClick={() => {
-                                    setSnapEnabled((prev) => {
-                                        if (prev) clearSnapGuides();
-                                        return !prev;
-                                    });
-                                }}>{snapEnabled ? t('designer.snapOn') : t('designer.snapOff')}</Button>
-                                <select className="topControl" value={String(snapThreshold)} onChange={(e) => setSnapThreshold(Number(e.target.value))}>
-                                    <option value="4">4px</option>
-                                    <option value="6">6px</option>
-                                    <option value="8">8px</option>
-                                    <option value="10">10px</option>
-                                </select>
-                                <Button type="default" disabled={simulationEnabled || !canGroupSelection} onClick={groupSelectedShapes}>{t('designer.group')}</Button>
-                                <Button type="default" disabled={simulationEnabled || !canUngroupSelection} onClick={ungroupSelectedShapes}>{t('designer.ungroup')}</Button>
-                            </div>
-                        </div>
-                        <div className="topRight">
-                            <span className={`saveStatus ${saveStatusText === modifiedStatus ? 'dirty' : ''}`}>{saveStatusText}</span>
-                            <Button type="default" className="topActionBtn" icon={<SafetyCertificateOutlined />} onClick={openPreflight}>{t('designer.preflight.trigger')}</Button>
-                            <Button type="default" className="topActionBtn" icon={<DatabaseOutlined />} onClick={openDataSourceHealth}>{t('designer.dataSourceHealth.trigger')}</Button>
-                            <Button type={simulationEnabled ? 'primary' : 'default'} className="topActionBtn" icon={<ExperimentOutlined />} onClick={() => setSimulationOpen(true)}>{t('designer.simulation.trigger')}</Button>
-                            <Button type="primary" className="topActionBtn" onClick={() => setIsOutOpen(true)}>{t('auto.k0388')}</Button>
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('preview')}>{t('auto.k0389')}</Button>}
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => setshowsaveTplBox(1)}>{t('auto.k0390')}</Button>}
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => savePage('page')}>{t('auto.k0391')}</Button>}
-                            <Button type="primary" className="topActionBtn" onClick={() => savePage('editpage')}>{t('auto.k0392')}</Button>
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={() => {
-                                // F24 capture current multi-selection so the dialog only lists those devices.
-                                // Falls back to single-selected id; null means scan whole canvas.
+                    <div className="designerHeader">
+                    <DesignerRibbonToolbar
+                        title={t('auto.k0387')}
+                        saveStatusText={saveStatusText}
+                        isDirty={saveStatusText === modifiedStatus}
+                        selectedCount={selectedIds.length > 0 ? selectedIds.length : (selectedId ? 1 : 0)}
+                        canGroupSelection={canGroupSelection}
+                        canUngroupSelection={canUngroupSelection}
+                        simulationEnabled={simulationEnabled}
+                        snapEnabled={snapEnabled}
+                        snapThreshold={snapThreshold}
+                        commandHandlers={{
+                            hasPersistedPage: savePageId !== '0' && savePageType === '1',
+                            undo: () => handleToolChange('undo'),
+                            copy: () => handleToolChange('copy'),
+                            lock: () => handleToolChange('lock'),
+                            unlock: () => handleToolChange('unlock'),
+                            delete: () => handleToolChange('del'),
+                            group: groupSelectedShapes,
+                            ungroup: ungroupSelectedShapes,
+                            layerUp: () => handleToolChange('up'),
+                            layerDown: () => handleToolChange('down'),
+                            layerTop: () => handleToolChange('top'),
+                            layerBottom: () => handleToolChange('bottom'),
+                            alignLeft: () => handleToolChange('alginleft'),
+                            alignRight: () => handleToolChange('alginright'),
+                            alignTop: () => handleToolChange('algintop'),
+                            alignBottom: () => handleToolChange('alginbottom'),
+                            alignCenter: () => handleToolChange('algincenter'),
+                            alignMiddle: () => handleToolChange('alginvertical'),
+                            equalHeight: () => handleToolChange('equalhight'),
+                            equalWidth: () => handleToolChange('equalwidth'),
+                            equalGrid: () => handleToolChange('equal'),
+                            equalVertical: () => handleToolChange('equalvertical'),
+                            equalHorizontal: () => handleToolChange('equallevel'),
+                            preflight: openPreflight,
+                            dataHealth: openDataSourceHealth,
+                            simulation: () => setSimulationOpen(true),
+                            replaceDevice: () => {
                                 const ids = Array.isArray(selectedIdsRef.current) && selectedIdsRef.current.length > 0
                                     ? [...selectedIdsRef.current]
                                     : (selectedIdRef.current ? [selectedIdRef.current] : null);
                                 resetScopeIdsRef.current = ids;
                                 setresetBox(true);
-                            }}>{t('auto.k0393')}</Button>}
-                            <Button
-                                type="primary"
-                                className="topActionBtn"
-                                disabled={selectedIds.length < 2}
-                                onClick={openParameterReplacementDialog}
-                            >
-                                {t('parameterReplacement.triggerLabel')}
-                            </Button>
-                            {(savePageId !== '0' && savePageType === '1') && <Button type="primary" className="topActionBtn" onClick={openTextReplaceDialog}>{t('textReplace.triggerLabel')}</Button>}
-                        </div>
+                            },
+                            replaceParameter: openParameterReplacementDialog,
+                            replaceText: openTextReplaceDialog,
+                            newPage: () => savePage('editpage'),
+                            preview: () => savePage('preview'),
+                            saveTemplate: () => setshowsaveTplBox(1),
+                            savePage: () => savePage('page'),
+                            snap: () => {
+                                setSnapEnabled((prev) => {
+                                    if (prev) clearSnapGuides();
+                                    return !prev;
+                                });
+                            },
+                            setSnapThreshold,
+                            openShortcuts: () => setKeyboardShortcutsOpen(true),
+                            exit: () => setIsOutOpen(true),
+                        }}
+                    />
                     </div>
                     <ItemBox
                         onChangeDragUrl={handleItemDragUrl}

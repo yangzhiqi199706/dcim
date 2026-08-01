@@ -437,9 +437,451 @@
     --designer-accent: #2cc7ae;
     --designer-selection: #4c97df;
     --designer-warning: #e7b457;
+    --designer-ribbon-height: 118px;
     min-height: 100vh;
     color: var(--designer-text);
     background: var(--designer-bg);
+}
+
+.designerRibbon {
+    min-height: var(--designer-ribbon-height);
+    border-bottom: 1px solid var(--designer-border);
+    background: var(--designer-surface);
+}
+
+.ribbonGlobalRow,
+.ribbonContextRow,
+.ribbonGlobalActions,
+.ribbonTabs,
+.ribbonGroups,
+.ribbonCommands {
+    display: flex;
+    align-items: center;
+}
+
+.ribbonGlobalRow {
+    min-height: 52px;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--designer-border);
+}
+
+.ribbonBrand {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--designer-text);
+    font-size: 18px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ribbonGlobalActions {
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+.ribbonGlobalActions .ant-btn,
+.ribbonCommand,
+.ribbonSnapThreshold {
+    height: 34px;
+    border-color: var(--designer-border);
+    border-radius: 4px;
+    background: var(--designer-surface-raised);
+    color: var(--designer-text);
+}
+
+.ribbonGlobalIcon,
+.ribbonToolbarMore {
+    width: 34px;
+    padding: 0;
+}
+
+.ribbonSaveAction {
+    min-width: 88px;
+}
+
+.ribbonContextRow {
+    min-height: 64px;
+    gap: 14px;
+    padding: 5px 18px 6px;
+}
+
+.ribbonTabs {
+    flex: 0 0 auto;
+    align-self: stretch;
+    gap: 2px;
+    padding-right: 14px;
+    border-right: 1px solid var(--designer-border);
+}
+
+.ribbonTab {
+    height: 34px;
+    padding: 0 11px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--designer-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.ribbonTab:hover,
+.ribbonTab.isActive {
+    border-color: #41605d;
+    background: #29413d;
+    color: #a8f1e3;
+}
+
+.ribbonGroups {
+    min-width: 0;
+    flex: 1 1 auto;
+    align-self: stretch;
+    gap: 0;
+    overflow: hidden;
+}
+
+.ribbonGroup {
+    position: relative;
+    display: flex;
+    align-self: stretch;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 10px 13px;
+    border-right: 1px solid var(--designer-border);
+}
+
+.ribbonGroup:first-child {
+    padding-left: 0;
+}
+
+.ribbonCommands {
+    min-height: 34px;
+    gap: 3px;
+}
+
+.ribbonCommand {
+    min-width: 34px;
+    padding: 0 8px;
+}
+
+.ribbonCommand .anticon,
+.ribbonGlobalIcon .anticon,
+.ribbonToolbarMore .anticon {
+    font-size: 15px;
+}
+
+.ribbonCommandLabel {
+    display: none;
+}
+
+.ribbonGroup-quality .ribbonCommand,
+.ribbonGroup-replace .ribbonCommand,
+.ribbonGroup-workspace .ribbonCommand,
+.ribbonGroup-save .ribbonCommand,
+.ribbonSnapGroup .ribbonCommand {
+    min-width: 0;
+}
+
+.ribbonGroup-quality .ribbonCommandLabel,
+.ribbonGroup-replace .ribbonCommandLabel,
+.ribbonGroup-workspace .ribbonCommandLabel,
+.ribbonGroup-save .ribbonCommandLabel,
+.ribbonSnapGroup .ribbonCommandLabel {
+    display: inline;
+}
+
+.ribbonCommand.isDanger:not(:disabled) {
+    border-color: #81494a;
+    color: #ff9a9d;
+}
+
+.ribbonCommand.isDanger:not(:disabled):hover {
+    border-color: #d06165;
+    background: #4a2b2e;
+    color: #ffc3c5;
+}
+
+.ribbonGroupLabel {
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    left: 10px;
+    overflow: hidden;
+    color: var(--designer-muted);
+    font-size: 10px;
+    line-height: 13px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ribbonGroup:first-child .ribbonGroupLabel {
+    left: 0;
+}
+
+.ribbonSnapThreshold {
+    width: 56px;
+    padding: 0 5px;
+    font-size: 12px;
+}
+
+.designerRibbon .ant-btn-primary,
+.designerRibbon .ant-btn-primary:hover {
+    border-color: var(--designer-accent);
+    background: var(--designer-accent);
+    color: #092a27;
+    font-weight: 700;
+}
+
+.designerRibbon .ant-btn:not(:disabled):not(.ant-btn-primary):hover,
+.ribbonSnapThreshold:hover {
+    border-color: #62717c;
+    background: #343c42;
+    color: var(--designer-text);
+}
+
+.designerRibbon button:focus-visible,
+.designerRibbon select:focus-visible {
+    outline: 2px solid #8ee5d3;
+    outline-offset: 2px;
+}
+
+.designerShell .canvasStage {
+    height: calc(100vh - var(--designer-ribbon-height) - 30px);
+}
+
+@media (max-width: 1320px) {
+    .ribbonContextRow {
+        gap: 8px;
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .ribbonGlobalRow {
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .ribbonGroup {
+        padding-right: 7px;
+        padding-left: 7px;
+    }
+
+    .ribbonGroupLabel {
+        right: 7px;
+        left: 7px;
+    }
+
+    .ribbonGroup-quality .ribbonCommandLabel,
+    .ribbonGroup-replace .ribbonCommandLabel,
+    .ribbonGroup-workspace .ribbonCommandLabel,
+    .ribbonGroup-save .ribbonCommandLabel,
+    .ribbonSnapGroup .ribbonCommandLabel {
+        display: none;
+    }
+}
+
+@media (max-width: 980px) {
+    .designerRibbon {
+        --designer-ribbon-height: 106px;
+    }
+
+    .ribbonGlobalRow {
+        min-height: 48px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    .ribbonContextRow {
+        min-height: 58px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+
+    .ribbonBrand {
+        font-size: 16px;
+    }
+
+    .ribbonTabs {
+        gap: 0;
+        padding-right: 8px;
+    }
+
+    .ribbonTab {
+        padding: 0 7px;
+    }
+
+    .ribbonGroup {
+        padding-right: 4px;
+        padding-left: 4px;
+    }
+
+    .ribbonGroupLabel {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ribbonTab {
+        transition: none;
+    }
+}
+
+.ribbonPreviewCanvas {
+    min-height: 100vh;
+}
+
+.ribbonPreviewStage {
+    min-height: calc(100vh - var(--designer-ribbon-height));
+    padding: 24px;
+    background-color: var(--designer-bg);
+    background-image: linear-gradient(rgba(102, 125, 128, .12) 1px, transparent 1px), linear-gradient(90deg, rgba(102, 125, 128, .12) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.ribbonPreviewHud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 1320px;
+    margin: 0 auto 16px;
+    color: var(--designer-muted);
+    font-size: 13px;
+}
+
+.ribbonPreviewHud span:first-child {
+    color: var(--designer-text);
+    font-weight: 700;
+}
+
+.ribbonPreviewBoard {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+    grid-template-rows: minmax(240px, 1fr) 160px;
+    gap: 16px;
+    width: min(1320px, 100%);
+    min-height: 560px;
+    margin: 0 auto;
+    padding: 26px;
+    border: 1px solid #46605e;
+    background: #1d272a;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, .24);
+}
+
+.ribbonPreviewWidget {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid #3c5051;
+    background: #263235;
+}
+
+.ribbonPreviewWidget-main {
+    grid-row: span 2;
+}
+
+.ribbonPreviewWidget-footer {
+    grid-column: 2;
+}
+
+.ribbonPreviewWidgetTitle {
+    color: #dfeceb;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.ribbonPreviewChart {
+    display: flex;
+    align-items: end;
+    gap: 10px;
+    height: calc(100% - 34px);
+    padding: 28px 8px 4px;
+    border-bottom: 1px solid #48615f;
+}
+
+.ribbonPreviewChart span {
+    flex: 1 1 0;
+    min-width: 18px;
+    background: #2cc7ae;
+}
+
+.ribbonPreviewChart span:nth-child(1) { height: 36%; }
+.ribbonPreviewChart span:nth-child(2) { height: 55%; }
+.ribbonPreviewChart span:nth-child(3) { height: 44%; }
+.ribbonPreviewChart span:nth-child(4) { height: 76%; }
+.ribbonPreviewChart span:nth-child(5) { height: 64%; }
+.ribbonPreviewChart span:nth-child(6) { height: 91%; }
+
+.ribbonPreviewMetric {
+    margin-top: 32px;
+    color: #a8f1e3;
+    font-size: 44px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.ribbonPreviewMetric span {
+    margin-left: 3px;
+    color: var(--designer-muted);
+    font-size: 18px;
+}
+
+.ribbonPreviewLine,
+.ribbonPreviewLine span {
+    height: 7px;
+}
+
+.ribbonPreviewLine {
+    margin-top: 24px;
+    overflow: hidden;
+    background: #364447;
+}
+
+.ribbonPreviewLine span {
+    display: block;
+    width: 78%;
+    background: #2cc7ae;
+}
+
+.ribbonPreviewRows {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.ribbonPreviewRows span {
+    height: 10px;
+    background: #3d4c4f;
+}
+
+.ribbonPreviewRows span:nth-child(1) { width: 86%; }
+.ribbonPreviewRows span:nth-child(2) { width: 62%; }
+.ribbonPreviewRows span:nth-child(3) { width: 75%; }
+
+@media (max-width: 760px) {
+    .ribbonPreviewStage {
+        padding: 12px;
+    }
+
+    .ribbonPreviewBoard {
+        grid-template-columns: 1fr;
+        grid-template-rows: 230px 180px 150px;
+        min-height: 0;
+        padding: 14px;
+    }
+
+    .ribbonPreviewWidget-main,
+    .ribbonPreviewWidget-footer {
+        grid-column: auto;
+        grid-row: auto;
+    }
 }
 
 .designerShell .top {

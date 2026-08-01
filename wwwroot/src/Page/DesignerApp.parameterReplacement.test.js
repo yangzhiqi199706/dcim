@@ -16,7 +16,7 @@ describe('designer parameter replacement integration', () => {
         expect(source).toContain('parameterReplacementRequestRef.current.isCurrent(requestId)');
         expect(source).toContain('const closeParameterReplacementDialog = () => {');
         expect(source).toContain('history.push(JSON.parse(JSON.stringify(result.shapes)))');
-        expect(source).toContain('onClick={openParameterReplacementDialog}');
+        expect(source).toContain('replaceParameter: openParameterReplacementDialog');
         expect(source).toContain('style={parameterReplacementBox ? { \'display\': \'block\' } : { \'display\': \'none\' }}');
     });
 });
