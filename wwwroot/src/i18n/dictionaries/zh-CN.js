@@ -109,6 +109,15 @@
     noTargets: '请先选中文本 / 数据文本 / 状态文本组件',
     cancel: '取消',
   },
+  masterControls: {
+    save: '保存为主控件',
+    saveTitle: '保存主控件',
+    name: '主控件名称',
+    nameRequired: '请输入主控件名称',
+    selectionRequired: '请先选择至少一个元素',
+    saveSuccess: '主控件已保存',
+    saveFailed: '主控件保存失败',
+  },
   designer: {
     saved: '已保存',
     modified: '已修改',

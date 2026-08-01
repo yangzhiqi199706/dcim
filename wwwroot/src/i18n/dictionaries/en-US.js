@@ -109,6 +109,15 @@
     noTargets: 'Please select Text / Data Text / Status Text components first.',
     cancel: 'Cancel',
   },
+  masterControls: {
+    save: 'Save as Master Control',
+    saveTitle: 'Save Master Control',
+    name: 'Master control name',
+    nameRequired: 'Enter a master control name.',
+    selectionRequired: 'Select at least one element first.',
+    saveSuccess: 'Master control saved.',
+    saveFailed: 'Failed to save the master control.',
+  },
   designer: {
     saved: 'Saved',
     modified: 'Modified',
