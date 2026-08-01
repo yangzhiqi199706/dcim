@@ -35,6 +35,7 @@ import {
 } from './multiDragRuntime';
 import { buildMainApiUrl } from '../config/endpoints';
 import { t } from '../i18n';
+import { shouldRequireDesignerLogin } from '../designerLoginAccess';
 import {
     createMasterControlDefinition,
     instantiateMasterControl,
@@ -58,7 +59,7 @@ let stagejson = '';// Comment translated to English.
 
 // Comment translated to English.
 const loginState = localStorage.getItem('wl') || null;
-if (!loginState && !isPreview) {
+if (!loginState && !isPreview && shouldRequireDesignerLogin(window.location.hostname)) {
     message.error(t('auto.k0333'), 2, function () {
         window.location.href = httpsend.mainURL() + 'login.html';
     });

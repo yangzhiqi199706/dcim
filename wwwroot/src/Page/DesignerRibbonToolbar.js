@@ -41,6 +41,7 @@ const COMMANDS = {
     delete: { icon: DeleteOutlined, labelKey: 'ribbonToolbar.commands.delete', tone: 'danger' },
     group: { icon: ApartmentOutlined, labelKey: 'ribbonToolbar.commands.group' },
     ungroup: { icon: BlockOutlined, labelKey: 'ribbonToolbar.commands.ungroup' },
+    saveMasterControl: { icon: SaveOutlined, labelKey: 'masterControls.save' },
     layerUp: { icon: ArrowUpOutlined, labelKey: 'ribbonToolbar.commands.layerUp' },
     layerDown: { icon: ArrowDownOutlined, labelKey: 'ribbonToolbar.commands.layerDown' },
     layerTop: { icon: VerticalAlignTopOutlined, labelKey: 'ribbonToolbar.commands.layerTop' },
@@ -82,6 +83,7 @@ function DesignerRibbonToolbar({
     selectedCount,
     canGroupSelection,
     canUngroupSelection,
+    canSaveMasterControl,
     simulationEnabled,
     snapEnabled,
     snapThreshold,
@@ -109,6 +111,7 @@ function DesignerRibbonToolbar({
         if (SELECTION_COMMANDS.has(command)) return selectedCount < 1;
         if (command === 'group') return !canGroupSelection;
         if (command === 'ungroup') return !canUngroupSelection;
+        if (command === 'saveMasterControl') return !canSaveMasterControl;
         if (command === 'replaceParameter') return selectedCount < 2;
         if (['replaceDevice', 'replaceText', 'preview', 'saveTemplate', 'savePage'].includes(command)) return !isPageAvailable;
         return false;

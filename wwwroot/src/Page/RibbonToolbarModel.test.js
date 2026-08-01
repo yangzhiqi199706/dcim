@@ -22,6 +22,13 @@ describe('RibbonToolbarModel', () => {
         expect(groups[2].commands).toContain('equalVertical');
     });
 
+    test('keeps the master control save command with editing commands', () => {
+        const groups = getRibbonToolbarGroups('edit');
+        const commands = groups.reduce((all, group) => all.concat(group.commands), []);
+
+        expect(commands).toContain('saveMasterControl');
+    });
+
     test('falls back to the editing tools for an unknown tab', () => {
         expect(getRibbonToolbarGroups('unknown')).toEqual(getRibbonToolbarGroups('edit'));
     });

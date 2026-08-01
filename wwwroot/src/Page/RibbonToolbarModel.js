@@ -9,7 +9,7 @@ const TAB_GROUPS = {
     edit: [
         { id: 'history', labelKey: 'ribbonToolbar.groups.history', commands: ['undo'] },
         { id: 'selection', labelKey: 'ribbonToolbar.groups.selection', commands: ['copy', 'lock', 'unlock', 'delete'] },
-        { id: 'composition', labelKey: 'ribbonToolbar.groups.composition', commands: ['group', 'ungroup'] },
+        { id: 'composition', labelKey: 'ribbonToolbar.groups.composition', commands: ['group', 'ungroup', 'saveMasterControl'] },
     ],
     arrange: [
         { id: 'layer', labelKey: 'ribbonToolbar.groups.layer', commands: ['layerUp', 'layerDown', 'layerTop', 'layerBottom'] },
