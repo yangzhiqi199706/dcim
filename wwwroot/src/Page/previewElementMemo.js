@@ -7,3 +7,7 @@ export const arePreviewElementPropsEqual = (previous, next) => (
     && previous.isSwiper === next.isSwiper
     && previous.useSlaveId === next.useSlaveId
 );
+
+export const getAlarmListRows = (data) => (
+    Array.isArray(data) ? data.filter(Boolean) : []
+);

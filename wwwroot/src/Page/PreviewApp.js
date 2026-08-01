@@ -13,7 +13,10 @@ import {
 } from './previewDataBatch';
 import {
     PREVIEW_REALTIME_INTERVAL_MS,
+    createInitialPreviewRenderState,
     createPreparedPreviewModel,
+    getPreviewChartRenderIds,
+    mergePreviewChartRenderIds,
     reconcilePreviewElements,
     selectPreviewSources
 } from './previewIncrementalRender';
@@ -161,6 +164,7 @@ function PreviewApp() {
         const intervalTimers = [];
         const timeoutTimers = [];
         let previewChartTimer = null;
+        let pendingPreviewChartIds = [];
         const registerInterval = (callback, delay) => {
             const id = setInterval(() => {
                 if (!isDisposed) {
@@ -465,10 +469,13 @@ function PreviewApp() {
             };
             const schedulePreviewChartRender = (changedChartIds) => {
                 if (!changedChartIds.length) return;
+                pendingPreviewChartIds = mergePreviewChartRenderIds(pendingPreviewChartIds, changedChartIds);
                 if (previewChartTimer !== null) clearTimeout(previewChartTimer);
                 previewChartTimer = registerTimeout(() => {
                     previewChartTimer = null;
-                    setChart(imagesRef.current, null, alarmData, { changedChartIds, delay: 0 });
+                    const renderIds = pendingPreviewChartIds;
+                    pendingPreviewChartIds = [];
+                    setChart(imagesRef.current, null, alarmData, { changedChartIds: renderIds, delay: 0 });
                 }, 100);
             };
             const loadPreviewData = (runner, options) => runner(async () => {
@@ -570,7 +577,11 @@ function PreviewApp() {
                 const result = reconcilePreviewElements(preparedPreviewModel, imagesRef.current, candidates);
                 imagesRef.current = result.elements;
                 setImagesdata(result.elements);
-                schedulePreviewChartRender(result.changedChartIds);
+                schedulePreviewChartRender(getPreviewChartRenderIds(
+                    preparedPreviewModel,
+                    refreshCategories,
+                    result.changedChartIds
+                ));
             };
 
             let refreshTimersStarted = false;
@@ -618,6 +629,10 @@ function PreviewApp() {
                     if (isDisposed) return;
                     const dynamicSources = handlepredata(previewjson);
                     preparedPreviewModel = createPreparedPreviewModel(dynamicSources);
+                    const initialPreviewState = createInitialPreviewRenderState(preparedPreviewModel);
+                    imagesRef.current = initialPreviewState.elements;
+                    setImagesdata(initialPreviewState.elements);
+                    schedulePreviewChartRender(initialPreviewState.chartIds);
                     startPreviewRefreshTimers();
                     void loadPreviewData(previewRefreshChannels.realtime, {
                         initial: true,
@@ -641,6 +656,7 @@ function PreviewApp() {
         return () => {
             isDisposed = true;
             if (previewChartTimer !== null) clearTimeout(previewChartTimer);
+            pendingPreviewChartIds = [];
             clearAllTimers();
         };
     }, []);

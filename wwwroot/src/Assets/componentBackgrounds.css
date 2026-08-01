@@ -187,6 +187,80 @@
     color: #F96055 !important;
 }
 
+.bubble {
+    position: relative;
+    background: linear-gradient(#E0F4FB, #C6E8EA);
+    color: #222;
+    padding: 8px 10px;
+    border-radius: 8px;
+    width: 180px;
+    font-size: 12px;
+    z-index: 99999;
+}
+
+.bubbleTop {
+    top: -70px;
+}
+
+.bubbleBottom {
+    bottom: -30px;
+}
+
+.bubbleLeft {
+    left: -190px;
+    top: -20px;
+}
+
+.bubbleRight {
+    right: calc(-100% - 10px);
+    top: -20px;
+}
+
+.bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 20px;
+    border-width: 10px 10px 0;
+    border-style: solid;
+    border-color: #C6E8EA transparent transparent;
+}
+
+.bubbleBottom::after {
+    bottom: 100%;
+    left: 20px;
+    border-width: 0 10px 10px;
+    border-color: transparent transparent #E0F4FB;
+}
+
+.bubbleLeft::after {
+    left: 100%;
+    top: 10px;
+    height: 1px;
+    border-width: 10px 0 10px 10px;
+    border-color: transparent transparent transparent #E0F4FB;
+}
+
+.bubbleRight::after {
+    left: -10px;
+    top: 10px;
+    height: 1px;
+    border-width: 10px 10px 10px 0;
+    border-color: transparent #C6E8EA transparent transparent;
+}
+
+.bubble label {
+    width: 72px;
+    display: inline-block;
+}
+
+.bubble span {
+    color: red;
+    display: inline-block;
+    width: 76px;
+    text-align: center;
+}
+
 .rope {
     background-image: url('/Images/icon/rope.jpg');
     background-repeat: repeat-x;

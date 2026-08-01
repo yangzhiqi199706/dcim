@@ -33,4 +33,16 @@ describe('legacy component rendering', () => {
         expect(styles).toContain('.rope');
         expect(styles).toContain('/Images/icon/rope.jpg');
     });
+
+    test('keeps leak rope dialog styling in the shared bundle', () => {
+        const styles = readSource('Assets/componentBackgrounds.css');
+
+        expect(styles).toContain('.bubble {');
+        expect(styles).toContain('.bubbleTop');
+        expect(styles).toContain('.bubbleBottom');
+        expect(styles).toContain('.bubbleLeft');
+        expect(styles).toContain('.bubbleRight');
+        expect(styles).toContain('.bubble::after');
+        expect(styles).toContain('.bubble span');
+    });
 });

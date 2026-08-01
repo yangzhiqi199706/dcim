@@ -91,3 +91,22 @@ export const mergePreviewChartRenderIds = (pendingIds, changedIds) => {
     });
     return Array.from(merged);
 };
+
+export const getPreviewChartRenderIds = (model, refreshCategories, changedChartIds) => {
+    const categories = new Set(Array.isArray(refreshCategories) ? refreshCategories : []);
+    if (!categories.has('initial')) return Array.isArray(changedChartIds) ? changedChartIds : [];
+    const entries = model && Array.isArray(model.entries) ? model.entries : [];
+    const initialChartIds = entries
+        .filter(entry => entry && entry.isChart && entry.id)
+        .map(entry => entry.id);
+    return mergePreviewChartRenderIds(changedChartIds, initialChartIds);
+};
+
+export const createInitialPreviewRenderState = (model) => {
+    const safeModel = model || { sources: [] };
+    const elements = Array.isArray(safeModel.sources) ? safeModel.sources : [];
+    return {
+        elements,
+        chartIds: getPreviewChartRenderIds(safeModel, ['initial'], [])
+    };
+};

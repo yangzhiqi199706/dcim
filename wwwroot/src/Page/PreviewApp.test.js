@@ -21,4 +21,15 @@ describe('preview application runtime', () => {
         expect(source).toContain('async function gettxtdata()');
         expect(source).toContain("getDataLocal('imgData', { action: 'page', name: txttitle })");
     });
+
+    test('renders every dynamic chart on the initial preview commit and preserves queued chart ids', () => {
+        expect(source).toContain('createInitialPreviewRenderState');
+        expect(source).toContain('getPreviewChartRenderIds');
+        expect(source).toContain('mergePreviewChartRenderIds');
+        expect(source).toContain('let pendingPreviewChartIds = [];');
+        expect(source).toContain('pendingPreviewChartIds = mergePreviewChartRenderIds(pendingPreviewChartIds, changedChartIds);');
+        expect(source).toContain('const initialPreviewState = createInitialPreviewRenderState(preparedPreviewModel);');
+        expect(source).toContain('schedulePreviewChartRender(initialPreviewState.chartIds);');
+        expect(source).toContain('schedulePreviewChartRender(getPreviewChartRenderIds(');
+    });
 });

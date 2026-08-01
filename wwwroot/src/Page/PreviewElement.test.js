@@ -1,3 +1,4 @@
+import * as previewElementMemo from './previewElementMemo';
 import { arePreviewElementPropsEqual } from './previewElementMemo';
 
 describe('arePreviewElementPropsEqual', () => {
@@ -20,5 +21,10 @@ describe('arePreviewElementPropsEqual', () => {
 
     test('re-renders when the element data reference changes', () => {
         expect(arePreviewElementPropsEqual(createProps(), createProps({ shapeProps: { id: 'shape-1' } }))).toBe(false);
+    });
+
+    test('normalizes a missing alarm list payload to an empty view state', () => {
+        expect(typeof previewElementMemo.getAlarmListRows).toBe('function');
+        expect(previewElementMemo.getAlarmListRows(undefined)).toEqual([]);
     });
 });

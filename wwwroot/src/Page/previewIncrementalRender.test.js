@@ -84,3 +84,30 @@ describe('mergePreviewChartRenderIds', () => {
             .toEqual(['pue', 'line', 'pie']);
     });
 });
+
+describe('getPreviewChartRenderIds', () => {
+    test('includes an alarm summary chart in the initial render when its data is unchanged', () => {
+        const model = createPreparedPreviewModel([
+            createShape({ id: 'alarm-summary', bindingType: null, className: 'Echart', cat: 'alarmpie' })
+        ]);
+
+        expect(typeof previewIncrementalRender.getPreviewChartRenderIds).toBe('function');
+        expect(previewIncrementalRender.getPreviewChartRenderIds(model, ['initial'], []))
+            .toEqual(['alarm-summary']);
+    });
+});
+
+describe('createInitialPreviewRenderState', () => {
+    test('provides the initial dynamic elements and alarm chart render ids before data batches resolve', () => {
+        const model = createPreparedPreviewModel([
+            createShape({ id: 'alarm-summary', bindingType: null, className: 'Echart', cat: 'alarmpie' }),
+            createShape({ id: 'alarm-list', bindingType: null, className: 'alarmList' })
+        ]);
+
+        expect(typeof previewIncrementalRender.createInitialPreviewRenderState).toBe('function');
+        expect(previewIncrementalRender.createInitialPreviewRenderState(model)).toEqual({
+            elements: model.sources,
+            chartIds: ['alarm-summary']
+        });
+    });
+});

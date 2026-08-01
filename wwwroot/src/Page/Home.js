@@ -21,11 +21,18 @@ import {
 } from './previewDataBatch';
 import {
     PREVIEW_REALTIME_INTERVAL_MS,
+    createInitialPreviewRenderState,
     createPreparedPreviewModel,
+    getPreviewChartRenderIds,
     mergePreviewChartRenderIds,
     reconcilePreviewElements,
     selectPreviewSources
 } from './previewIncrementalRender';
+import {
+    calculateMultiDragFrame,
+    createMultiDragSession,
+    offsetMultiDragPositions,
+} from './multiDragRuntime';
 import { buildMainApiUrl } from '../config/endpoints';
 import { t } from '../i18n';
 
@@ -1171,8 +1178,8 @@ function Home() {
         return bestMatch;
     };
 
-    const getSnappedMetrics = (metrics, excludeIds = []) => {
-        const candidates = buildGuideCandidates(excludeIds);
+    const getSnappedMetrics = (metrics, excludeIds = [], cachedGuideCandidates = null) => {
+        const candidates = cachedGuideCandidates || buildGuideCandidates(excludeIds);
         const verticalEdges = [
             { type: 'left', value: metrics.left },
             { type: 'centerX', value: metrics.centerX },
@@ -1261,34 +1268,28 @@ function Home() {
     };
 
     // F9 \u591a\u9009\u8fb9\u754c（\u4f9d\u8d56 buildGroupMetricsFromIds）
-    const getBoundedMultiDragPositions = (positionMap, ids) => {
+    const getBoundedMultiDragPositions = (positionMap, ids, groupMetrics = null) => {
         if (!positionMap || !Array.isArray(ids) || ids.length === 0) return positionMap;
-        const groupMetrics = buildGroupMetricsFromIds(ids, positionMap);
-        if (!groupMetrics) return positionMap;
-        const boundedGroup = getBoundedDragPosition(groupMetrics, groupMetrics.x, groupMetrics.y);
-        const offsetX = boundedGroup.x - groupMetrics.x;
-        const offsetY = boundedGroup.y - groupMetrics.y;
+        const currentGroupMetrics = groupMetrics || buildGroupMetricsFromIds(ids, positionMap);
+        if (!currentGroupMetrics) return positionMap;
+        const boundedGroup = getBoundedDragPosition(currentGroupMetrics, currentGroupMetrics.x, currentGroupMetrics.y);
+        const offsetX = boundedGroup.x - currentGroupMetrics.x;
+        const offsetY = boundedGroup.y - currentGroupMetrics.y;
         if (offsetX === 0 && offsetY === 0) return positionMap;
-        return Object.keys(positionMap).reduce((acc, id) => {
-            acc[id] = { x: positionMap[id].x + offsetX, y: positionMap[id].y + offsetY };
-            return acc;
-        }, {});
+        return offsetMultiDragPositions(positionMap, offsetX, offsetY);
     };
 
-    const applyMultiDragPositions = (positionMap) => {
+    const applyMultiDragPositions = (positionMap, cachedNodesById = null) => {
         if (!positionMap) return;
         const stage = stageRef.current ? stageRef.current.getStage() : null;
         if (!stage) return;
         let touchedLayer = null;
         Object.keys(positionMap).forEach((id) => {
-            const shape = imagesRef.current.find((s) => s.id === id);
-            const node = stage.findOne('#' + id);
+            const node = cachedNodesById && cachedNodesById[id]
+                ? cachedNodesById[id]
+                : stage.findOne('#' + id);
             if (!node) return;
-            if (shape && shape.draggable === false) {
-                node.position({ x: shape.x, y: shape.y });
-            } else {
-                node.position(positionMap[id]);
-            }
+            node.position(positionMap[id]);
             if (!touchedLayer) touchedLayer = node.getLayer();
         });
         if (touchedLayer) touchedLayer.batchDraw();
@@ -1386,8 +1387,33 @@ function Home() {
     useLayoutEffect(() => {
         if (!multiDragRef.current.active) return;
         const positions = multiDragRef.current.pendingPositions;
-        if (positions) applyMultiDragPositions(positions);
+        if (positions) applyMultiDragPositions(positions, multiDragRef.current.nodesById);
     });
+
+    const createMultiDragSessionForSelection = (stage, ids, draggedId) => {
+        const startPositions = {};
+        const nodesById = {};
+        ids.forEach((id) => {
+            const node = stage.findOne('#' + id);
+            if (node) {
+                startPositions[id] = { x: node.x(), y: node.y() };
+                nodesById[id] = node;
+                return;
+            }
+            const currentShape = imagesRef.current.find((item) => item.id === id);
+            if (currentShape) {
+                startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
+            }
+        });
+        return createMultiDragSession({
+            ids,
+            draggedId,
+            startPositions,
+            nodesById,
+            groupMetrics: buildGroupMetricsFromIds(ids),
+            guideCandidates: snapEnabled ? buildGuideCandidates(ids) : null,
+        });
+    };
 
     // \u591a\u9009/\u7ec4\u5408\u62d6\u52a8：dragstart \u7acb\u5373\u7528 Konva \u8282\u70b9\u771f\u5b9e\u4f4d\u7f6e\u8bb0\u5f55\u6240\u6709\u6210\u5458\u8d77\u70b9。
     // \u5173\u952e\u4fee\u590d：startPositions \u5fc5\u987b\u4e0e e.target.position() \u540c\u6e90（\u90fd\u6765\u81ea Konva \u8282\u70b9）。
@@ -1413,25 +1439,7 @@ function Home() {
             pendingDragFollowerIdsRef.current = new Set();
             return;
         }
-        const startPositions = {};
-        dragSelectedIds.forEach((id) => {
-            const node = stage.findOne('#' + id);
-            if (node) {
-                // \u7528 Konva \u8282\u70b9\u7684\u771f\u5b9e\u4f4d\u7f6e\u4f5c\u4e3a\u8d77\u70b9，\u4e0e\u88ab\u62d6\u5143\u7d20 e.target.position() \u540c\u6e90
-                startPositions[id] = { x: node.x(), y: node.y() };
-            } else {
-                const currentShape = imagesRef.current.find((item) => item.id === id);
-                if (currentShape) {
-                    startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
-                }
-            }
-        });
-        multiDragRef.current = {
-            active: true,
-            draggedId: shape.id,
-            startPositions,
-            pendingPositions: null,
-        };
+        multiDragRef.current = createMultiDragSessionForSelection(stage, dragSelectedIds, shape.id);
         // \u8bb0\u5f55"\u8ddf\u968f\u6210\u5458"：dragend \u65f6\u8fd9\u4e9b id \u7684 onChange \u76f4\u63a5 return，\u907f\u514d\u6bcf\u4e2a\u6210\u5458\u90fd push \u4e00\u6b21 history
         const followers = new Set();
         dragSelectedIds.forEach((id) => {
@@ -1443,12 +1451,29 @@ function Home() {
     // \u591a\u9009/\u7ec4\u5408\u62d6\u52a8：dragmove \u8ba1\u7b97 delta \u5e76\u628a\u6240\u6709\u6210\u5458\u5b9a\u4f4d\u5230 startPositions[id] + delta
     // dragstart \u5df2\u7ecf\u9884\u8bb0\u5f55\u8d77\u70b9；\u8fd9\u91cc\u4fdd\u7559\u61d2\u521d\u59cb\u5316\u4f5c\u4e3a\u515c\u5e95（\u4e07\u4e00 dragstart \u672a\u89e6\u53d1\u4e5f\u80fd fallback）
     const handleShapeDragMove = (e, shape) => {
-        const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
-        const dragSelectedIds = expandedSelectedIds.filter((id) => {
-            const currentShape = imagesRef.current.find((item) => item.id === id);
-            return currentShape && currentShape.draggable !== false;
-        });
-        const isMultiDrag = Array.isArray(dragSelectedIds) && dragSelectedIds.length > 1 && dragSelectedIds.includes(shape.id);
+        let dragSession = multiDragRef.current;
+        let dragSelectedIds = dragSession.ids || [];
+        let isMultiDrag = dragSession.active
+            && dragSession.draggedId === shape.id
+            && dragSelectedIds.length > 1
+            && dragSelectedIds.includes(shape.id);
+        if (!isMultiDrag) {
+            const expandedSelectedIds = expandDragSelectionIds(selectedIdsRef.current, shape.id);
+            dragSelectedIds = expandedSelectedIds.filter((id) => {
+                const currentShape = imagesRef.current.find((item) => item.id === id);
+                return currentShape && currentShape.draggable !== false;
+            });
+            isMultiDrag = dragSelectedIds.length > 1 && dragSelectedIds.includes(shape.id);
+            if (isMultiDrag) {
+                const stage = stageRef.current ? stageRef.current.getStage() : null;
+                if (stage) {
+                    dragSession = createMultiDragSessionForSelection(stage, dragSelectedIds, shape.id);
+                    multiDragRef.current = dragSession;
+                } else {
+                    isMultiDrag = false;
+                }
+            }
+        }
         if (!isMultiDrag) {
             multiDragRef.current = {
                 active: false,
@@ -1464,58 +1489,25 @@ function Home() {
         }
         // \u61d2\u521d\u59cb\u5316\u515c\u5e95：dragstart \u672a\u89e6\u53d1\u65f6（\u6781\u5c11\u6570\u60c5\u51b5），\u7528 Konva \u8282\u70b9\u771f\u5b9e\u4f4d\u7f6e\u8bb0\u5f55\u8d77\u70b9，
         // \u4e0e e.target.position() \u540c\u6e90，\u907f\u514d\u5438\u6536 React/Konva \u4e0d\u540c\u6b65\u7684\u504f\u5dee\u5bfc\u81f4\u5176\u4ed6\u6210\u5458\u4e71\u8dd1
-        if (!multiDragRef.current.active || multiDragRef.current.draggedId !== shape.id) {
-            const stage = stageRef.current ? stageRef.current.getStage() : null;
-            const startPositions = {};
-            dragSelectedIds.forEach((id) => {
-                const node = stage ? stage.findOne('#' + id) : null;
-                if (node) {
-                    startPositions[id] = { x: node.x(), y: node.y() };
-                } else {
-                    const currentShape = imagesRef.current.find((item) => item.id === id);
-                    if (currentShape) {
-                        startPositions[id] = { x: Number(currentShape.x) || 0, y: Number(currentShape.y) || 0 };
-                    }
-                }
-            });
-            multiDragRef.current = {
-                active: true,
-                draggedId: shape.id,
-                startPositions,
-                pendingPositions: null,
-            };
-        }
-        const startPosition = multiDragRef.current.startPositions[shape.id];
-        if (!startPosition) {
+        const frame = calculateMultiDragFrame(dragSession, { x: e.target.x(), y: e.target.y() });
+        if (!frame) {
             applySnapForShape(e.target, shape);
             return;
         }
-        const deltaX = e.target.x() - startPosition.x;
-        const deltaY = e.target.y() - startPosition.y;
-        let nextPositions = {};
-        dragSelectedIds.forEach((id) => {
-            const basePos = multiDragRef.current.startPositions[id];
-            if (basePos) {
-                nextPositions[id] = {
-                    x: basePos.x + deltaX,
-                    y: basePos.y + deltaY,
-                };
-            }
-        });
+        let nextPositions = frame.positions;
+        let groupMetrics = frame.groupMetrics;
         if (snapEnabled) {
-            const groupMetrics = buildGroupMetricsFromIds(dragSelectedIds, nextPositions);
             if (groupMetrics) {
-                const { matchX, matchY, snappedMetrics } = getSnappedMetrics(groupMetrics, dragSelectedIds);
+                const { matchX, matchY, snappedMetrics } = getSnappedMetrics(
+                    groupMetrics,
+                    dragSelectedIds,
+                    dragSession.guideCandidates,
+                );
                 if (matchX || matchY) {
                     const offsetX = snappedMetrics.x - groupMetrics.x;
                     const offsetY = snappedMetrics.y - groupMetrics.y;
-                    nextPositions = Object.keys(nextPositions).reduce((acc, id) => {
-                        acc[id] = {
-                            x: nextPositions[id].x + offsetX,
-                            y: nextPositions[id].y + offsetY,
-                        };
-                        return acc;
-                    }, {});
+                    nextPositions = offsetMultiDragPositions(nextPositions, offsetX, offsetY);
+                    groupMetrics = snappedMetrics;
                     // \u5f15\u5bfc\u7ebf\u7528 ref imperative \u7ed8\u5236，\u4e0d\u89e6\u53d1 React \u91cd\u6e32\u67d3，\u591a\u9009/\u7ec4\u5408\u62d6\u52a8\u4e5f\u80fd\u663e\u793a
                     updateSnapGuides(buildSnapGuideLine(
                         matchX ? matchX.guide.value : null,
@@ -1532,8 +1524,8 @@ function Home() {
         } else {
             clearSnapGuides();
         }
-        nextPositions = getBoundedMultiDragPositions(nextPositions, dragSelectedIds);
-        applyMultiDragPositions(nextPositions);
+        nextPositions = getBoundedMultiDragPositions(nextPositions, dragSelectedIds, groupMetrics);
+        applyMultiDragPositions(nextPositions, dragSession.nodesById);
         multiDragRef.current.pendingPositions = nextPositions;
     };
 
@@ -2146,7 +2138,11 @@ function Home() {
                 const result = reconcilePreviewElements(preparedPreviewModel, imagesRef.current, candidates);
                 imagesRef.current = result.elements;
                 setImagesdata(result.elements);
-                schedulePreviewChartRender(result.changedChartIds);
+                schedulePreviewChartRender(getPreviewChartRenderIds(
+                    preparedPreviewModel,
+                    refreshCategories,
+                    result.changedChartIds
+                ));
             };
 
             let refreshTimersStarted = false;
@@ -2194,6 +2190,10 @@ function Home() {
                     if (isDisposed) return;
                     const dynamicSources = handlepredata(previewjson);
                     preparedPreviewModel = createPreparedPreviewModel(dynamicSources);
+                    const initialPreviewState = createInitialPreviewRenderState(preparedPreviewModel);
+                    imagesRef.current = initialPreviewState.elements;
+                    setImagesdata(initialPreviewState.elements);
+                    schedulePreviewChartRender(initialPreviewState.chartIds);
                     startPreviewRefreshTimers();
                     void loadPreviewData(previewRefreshChannels.realtime, {
                         initial: true,
