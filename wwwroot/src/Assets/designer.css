@@ -50,3 +50,387 @@
         padding: 5px 0;
     }
 }
+
+.designerShell {
+    --designer-bg: #1a1d20;
+    --designer-surface: #24292d;
+    --designer-surface-raised: #2d3338;
+    --designer-canvas: #31383d;
+    --designer-border: #3c454d;
+    --designer-text: #f0f4f5;
+    --designer-muted: #aab4ba;
+    --designer-accent: #2cc7ae;
+    --designer-selection: #4c97df;
+    --designer-warning: #e7b457;
+    min-height: 100vh;
+    color: var(--designer-text);
+    background: var(--designer-bg);
+}
+
+.designerShell .top {
+    min-height: 64px;
+    padding: 8px 18px;
+    gap: 12px;
+    flex-wrap: nowrap;
+    border-bottom: 1px solid var(--designer-border);
+    background: var(--designer-surface);
+}
+
+.designerShell .topLeft label {
+    color: var(--designer-text);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 48px;
+}
+
+.designerShell .topCenter,
+.designerShell .topRight,
+.designerShell .topGroup {
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.designerShell .topCenter {
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.designerShell .topToolList {
+    min-height: 40px;
+    padding-right: 10px;
+    border-right: 1px solid var(--designer-border);
+}
+
+.designerShell .top svg {
+    width: 24px;
+    height: 24px;
+    margin: 0 4px;
+    border-radius: 3px;
+}
+
+.designerShell .top svg:hover {
+    background: #34413f;
+}
+
+.designerShell .topControls .ant-btn,
+.designerShell .topActionBtn,
+.designerShell .topControl {
+    min-width: 0;
+    height: 36px;
+    margin: 0;
+    padding: 2px 11px;
+    border-color: var(--designer-border);
+    border-radius: 4px;
+    background: var(--designer-surface-raised);
+    color: var(--designer-text);
+    font-size: 13px;
+}
+
+.designerShell .topActionBtn.ant-btn-primary,
+.designerShell .topControls .ant-btn-primary,
+.designerShell .ant-btn-primary {
+    border-color: var(--designer-accent) !important;
+    background: var(--designer-accent) !important;
+    color: #092a27 !important;
+    font-weight: 700;
+}
+
+.designerShell .top .ant-btn:not(.ant-btn-primary):hover,
+.designerShell .topControl:hover {
+    border-color: #62717c;
+    background: #343c42;
+    color: var(--designer-text);
+}
+
+.designerShell .saveStatus {
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid #3d7069;
+    border-radius: 4px;
+    background: #213c37;
+    color: #8ee5d3;
+}
+
+.designerShell .saveStatus.dirty {
+    border-color: #7f5d30;
+    background: #41331f;
+    color: #f3c974;
+}
+
+.designerShell .left,
+.designerShell .eleAttrs {
+    height: calc(100vh - 64px);
+    border-color: var(--designer-border);
+    background: var(--designer-surface);
+}
+
+.designerShell .left {
+    width: 282px;
+}
+
+.designerShell .left > ul {
+    padding-top: 12px;
+    background: #202428;
+}
+
+.designerShell .left > ul li {
+    width: 76px;
+    height: 64px;
+    color: var(--designer-muted);
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
+.designerShell .left > ul li.check,
+.designerShell .left > ul li:hover {
+    border-left: 2px solid var(--designer-accent);
+    background: #2b403c;
+    color: #d6f3ec;
+}
+
+.designerShell .left > div {
+    border-right-color: var(--designer-border);
+    background: var(--designer-surface);
+}
+
+.designerShell .left .itemTitle,
+.designerShell .left .itmeOne,
+.designerShell .left .itmeOne div {
+    color: var(--designer-text);
+}
+
+.designerShell .left .itemTitle,
+.designerShell .uploadBtn {
+    border-bottom-color: var(--designer-border);
+    background: var(--designer-surface-raised);
+}
+
+.designerShell .left .itmeOne img,
+.designerShell .galleryThumb {
+    border-color: var(--designer-border);
+    background: #1b2023;
+}
+
+.designerShell .galleryThumb.active,
+.designerShell .galleryThumb:hover {
+    border-color: var(--designer-accent);
+    box-shadow: 0 0 0 2px rgba(44, 199, 174, 0.16);
+}
+
+.designerShell .canvasBody,
+.designerShell .designerCanvasBody {
+    width: calc(100% - 572px);
+    background: var(--designer-canvas) !important;
+}
+
+.designerShell .canvasStage {
+    width: calc(100vw - 596px);
+    height: calc(100vh - 94px);
+}
+
+.designerShell .canvasStage2 {
+    margin: 16px auto 24px;
+    background: #394248;
+}
+
+.designerShell .canvasRange {
+    right: 16px;
+    bottom: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--designer-border);
+    border-radius: 4px;
+    background: var(--designer-surface);
+}
+
+.designerShell .canvasResetBtn {
+    background: var(--designer-selection) !important;
+    border-color: var(--designer-selection) !important;
+}
+
+.designerShell .designerInspector {
+    width: 290px;
+    background: var(--designer-surface);
+}
+
+.designerShell .eleAttrs ul,
+.designerShell .eleAttrs li,
+.designerShell .attrBox {
+    border-color: var(--designer-border);
+    background: var(--designer-surface);
+    color: var(--designer-text);
+}
+
+.designerShell .eleAttrs li {
+    color: var(--designer-muted);
+}
+
+.designerShell .eleAttrs li.check {
+    border-bottom: 2px solid var(--designer-accent);
+    background: #2b403c;
+    color: #e5f7f1;
+}
+
+.designerShell .attrTitle {
+    background: var(--designer-surface-raised);
+    color: var(--designer-text);
+}
+
+.designerShell .attrBox label,
+.designerShell .attrLocked,
+.designerShell .interfaceItem span,
+.designerShell .interfaceGroupHeader span {
+    color: var(--designer-muted);
+}
+
+.designerShell .attrBox input,
+.designerShell .attrBox select,
+.designerShell .attrBox textarea,
+.designerShell .attrTable,
+.designerShell .attrTable tr {
+    border-color: var(--designer-border);
+    background: #1d2225;
+    color: var(--designer-text);
+}
+
+.designerShell .interfaceItem:hover,
+.designerShell .interfaceGroupHeader:hover {
+    background: #2d403d;
+}
+
+.designerShell .layui-layer {
+    border: 1px solid var(--designer-border);
+    border-radius: 6px;
+    background: var(--designer-surface);
+    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.48);
+}
+
+.designerShell .layui-layer-title {
+    border-bottom-color: var(--designer-border);
+    border-radius: 6px 6px 0 0;
+    background: var(--designer-surface-raised);
+    color: var(--designer-text);
+}
+
+.designerShell .layui-layer-content,
+.designerShell .layui-layer-content label {
+    color: var(--designer-text);
+}
+
+.designerShell .layui-layer-content input,
+.designerShell .layui-layer-content select,
+.designerShell .layui-layer-content textarea {
+    border-color: var(--designer-border);
+    background: #1d2225;
+    color: var(--designer-text);
+}
+
+.designerShell .ant-tree {
+    background: transparent;
+    color: var(--designer-text);
+}
+
+.designerShell .ant-tree-node-content-wrapper {
+    color: var(--designer-text);
+}
+
+.designerShell button:focus-visible,
+.designerShell [role="button"]:focus-visible,
+.designerShell input:focus-visible,
+.designerShell select:focus-visible,
+.designerShell textarea:focus-visible {
+    outline: 3px solid var(--designer-warning);
+    outline-offset: 2px;
+}
+
+.designerShell ::-webkit-scrollbar {
+    background: #202428;
+}
+
+.designerShell ::-webkit-scrollbar-track {
+    background: #202428;
+}
+
+.designerShell ::-webkit-scrollbar-thumb {
+    background: #56616a;
+}
+
+@media (max-width: 1100px) {
+    .designerShell .top {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .designerShell .topCenter,
+    .designerShell .topRight,
+    .designerShell .topGroup {
+        flex-wrap: wrap;
+    }
+
+    .designerShell .topCenter {
+        overflow-x: visible;
+    }
+
+    .designerShell .topRight {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .designerShell .left {
+        width: 250px;
+    }
+
+    .designerShell .eleAttrs {
+        width: 250px;
+    }
+
+    .designerShell .canvasBody,
+    .designerShell .designerCanvasBody {
+        width: calc(100% - 500px);
+    }
+
+    .designerShell .canvasStage {
+        width: calc(100vw - 524px);
+    }
+}
+
+@media (max-width: 760px) {
+    .designerShell .top {
+        min-height: 56px;
+        padding: 8px 12px;
+    }
+
+    .designerShell .topCenter,
+    .designerShell .left,
+    .designerShell .eleAttrs {
+        display: none;
+    }
+
+    .designerShell .topRight {
+        width: auto;
+        margin-left: auto;
+    }
+
+    .designerShell .saveStatus,
+    .designerShell .topActionBtn:not(:last-child) {
+        display: none;
+    }
+
+    .designerShell .canvasBody,
+    .designerShell .designerCanvasBody {
+        width: 100%;
+    }
+
+    .designerShell .canvasStage {
+        width: 100vw;
+        height: calc(100vh - 56px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .designerShell *,
+    .designerShell *::before,
+    .designerShell *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}

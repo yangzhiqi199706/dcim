@@ -42,6 +42,7 @@ const SNAP_GUIDE_OFFSET = 24;
 const ZOOM_MIN_PERCENT = 10;
 const ZOOM_MAX_PERCENT = 300;
 const ZOOM_WHEEL_STEP_PERCENT = 10;
+const DESIGNER_EMPTY_STATE_TEXT = '#e7eef1';
 const isPreview = false;
 let stagejson = '';// Comment translated to English.
 
@@ -2702,20 +2703,20 @@ function DesignerApp() {
     return (
         <>
             {!isPreview &&
-                <>
-                    <div className="top">
+                <main className="designerShell" aria-label={t('auto.k0387')}>
+                    <div className="top designerHeader">
                         <div className="topLeft">
                             <label>{t('auto.k0387')}</label>
                         </div>
                         <div className="topCenter">
-                            <div className="topGroup topToolList">
+                            <div className="topGroup topToolList designerEditTools">
                                 <ToolList
                                     MultiSelect={selectedIds.length !== 0}
                                     handleTool={(type) => {
                                         handleToolChange(type);
                                     }} />
                             </div>
-                            <div className="topGroup topControls">
+                            <div className="topGroup topControls designerSelectionTools">
                                 <Button
                                     type="default"
                                     icon={<KeyOutlined />}
@@ -2769,7 +2770,7 @@ function DesignerApp() {
                     <ItemBox
                         onChangeDragUrl={handleItemDragUrl}
                         isChanged={savePageId} />
-                    <div className="eleAttrs">
+                    <div className="eleAttrs designerInspector">
                         <ul>
                             <li className={`${showIndex === 1 ? 'check' : ''} ${tabFlash === 'component' ? 'tabFlash' : ''}`.trim()} onClick={() => setshowIndex(1)}>{t('auto.k0394')}</li>
                             <li className={showIndex === 2 ? 'check' : ''} onClick={() => setshowIndex(2)}>{t('auto.k0395')}</li>
@@ -2845,8 +2846,7 @@ function DesignerApp() {
                         })()}
                     </div>
                     <div
-                        className="canvasBody"
-                        style={{ 'backgroundColor': '#eee' }}
+                        className="canvasBody designerCanvasBody"
                         ref={containerRef}
                         onDrop={handleOnDrop}
                         onDragOver={(e) => e.preventDefault()}
@@ -2885,7 +2885,7 @@ function DesignerApp() {
                         >
                             <Layer ref={layerRef} style={{ 'backgroundColor': '#fff' }}>
                                 <Group>
-                                    <Text text={t('auto.k0331')} fontSize={25} lineHeight={5} padding={50} />
+                                    <Text text={t('auto.k0331')} fill={DESIGNER_EMPTY_STATE_TEXT} fontSize={25} lineHeight={5} padding={50} />
                                 </Group>
                             </Layer>
                         </Stage>}
@@ -3057,7 +3057,7 @@ function DesignerApp() {
                         >
                             <Layer ref={layerRef} style={{ 'backgroundColor': '#fff' }}>
                                 <Group>
-                                    <Text text={t('auto.k0332')} fontSize={25} lineHeight={5} padding={50} />
+                                    <Text text={t('auto.k0332')} fill={DESIGNER_EMPTY_STATE_TEXT} fontSize={25} lineHeight={5} padding={50} />
                                 </Group>
                             </Layer>
                         </Stage>)}
@@ -3497,7 +3497,7 @@ function DesignerApp() {
                             <Button onClick={closeParameterReplacementDialog}>{t('textReplace.cancel')}</Button>
                         </div>
                     </div>
-                </>
+                </main>
             }
         </>
     );
