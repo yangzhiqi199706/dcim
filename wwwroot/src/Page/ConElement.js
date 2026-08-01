@@ -6,7 +6,7 @@ import { Html } from "react-konva-utils";
 import { t } from '../i18n';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
-const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmentAnchor, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack }) => {
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmentAnchor, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack, isSimulationMode = false }) => {
 
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
@@ -15,6 +15,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     }
     const moduleChildren = Array.isArray(shapeProps.moduleJson.children) ? shapeProps.moduleJson.children : [];
     const firstModuleChild = moduleChildren.length > 0 ? moduleChildren[0] : null;
+    const canEdit = shapeProps.draggable !== false && !isSimulationMode;
     const srcText = typeof shapeProps.src === 'string' ? shapeProps.src : '';
     const fallbackImage = srcText.indexOf('http') > -1 ? '../Images/' + srcText.split('/Images/')[0] : srcText;
     const [imgurl] = useImage(
@@ -133,6 +134,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     });
 
     const handleDragStart = e => {
+        if (!canEdit) return;
         if (e && e.evt) {
             e.evt.__draggingSelection = true;
         }
@@ -142,6 +144,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     };
     
     const handleDragEnd = e => {
+        if (!canEdit) return;
         
         onChange({
             ...shapeProps,
@@ -152,6 +155,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     };
 
     const handeleGroupTransformEnd = (newbox) => {
+        if (!canEdit) return;
         const group = groupRef.current;
         const scaleX = group.scaleX();
         const scaleY = group.scaleY();
@@ -195,7 +199,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     }
 
     const handleToolChange = (toolType) => {
-        if (toolType !== null && isSelected) {
+        if (toolType !== null && isSelected && canEdit) {
             const node = groupRef.current;
             switch (toolType) {
                 case 'copy': onToolBack(newshapeProps, 'copy'); break;
@@ -229,10 +233,11 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
                 onMouseLeave={() => { if (onHoverLeave) onHoverLeave(shapeProps); }}
                 onClick={onSelect}
                 onTap={onSelect}
-                handleTool={isSelected && handleToolChange(toolType)}
+                handleTool={isSelected && canEdit && handleToolChange(toolType)}
                 {...shapeProps}
+                draggable={canEdit}
                 ref={groupRef}
-                onTransformEnd={(newbox) => isSelected && shapeProps.draggable && handeleGroupTransformEnd(newbox)}
+                onTransformEnd={(newbox) => isSelected && canEdit && handeleGroupTransformEnd(newbox)}
                 name="group"
             >
                 {shapeProps.moduleJson.children.map((img, i) => {

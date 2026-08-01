@@ -43,11 +43,386 @@
     font-size: 12px;
 }
 
+.designerOverlay {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.48);
+}
+
+.designerDialog {
+    display: flex;
+    flex-direction: column;
+    width: min(560px, 100%);
+    max-height: min(680px, calc(100vh - 48px));
+    overflow: hidden;
+    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-radius: 6px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.24);
+}
+
+.designerDialogHeader,
+.designerDialogFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+}
+
+.designerDialogHeader {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.designerDialogHeader h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.designerDialogHeader p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.dialogIconButton {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: #64748b;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dialogIconButton:hover {
+    color: #1f2937;
+    background: #f1f5f9;
+}
+
+.designerDialogBody {
+    min-height: 0;
+    padding: 16px 20px;
+    overflow-y: auto;
+}
+
+.preflightSummary {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.diagnosticEmpty {
+    padding: 28px 16px;
+    color: #64748b;
+    text-align: center;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+}
+
+.diagnosticFinding {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 12px;
+    align-items: center;
+    margin: 0 0 8px;
+    padding: 11px 12px;
+    color: #334155;
+    text-align: left;
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-left-width: 3px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.diagnosticFinding:hover {
+    background: #f8fafc;
+    border-color: #93c5fd;
+}
+
+.diagnosticFinding-error {
+    border-left-color: #dc2626;
+}
+
+.diagnosticFinding-warning {
+    border-left-color: #d97706;
+}
+
+.diagnosticFindingTitle {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.diagnosticFindingMeta {
+    max-width: 180px;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.simulationToggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.simulationToggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: #2563eb;
+}
+
+.simulationValueRow {
+    display: grid;
+    grid-template-columns: minmax(120px, 38%) minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    margin: 0 0 10px;
+}
+
+.simulationValueRow label {
+    overflow: hidden;
+    color: #475569;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.simulationValueRow input {
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    padding: 0 9px;
+    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: 0;
+}
+
+.simulationValueRow input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.designerDialogFooter {
+    border-top: 1px solid #e5e7eb;
+}
+
+.dialogSecondaryButton,
+.dialogPrimaryButton {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dialogSecondaryButton {
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+}
+
+.dialogPrimaryButton {
+    margin-left: auto;
+    color: #ffffff;
+    background: #2563eb;
+    border: 1px solid #2563eb;
+}
+
+.dialogSecondaryButton:hover {
+    background: #f8fafc;
+}
+
+.dialogPrimaryButton:hover {
+    background: #1d4ed8;
+}
+
+.dataSourceHealthDialog {
+    width: min(680px, 100%);
+}
+
+.dataSourceHealthActions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.dataSourceHealthCounts {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.dataSourceHealthCount {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.dataSourceHealthCount span:first-child {
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.dataSourceHealthCount-missing,
+.dataSourceHealthCount-invalid,
+.dataSourceHealthCount-unavailable {
+    border-color: #fecaca;
+}
+
+.dataSourceHealthCount-unknown {
+    border-color: #fed7aa;
+}
+
+.dataSourceHealthNotice {
+    margin: 0 0 12px;
+    padding: 9px 10px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.dataSourceHealthNotice-error {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fcd34d;
+}
+
+.dataSourceHealthItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 6px 12px;
+    align-items: center;
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    text-align: left;
+    background: #ffffff;
+    border: 1px solid #dbe3ee;
+    border-left-width: 3px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dataSourceHealthItem:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #93c5fd;
+}
+
+.dataSourceHealthItem:disabled {
+    cursor: default;
+    opacity: 0.65;
+}
+
+.dataSourceHealthItem-missing,
+.dataSourceHealthItem-invalid,
+.dataSourceHealthItem-unavailable {
+    border-left-color: #dc2626;
+}
+
+.dataSourceHealthItem-unknown {
+    border-left-color: #d97706;
+}
+
+.dataSourceHealthItem-available {
+    border-left-color: #16a34a;
+}
+
+.dataSourceHealthItemTitle,
+.dataSourceHealthItemMeta {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dataSourceHealthItemTitle {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dataSourceHealthItemStatus {
+    padding: 2px 7px;
+    color: #475569;
+    background: #f1f5f9;
+    border-radius: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.dataSourceHealthItemMeta {
+    grid-column: 1 / -1;
+    color: #64748b;
+    font-size: 12px;
+}
+
 @media (max-width: 640px) {
     .keyboardShortcutsRow {
         grid-template-columns: 1fr;
         gap: 4px;
         padding: 5px 0;
+    }
+
+    .designerOverlay {
+        padding: 12px;
+    }
+
+    .designerDialogHeader,
+    .designerDialogFooter,
+    .designerDialogBody {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .simulationValueRow {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .dataSourceHealthCounts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
