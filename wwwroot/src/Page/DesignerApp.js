@@ -5,7 +5,7 @@ import httpsend from '../Assets/httpsend';
 import DesignerRibbonToolbar from './DesignerRibbonToolbar';
 import ItemBox from "./ItemBox";
 import ConElement from "./ConElement";
-import ElementAttr from "./ElementAttr";
+import ElementAttr, { applyCommonAttributeToSelection, applyHostBindingToSelection } from "./ElementAttr";
 import ElementSvg from "./ElementSvg";
 import SvgBackground from "./SvgBackground";
 import { Select, message, Button, Cascader } from 'antd';
@@ -42,6 +42,7 @@ import {
     instantiateMasterControl,
     isMasterControlDefinition,
 } from './masterControlLibrary';
+import { getSelectAllSelectionState } from './designerSelection';
 import '../Assets/base.css';
 import '../Assets/designer.css';
 
@@ -814,6 +815,17 @@ function DesignerApp() {
     const canGroupSelection = selectedIds.length >= 2;
     const canUngroupSelection = isSelectionSingleGroup();
     const canSaveMasterControl = selectedId !== null || selectedIds.length > 0;
+
+    const selectAllElements = () => {
+        const nextSelection = getSelectAllSelectionState(imagesRef.current);
+        selectShapes(nextSelection.selectedIds);
+        selectedIdsRef.current = nextSelection.selectedIds;
+        setSelectedId(nextSelection.selectedId);
+        selectedIdRef.current = nextSelection.selectedId;
+        const primaryShape = imagesRef.current.find((shape) => shape.id === nextSelection.selectedId);
+        setDragShape(primaryShape || null);
+        settoolType(null);
+    };
 
     // \u5bf9\u9f50\u951a\u70b9：\u7528\u6237\u6700\u5148\u9009\u4e2d\u7684\u5143\u7d20 / \u7ec4\u5408，\u5bf9\u9f50\u65f6\u951a\u70b9\u4e0d\u52a8，\u5176\u4ed6 unit \u5411\u951a\u70b9\u9760\u62e2。
     // - \u5355\u9009 / 0 \u9009：\u65e0\u951a\u70b9（\u7a7a\u96c6），UI \u4e0d\u753b\u7d2b\u8272\u9ad8\u4eae
@@ -1779,7 +1791,11 @@ function DesignerApp() {
                 || (e.target && e.target.isContentEditable);
             if (isEditing) return;
             if (simulationEnabledRef.current) return;
-            if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+            const modifierPressed = e.ctrlKey || e.metaKey;
+            if (modifierPressed && (e.key === 'A' || e.key === 'a')) {
+                e.preventDefault();
+                selectAllElements();
+            } else if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
                 e.preventDefault();
                 ungroupSelectedShapes();
             } else if (e.ctrlKey && (e.key === 'G' || e.key === 'g')) {
@@ -2348,6 +2364,36 @@ function DesignerApp() {
             selectShapes(selectedIdsRef.current)
         }
     };
+    const handleBatchHostBindingChange = (binding) => {
+        const selectionIds = Array.isArray(selectedIdsRef.current) ? selectedIdsRef.current : [];
+        const updatedShapes = applyHostBindingToSelection(imagesRef.current, selectionIds, binding);
+        const hasChanges = updatedShapes.some((shape, index) => shape !== imagesRef.current[index]);
+        if (!hasChanges) return;
+        const nextImages = JSON.parse(JSON.stringify(updatedShapes));
+        setImages(nextImages);
+        imagesRef.current = nextImages;
+        history.push(JSON.parse(JSON.stringify(nextImages)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        const primaryShape = nextImages.find((shape) => shape.id === selectedIdRef.current) || nextImages.find((shape) => selectionIds.includes(shape.id));
+        if (primaryShape) setDragShape(primaryShape);
+    };
+    const handleBatchCommonAttributeChange = (attribute, value) => {
+        const selectionIds = Array.isArray(selectedIdsRef.current) ? selectedIdsRef.current : [];
+        const updatedShapes = applyCommonAttributeToSelection(imagesRef.current, selectionIds, attribute, value);
+        const hasChanges = updatedShapes.some((shape, index) => shape !== imagesRef.current[index]);
+        if (!hasChanges) return;
+        const nextImages = JSON.parse(JSON.stringify(updatedShapes));
+        setImages(nextImages);
+        imagesRef.current = nextImages;
+        history.push(JSON.parse(JSON.stringify(nextImages)));
+        setChart(imagesRef.current, selectedIdRef.current, null);
+        const primaryShape = nextImages.find((shape) => shape.id === selectedIdRef.current) || nextImages.find((shape) => selectionIds.includes(shape.id));
+        if (primaryShape) setDragShape(primaryShape);
+    };
+    const selectedShapesForAttrPanel = useMemo(() => {
+        const selectionIds = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+        return images.filter((shape) => selectionIds.has(shape.id));
+    }, [images, selectedIds]);
     // Comment translated to English.
     const handleToolBack = async (newShapeProps, type) => {
         switch (type) {
@@ -2978,6 +3024,9 @@ function DesignerApp() {
                                 MultiSelect={selectedIds.length !== 0}
                                 dragShape={dragShape}
                                 useSlaveId={useSlaveId}
+                                selectedShapes={selectedShapesForAttrPanel}
+                                onBatchHostBindingChange={handleBatchHostBindingChange}
+                                onBatchCommonAttributeChange={handleBatchCommonAttributeChange}
                                 onChange={(dragShape, clickEvnt) => {
                                     handleShapeChange(dragShape, clickEvnt);
                                 }} />}
@@ -3607,7 +3656,7 @@ function DesignerApp() {
                         }}>
                             <Close />
                         </span>
-                        <div className="layui-layer-btn">
+                        <div className="layui-layer-btn switchConfirmActions">
                             <Button type="primary" onClick={async () => {
                                 // Save-and-switch: run the same blocking save path as the "save page" modal.
                                 // On any failure, surface the real backend message and DO NOT switch — the user can retry or pick "discard".

@@ -244,6 +244,7 @@
         page: '页面操作',
       },
       actions: {
+        selectAll: '选择全部可编辑元素',
         multiSelect: '多选或取消选择元素',
         moveOnePixel: '移动选中元素 1px',
         moveTenPixels: '移动选中元素 10px',
@@ -265,6 +266,20 @@
         unlockAlternative: '解除锁定选中元素（备用快捷键）',
         save: '保存页面',
         },
+    },
+    batchHost: {
+      title: '主机属性',
+      selectedElements: '已选择 {count} 个元素',
+      host: '主机',
+      selectHost: '选择主机',
+      mixedHost: '所选元素的主机不一致',
+      noCommonHost: '所选元素没有可共同编辑的主机属性',
+      apply: '应用到所选元素',
+    },
+    batchAttributes: {
+      title: '共同属性',
+      mixedValue: '多个值',
+      noCommonAttributes: '所选元素没有可共同编辑的属性',
     },
     preflight: {
       trigger: '发布前校验',

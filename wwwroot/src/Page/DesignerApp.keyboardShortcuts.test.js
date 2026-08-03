@@ -16,4 +16,14 @@ describe('designer keyboard shortcuts help', () => {
         expect(ribbonSource).toContain('icon: <KeyOutlined />');
         expect(ribbonSource).toContain('onClick: commandHandlers.openShortcuts');
     });
+
+    test('handles select all without affecting editable form controls', () => {
+        expect(source).toContain("import { getSelectAllSelectionState } from './designerSelection';");
+        expect(source).toContain('const selectAllElements = () => {');
+        expect(source).toContain('const modifierPressed = e.ctrlKey || e.metaKey;');
+        expect(source).toContain("if (modifierPressed && (e.key === 'A' || e.key === 'a')) {");
+        expect(source).toContain('e.preventDefault();');
+        expect(source).toContain('selectAllElements();');
+        expect(source).toContain("const isEditing = tag === 'input' || tag === 'textarea' || tag === 'select'");
+    });
 });

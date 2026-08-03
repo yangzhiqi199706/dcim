@@ -2,6 +2,7 @@ export const KEYBOARD_SHORTCUT_GROUPS = [
     {
         titleKey: 'designer.shortcuts.groups.selection',
         items: [
+            { keys: 'Ctrl/Cmd + A', actionKey: 'designer.shortcuts.actions.selectAll' },
             { keys: 'Ctrl/Cmd + Click', actionKey: 'designer.shortcuts.actions.multiSelect' },
             { keys: 'Arrow keys', actionKey: 'designer.shortcuts.actions.moveOnePixel' },
             { keys: 'Shift + Arrow keys', actionKey: 'designer.shortcuts.actions.moveTenPixels' },

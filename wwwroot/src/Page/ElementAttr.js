@@ -8,6 +8,409 @@ import { ensureChartAttributeControls } from './chartAttributeControls';
 // import GifImages from './Data/GifImages';
 import debounce from 'lodash.debounce';
 
+const normalizeHostBinding = (binding) => {
+    if (!binding || binding.key === undefined || binding.key === null || binding.type === undefined || binding.type === null || binding.src === undefined || binding.src === null) {
+        return null;
+    }
+    return {
+        key: String(binding.key),
+        type: String(binding.type),
+        src: String(binding.src),
+    };
+};
+
+const getHostBinding = (shape) => {
+    const dataKey = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.dataKey;
+    return Array.isArray(dataKey) && dataKey.length > 0 ? normalizeHostBinding(dataKey[0]) : null;
+};
+
+export const isHostBindingEditable = (shape) => {
+    const moduleAttr = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.moduleAttr;
+    return Array.isArray(moduleAttr) && moduleAttr.some((group) => (
+        group && Array.isArray(group.attrGroupContent) && group.attrGroupContent.some((attr) => (
+            attr && attr.attrType === 'hardwareInputNew' && (attr.attrCode === 'dataDevKey' || attr.attrCode === 'dataKey')
+        ))
+    ));
+};
+
+const isParameterHostBinding = (shape) => {
+    const moduleAttr = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.moduleAttr;
+    return Array.isArray(moduleAttr) && moduleAttr.some((group) => (
+        group && Array.isArray(group.attrGroupContent) && group.attrGroupContent.some((attr) => (
+            attr && attr.attrType === 'hardwareInputNew' && attr.attrCode === 'dataKey'
+        ))
+    ));
+};
+
+const areHostBindingsEqual = (first, second) => (
+    first === second || (!!first && !!second
+        && first.key === second.key
+        && first.type === second.type
+        && first.src === second.src)
+);
+
+export const getBatchHostBindingState = (selectedShapes) => {
+    const shapes = Array.isArray(selectedShapes) ? selectedShapes.filter(Boolean) : [];
+    if (shapes.length === 0 || !shapes.every(isHostBindingEditable)) {
+        return { available: false, binding: null, mixed: false };
+    }
+    const firstBinding = getHostBinding(shapes[0]);
+    const mixed = !shapes.every((shape) => areHostBindingsEqual(firstBinding, getHostBinding(shape)));
+    return { available: true, binding: mixed ? null : firstBinding, mixed };
+};
+
+export const parseHostBindingOption = (value) => {
+    const match = String(value || '').match(/^([^&]+)&([^/]+)\/(.+)$/);
+    return match ? normalizeHostBinding({ key: match[1], type: match[2], src: match[3] }) : null;
+};
+
+export const applyHostBindingToSelection = (allShapes, selectedIds, binding) => {
+    const normalizedBinding = normalizeHostBinding(binding);
+    const selectedIdSet = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+    if (!normalizedBinding || selectedIdSet.size === 0) return allShapes;
+    return (Array.isArray(allShapes) ? allShapes : []).map((shape) => {
+        if (!shape || !selectedIdSet.has(shape.id) || !isHostBindingEditable(shape)) return shape;
+        const moduleJson = shape.moduleJson || {};
+        const attrs = moduleJson.attrs || {};
+        const dataKey = Array.isArray(attrs.dataKey) ? attrs.dataKey : [];
+        const nextDataKey = isParameterHostBinding(shape) && dataKey.length > 0
+            ? dataKey.map((item) => ({ ...item, ...normalizedBinding }))
+            : [{ ...normalizedBinding }];
+        return {
+            ...shape,
+            moduleJson: {
+                ...moduleJson,
+                attrs: {
+                    ...attrs,
+                    dataKey: nextDataKey,
+                },
+            },
+        };
+    });
+};
+
+const batchCommonAttributeTypes = new Set([
+    'textarea',
+    'number',
+    'text',
+    'color',
+    'selectFamily',
+    'select',
+    'selectAlign',
+    'selectverticalAlign',
+    'selectTime',
+    'selectDataType',
+    'aniSelect',
+]);
+
+const getAttributeIdentity = (attribute) => (
+    `${attribute.attrType}|${attribute.attrWhere}|${attribute.attrCode}`
+);
+
+const getShapeAttributeDeclaration = (shape, attribute) => {
+    const moduleAttr = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.moduleAttr;
+    if (!Array.isArray(moduleAttr)) return null;
+    const identity = getAttributeIdentity(attribute);
+    for (let groupIndex = 0; groupIndex < moduleAttr.length; groupIndex += 1) {
+        const content = moduleAttr[groupIndex] && moduleAttr[groupIndex].attrGroupContent;
+        if (!Array.isArray(content)) continue;
+        const match = content.find((item) => item && getAttributeIdentity(item) === identity);
+        if (match) return match;
+    }
+    return null;
+};
+
+const getShapeAttributeTarget = (shape, attribute) => {
+    const children = shape && shape.moduleJson && shape.moduleJson.children;
+    if (!Array.isArray(children)) return null;
+    return children.find((child) => (
+        child && child.attrs && child.attrs.name === attribute.attrWhere
+        && Object.prototype.hasOwnProperty.call(child.attrs, attribute.attrCode)
+    )) || null;
+};
+
+const isBatchCommonAttributeEditable = (shape, attribute) => (
+    !!attribute
+    && batchCommonAttributeTypes.has(attribute.attrType)
+    && !!getShapeAttributeDeclaration(shape, attribute)
+    && !!getShapeAttributeTarget(shape, attribute)
+);
+
+export const getBatchCommonAttributeGroups = (selectedShapes) => {
+    const shapes = Array.isArray(selectedShapes) ? selectedShapes.filter(Boolean) : [];
+    const firstShapeGroups = shapes[0] && shapes[0].moduleJson && shapes[0].moduleJson.attrs && shapes[0].moduleJson.attrs.moduleAttr;
+    if (shapes.length === 0 || !Array.isArray(firstShapeGroups)) return [];
+    return firstShapeGroups.map((group) => {
+        const attributes = Array.isArray(group && group.attrGroupContent)
+            ? group.attrGroupContent.filter((attribute) => (
+                isBatchCommonAttributeEditable(shapes[0], attribute)
+                && shapes.every((shape) => isBatchCommonAttributeEditable(shape, attribute))
+            ))
+            : [];
+        return {
+            name: group && group.attrGroupName,
+            attributes,
+        };
+    }).filter((group) => group.attributes.length > 0);
+};
+
+const getBatchCommonAttributeState = (selectedShapes, attribute) => {
+    const values = (Array.isArray(selectedShapes) ? selectedShapes : []).map((shape) => {
+        const target = getShapeAttributeTarget(shape, attribute);
+        return target && target.attrs ? target.attrs[attribute.attrCode] : undefined;
+    });
+    const value = values[0];
+    return {
+        value,
+        mixed: values.some((item) => item !== value),
+    };
+};
+
+export const applyCommonAttributeToSelection = (allShapes, selectedIds, attribute, value) => {
+    const selectedIdSet = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+    if (!attribute || selectedIdSet.size === 0) return allShapes;
+    const nextValue = attribute.attrType === 'number' ? Number(value) : value;
+    if (attribute.attrType === 'number' && !Number.isFinite(nextValue)) return allShapes;
+    return (Array.isArray(allShapes) ? allShapes : []).map((shape) => {
+        if (!shape || !selectedIdSet.has(shape.id) || !isBatchCommonAttributeEditable(shape, attribute)) return shape;
+        const moduleJson = shape.moduleJson || {};
+        const children = Array.isArray(moduleJson.children) ? moduleJson.children : [];
+        return {
+            ...shape,
+            moduleJson: {
+                ...moduleJson,
+                children: children.map((child) => {
+                    if (!child || !child.attrs || child.attrs.name !== attribute.attrWhere) return child;
+                    return {
+                        ...child,
+                        attrs: {
+                            ...child.attrs,
+                            [attribute.attrCode]: nextValue,
+                        },
+                    };
+                }),
+            },
+        };
+    });
+};
+
+const getHostOptionValue = (binding) => (
+    binding ? `${binding.key}&${binding.type}/${binding.src}` : undefined
+);
+
+const createHostDeviceOptions = (devices, useSlaveId) => (
+    (Array.isArray(devices) ? devices : []).filter((device) => device && device.id !== undefined && device.id !== null).map((device) => {
+        const source = useSlaveId && device.SlaveID ? `${device.ServerIP}@${device.SlaveID}` : '1';
+        return {
+            value: `${device.id}&${device.LinkMode}/${source}`,
+            label: device.DeviceName || String(device.id),
+        };
+    })
+);
+
+const BatchHostAttributes = memo((props) => {
+    const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
+    const bindingState = getBatchHostBindingState(selectedShapes);
+    const initialHostValue = getHostOptionValue(bindingState.binding);
+    const [deviceOptions, setDeviceOptions] = useState([]);
+    const [hostValue, setHostValue] = useState(initialHostValue);
+
+    useEffect(() => {
+        setHostValue(initialHostValue);
+    }, [initialHostValue, bindingState.mixed]);
+
+    useEffect(() => {
+        let active = true;
+        if (!bindingState.available) {
+            setDeviceOptions([]);
+            return () => {
+                active = false;
+            };
+        }
+        const loadDevices = async () => {
+            const res = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            if (active) setDeviceOptions(createHostDeviceOptions(res && res.data, props.useSlaveId === true));
+        };
+        loadDevices();
+        return () => {
+            active = false;
+        };
+    }, [bindingState.available, props.useSlaveId]);
+
+    if (!bindingState.available) return null;
+
+    return <>
+        <div className="attrTitle">{t('designer.batchHost.title')}</div>
+        <div className="attrBox batchHostSelectionCount">{t('designer.batchHost.selectedElements').replace('{count}', String(selectedShapes.length))}</div>
+        <div className="attrBox">
+            <label>{t('designer.batchHost.host')}</label>
+            <Select
+                showSearch
+                value={hostValue}
+                placeholder={t(bindingState.mixed ? 'designer.batchHost.mixedHost' : 'designer.batchHost.selectHost')}
+                optionFilterProp="label"
+                onChange={setHostValue}
+                options={deviceOptions}
+            />
+        </div>
+        <div className="attrBox batchHostApply">
+            <Button
+                type="primary"
+                disabled={!hostValue}
+                onClick={() => {
+                    const binding = parseHostBindingOption(hostValue);
+                    if (binding && typeof props.onBatchHostBindingChange === 'function') props.onBatchHostBindingChange(binding);
+                }}
+            >{t('designer.batchHost.apply')}</Button>
+        </div>
+    </>;
+});
+
+const getBatchSelectOptions = (attributeType) => {
+    if (attributeType === 'selectFamily') {
+        return [
+            [t('auto.k0011'), t('auto.k0011')],
+            [t('auto.k0231'), t('auto.k0231')],
+            [t('auto.k0232'), t('auto.k0232')],
+            [t('auto.k0233'), t('auto.k0233')],
+        ];
+    }
+    if (attributeType === 'select') return [
+        ['normal', t('auto.k0438')],
+        ['bold', t('auto.k0439')],
+        ['italic normal', t('auto.k0440')],
+        ['italic bold', t('auto.k0613')],
+    ];
+    if (attributeType === 'selectAlign') return [
+        ['center', t('auto.k0614')],
+        ['left', t('auto.k0615')],
+        ['right', t('auto.k0616')],
+    ];
+    if (attributeType === 'selectverticalAlign') return [
+        ['middle', t('auto.k0617')],
+        ['top', t('auto.k0618')],
+        ['bottom', t('auto.k0619')],
+    ];
+    if (attributeType === 'selectTime') return [
+        ['1', 'y/m/d h:m:s'],
+        ['2', 'y-m-d h:m:s'],
+        ['3', 'y/m/d'],
+        ['4', 'y-m-d'],
+        ['5', 'h:m:s'],
+    ];
+    if (attributeType === 'selectDataType') return [
+        ['hour', t('auto.k0435')],
+        ['day', t('auto.k0436')],
+        ['month', t('auto.k0437')],
+    ];
+    if (attributeType === 'aniSelect') return [
+        ['slide', t('auto.k0430')],
+        ['fade', t('auto.k0431')],
+        ['cube', t('auto.k0432')],
+        ['coverflow', t('auto.k0433')],
+        ['flip', t('auto.k0434')],
+    ];
+    return [];
+};
+
+const BatchCommonAttributeControl = memo((props) => {
+    const attribute = props.attribute;
+    const state = getBatchCommonAttributeState(props.selectedShapes, attribute);
+    const inputValue = state.mixed ? '' : state.value;
+    const controlKey = `${getAttributeIdentity(attribute)}|${state.mixed}|${String(inputValue)}`;
+    const applyValue = (value) => {
+        if (typeof props.onApply === 'function') props.onApply(attribute, value);
+    };
+    const applyBlurValue = (event) => {
+        if (event.target.value !== String(inputValue === undefined || inputValue === null ? '' : inputValue)) {
+            applyValue(event.target.value);
+        }
+    };
+
+    if (attribute.attrType === 'textarea') {
+        return <div className="attrBox">
+            <label>{attribute.attrName}</label>
+            <textarea
+                key={controlKey}
+                defaultValue={inputValue}
+                placeholder={state.mixed ? t('designer.batchAttributes.mixedValue') : ''}
+                onBlur={applyBlurValue}
+            />
+        </div>;
+    }
+    if (attribute.attrType === 'text' || attribute.attrType === 'number') {
+        return <div className="attrBox">
+            <label>{attribute.attrName}</label>
+            <input
+                key={controlKey}
+                type={attribute.attrType === 'number' ? 'number' : 'text'}
+                step={attribute.attrType === 'number' ? '0.1' : undefined}
+                defaultValue={inputValue}
+                placeholder={state.mixed ? t('designer.batchAttributes.mixedValue') : ''}
+                onBlur={applyBlurValue}
+            />
+        </div>;
+    }
+    if (attribute.attrType === 'color') {
+        return <div className="attrBox">
+            <label>{attribute.attrName}</label>
+            <input
+                key={controlKey}
+                type="color"
+                defaultValue={state.value || '#000000'}
+                onChange={(event) => applyValue(event.target.value)}
+            />
+        </div>;
+    }
+    const options = getBatchSelectOptions(attribute.attrType);
+    return <div className="attrBox">
+        <label>{attribute.attrName}</label>
+        <select
+            key={controlKey}
+            defaultValue={inputValue}
+            onChange={(event) => applyValue(event.target.value)}
+        >
+            {state.mixed && <option value="" disabled>{t('designer.batchAttributes.mixedValue')}</option>}
+            {options.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+        </select>
+    </div>;
+});
+
+const BatchCommonAttributes = memo((props) => {
+    const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
+    const groups = getBatchCommonAttributeGroups(selectedShapes);
+    if (groups.length === 0) return null;
+    return <>
+        <div className="attrTitle">{t('designer.batchAttributes.title')}</div>
+        <div className="attrBox batchHostSelectionCount">{t('designer.batchHost.selectedElements').replace('{count}', String(selectedShapes.length))}</div>
+        {groups.map((group, groupIndex) => <React.Fragment key={`${group.name || 'group'}-${groupIndex}`}>
+            <div className="attrTitle">{group.name}</div>
+            {group.attributes.map((attribute) => <BatchCommonAttributeControl
+                key={getAttributeIdentity(attribute)}
+                attribute={attribute}
+                selectedShapes={selectedShapes}
+                onApply={props.onBatchCommonAttributeChange}
+            />)}
+        </React.Fragment>)}
+    </>;
+});
+
+const BatchAttributes = memo((props) => {
+    const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
+    const hasHostBinding = getBatchHostBindingState(selectedShapes).available;
+    const hasCommonAttributes = getBatchCommonAttributeGroups(selectedShapes).length > 0;
+    if (!hasHostBinding && !hasCommonAttributes) {
+        return <div className="attrLocked">
+            <PermMedia fontSize="large" color="disabled" />
+            <div>{t('designer.batchAttributes.noCommonAttributes')}</div>
+        </div>;
+    }
+    return <>
+        <BatchHostAttributes {...props} />
+        <BatchCommonAttributes {...props} />
+    </>;
+});
+
 const ElementAttr = memo((props) => {
     const useSlaveId = props.useSlaveId === true;
     const splitToken = (text, delimiter, index) => {
@@ -17,11 +420,12 @@ const ElementAttr = memo((props) => {
     };
 
     if (props.MultiSelect) {
-        return [<div className="attrLocked" key='123456'>
-            <PermMedia fontSize="large" color="disabled" />
-            <div>{t('auto.k0423')}</div>
-        </div>
-        ]
+        return <BatchAttributes
+            selectedShapes={props.selectedShapes}
+            useSlaveId={useSlaveId}
+            onBatchHostBindingChange={props.onBatchHostBindingChange}
+            onBatchCommonAttributeChange={props.onBatchCommonAttributeChange}
+        />;
     }
 
     let dragShape = props.dragShape ? JSON.parse(JSON.stringify(props.dragShape)) : null;

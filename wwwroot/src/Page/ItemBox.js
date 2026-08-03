@@ -33,6 +33,16 @@ export const isBasicPaletteComponent = (item) => (
     && (item.moduleJson.children[0].className !== 'Echart' || isWaterBallComponent(item))
 );
 
+export const getImageAssetName = (imageUrl) => {
+    const pathValue = String(imageUrl || '').split(/[?#]/)[0].replace(/\\/g, '/');
+    const fileName = pathValue.split('/').pop() || '';
+    try {
+        return decodeURIComponent(fileName).replace(/\.[a-z0-9]{1,10}$/i, '').trim();
+    } catch (error) {
+        return fileName.replace(/\.[a-z0-9]{1,10}$/i, '').trim();
+    }
+};
+
 function ItemBox(props) {
     const [selectedNav, setSelectedNav] = useState(0);
     const [selectedData, setSelectedData] = useState([]);
@@ -322,11 +332,11 @@ function ItemBox(props) {
                 if (!Array.isArray(res.data)) {
                     setPaletteData(imgData, type);
                     return;
-                }
-                res.data.forEach((element) => {
-                    let imgOne = {
-                        moduleName: t('itemBox.image'),
-                        iconBase64: element.imgUrl,
+                    }
+                    res.data.forEach((element) => {
+                        let imgOne = {
+                            moduleName: getImageAssetName(element.imgUrl) || t('itemBox.image'),
+                            iconBase64: element.imgUrl,
                         moduleJson: {
                             attrs: {
                                 moduleAttr: [
@@ -690,9 +700,9 @@ function ItemBox(props) {
                                 <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
                             </div>
                         </div>
-                        <div className="galleryListOnly" style={{ marginTop: '4px' }} onMouseLeave={() => setHoverPreviewImg('')}>
+                        <div className="paletteAssetList galleryListOnly" style={{ marginTop: '4px' }} onMouseLeave={() => setHoverPreviewImg('')}>
                             {visiblePaletteData.map((v) => (
-                                <div className="itmeOne" key={v.favoriteId}>
+                                <div className="paletteAssetRow itmeOne" key={v.favoriteId}>
                                     <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img', v.favoriteId)} />
                                     <button
                                         type="button"
@@ -718,6 +728,7 @@ function ItemBox(props) {
                                         }}
                                         className={hoverPreviewImg === v.iconBase64 ? 'galleryThumb active' : 'galleryThumb'}
                                     />
+                                    <span className="paletteAssetName" title={v.moduleName}>{v.moduleName || t('itemBox.image')}</span>
                                 </div>
                             ))}
                         </div>
@@ -776,6 +787,7 @@ function ItemBox(props) {
                         <div style={{ marginTop: '62px' }}>
                             {selectedData.length > 0 && (
                                 <Tree
+                                    className="pageTree"
                                     showLine
                                     showIcon
                                     onSelect={onTreeSelect}
@@ -786,7 +798,36 @@ function ItemBox(props) {
                     </>
                 )}
 
-                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 5 || selectedNav === 8) && visiblePaletteData.map((v) => (
+                {selectedNav === 5 && (
+                    <div className="paletteAssetList defaultGalleryList">
+                        {visiblePaletteData.map((v) => (
+                            <div className="paletteAssetRow itmeOne" key={v.favoriteId}>
+                                <button
+                                    type="button"
+                                    className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''}`}
+                                    data-palette-favorite={v.favoriteId}
+                                    title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                    aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                    onClick={() => toggleFavorite(v)}
+                                >
+                                    {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                                </button>
+                                <img
+                                    className="galleryThumb"
+                                    src={v.iconBase64}
+                                    alt={JSON.stringify(v.moduleJson)}
+                                    onDragStart={(e) => {
+                                        const moduleJson = parseDragModuleFromAlt(e.target.alt);
+                                        if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
+                                    }}
+                                />
+                                <span className="paletteAssetName" title={v.moduleName}>{v.moduleName || t('itemBox.image')}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 8) && visiblePaletteData.map((v) => (
                     <div className="itmeOne" key={v.favoriteId}>
                         <button
                             type="button"

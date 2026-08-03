@@ -575,6 +575,47 @@
     font-size: 15px;
 }
 
+.designerRibbon .ribbonCommand:not(:disabled),
+.designerRibbon .ribbonGlobalIcon:not(:disabled),
+.designerRibbon .ribbonToolbarMore:not(:disabled) {
+    border-color: #788990;
+    background: #313a40;
+    color: #dceff0;
+}
+
+.designerRibbon .ribbonCommand:not(:disabled) .anticon,
+.designerRibbon .ribbonGlobalIcon:not(:disabled) .anticon,
+.designerRibbon .ribbonToolbarMore:not(:disabled) .anticon {
+    color: #dceff0;
+    opacity: 1;
+}
+
+.designerRibbon .ribbonCommand:not(:disabled):hover,
+.designerRibbon .ribbonGlobalIcon:not(:disabled):hover,
+.designerRibbon .ribbonToolbarMore:not(:disabled):hover {
+    border-color: #94c9c1;
+    background: #38504e;
+    color: #ffffff;
+}
+
+.designerRibbon .ribbonCommand:not(:disabled):hover .anticon,
+.designerRibbon .ribbonGlobalIcon:not(:disabled):hover .anticon,
+.designerRibbon .ribbonToolbarMore:not(:disabled):hover .anticon {
+    color: #ffffff;
+}
+
+.designerRibbon .ribbonCommand:disabled {
+    border-color: #46525a;
+    background: #293136;
+    color: #69767d;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+.designerRibbon .ribbonCommand:disabled .anticon {
+    color: #a6bbc0;
+}
+
 .ribbonCommandLabel {
     display: none;
 }
@@ -1034,6 +1075,10 @@
     box-shadow: 0 0 0 2px rgba(44, 199, 174, 0.16);
 }
 
+.designerShell .left .paletteAssetRow.itmeOne:hover {
+    background: #2d403d;
+}
+
 .designerShell .canvasBody,
 .designerShell .designerCanvasBody {
     width: calc(100% - 572px);
@@ -1042,7 +1087,7 @@
 
 .designerShell .canvasStage {
     width: calc(100vw - 596px);
-    height: calc(100vh - 94px);
+    height: calc(100vh - 104px);
 }
 
 .designerShell .canvasStage2 {
@@ -1141,6 +1186,33 @@
     color: var(--designer-text);
 }
 
+.designerShell .layui-layer-content select option,
+.designerShell .layui-layer-content select optgroup,
+.designerShell .attrBox select option,
+.designerShell .attrBox select optgroup {
+    background: #273137;
+    color: #e7f0f2;
+}
+
+.designerShell .layui-layer-content select option:checked,
+.designerShell .attrBox select option:checked {
+    background: #315e59;
+    color: #ffffff;
+}
+
+.designerShell .layui-layer-btn.switchConfirmActions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.designerShell .layui-layer-btn.switchConfirmActions .ant-btn {
+    margin: 0;
+    flex: 0 0 auto;
+}
+
 .designerShell .ant-tree {
     background: transparent;
     color: var(--designer-text);
@@ -1148,6 +1220,43 @@
 
 .designerShell .ant-tree-node-content-wrapper {
     color: var(--designer-text);
+}
+
+.designerShell .left .pageTree .ant-tree-treenode {
+    color: var(--designer-text);
+}
+
+.designerShell .left .pageTree .ant-tree-node-content-wrapper {
+    color: var(--designer-text);
+    border-radius: 3px;
+}
+
+.designerShell .left .pageTree .ant-tree-node-content-wrapper:hover {
+    background: #2d403d;
+    color: #e5f7f1;
+}
+
+.designerShell .left .pageTree .ant-tree-treenode-selected .ant-tree-node-content-wrapper,
+.designerShell .left .pageTree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+    background: #315e59;
+    color: #ffffff;
+}
+
+.designerShell .left .pageTree .ant-tree-switcher,
+.designerShell .left .pageTree .ant-tree-switcher:hover,
+.designerShell .left .pageTree .ant-tree-icon__customize {
+    color: var(--designer-muted);
+}
+
+.designerShell .left .pageTree .ant-tree-treenode-selected .ant-tree-switcher,
+.designerShell .left .pageTree .ant-tree-treenode-selected .ant-tree-icon__customize {
+    color: #d6f3ec;
+}
+
+.designerShell .left .pageTree .ant-tree-node-content-wrapper:focus,
+.designerShell .left .pageTree .ant-tree-node-content-wrapper:active {
+    background: #315e59;
+    color: #ffffff;
 }
 
 .designerShell button:focus-visible,

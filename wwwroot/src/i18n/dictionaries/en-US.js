@@ -244,6 +244,7 @@
         page: 'Page Actions',
       },
       actions: {
+        selectAll: 'Select all editable elements',
         multiSelect: 'Select or deselect elements',
         moveOnePixel: 'Move selected elements by 1px',
         moveTenPixels: 'Move selected elements by 10px',
@@ -265,6 +266,20 @@
         unlockAlternative: 'Unlock selected elements (alternative shortcut)',
         save: 'Save the page',
         },
+    },
+    batchHost: {
+      title: 'Host Properties',
+      selectedElements: '{count} elements selected',
+      host: 'Host',
+      selectHost: 'Select host',
+      mixedHost: 'Selected elements use different hosts',
+      noCommonHost: 'Selected elements do not share an editable host property',
+      apply: 'Apply to selected elements',
+    },
+    batchAttributes: {
+      title: 'Shared Properties',
+      mixedValue: 'Multiple values',
+      noCommonAttributes: 'Selected elements do not share editable properties',
     },
     preflight: {
       trigger: 'Preflight Check',

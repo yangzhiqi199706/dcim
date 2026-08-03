@@ -5,8 +5,8 @@ import enUS from '../i18n/dictionaries/en-US';
 const expectedGroups = [
     {
         name: 'selection',
-        keys: ['Ctrl/Cmd + Click', 'Arrow keys', 'Shift + Arrow keys'],
-        actions: ['multiSelect', 'moveOnePixel', 'moveTenPixels'],
+        keys: ['Ctrl/Cmd + A', 'Ctrl/Cmd + Click', 'Arrow keys', 'Shift + Arrow keys'],
+        actions: ['selectAll', 'multiSelect', 'moveOnePixel', 'moveTenPixels'],
     },
     {
         name: 'grouping',

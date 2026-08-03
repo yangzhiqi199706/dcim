@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>组态设计工作台 - 视觉方向</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, "Microsoft YaHei", "PingFang SC", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: #edf1f4; background: #17191c; }
+    main { width: min(1160px, calc(100% - 40px)); margin: 0 auto; padding: 60px 0 48px; }
+    .eyebrow { margin: 0 0 12px; color: #4ed1ba; font-size: 13px; font-weight: 700; }
+    h1 { margin: 0; font-size: 34px; letter-spacing: 0; }
+    .intro { max-width: 640px; margin: 14px 0 38px; color: #aeb7bf; font-size: 16px; line-height: 1.7; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    article { min-height: 310px; overflow: hidden; border: 1px solid #343a40; border-radius: 8px; background: #22262a; }
+    .preview { height: 174px; padding: 14px; background: #151719; }
+    .mini { display: grid; height: 100%; grid-template-columns: 34px 1fr 56px; gap: 6px; border: 1px solid rgba(255,255,255,.12); border-radius: 4px; overflow: hidden; }
+    .mini > span { display: block; }
+    .mini .rail { background: #252b2f; }
+    .mini .canvas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 12px; background: #353c40; }
+    .mini .canvas i { min-height: 36px; border: 1px solid rgba(28,179,161,.6); background: #f5f7f8; }
+    .mini .inspector { background: #202427; }
+    .paper .preview { background: #eef2f1; }
+    .paper .mini { border-color: #cfd8d6; }
+    .paper .rail { background: #dfe8e6; }
+    .paper .canvas { background: #e6edeb; }
+    .paper .canvas i { border-color: #69a999; background: #fff; }
+    .paper .inspector { background: #fff; }
+    .signal .preview { background: #111412; }
+    .signal .mini { border-color: #31423d; }
+    .signal .rail { background: #1d2925; }
+    .signal .canvas { background: #202825; }
+    .signal .canvas i { border-color: #44d4b5; background: #17201d; }
+    .signal .inspector { background: #1b2421; }
+    .card-body { padding: 20px; }
+    h2 { margin: 0 0 8px; font-size: 19px; }
+    p { margin: 0; color: #aeb7bf; line-height: 1.6; }
+    a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; color: #74e1cc; font-weight: 700; text-decoration: none; }
+    a:focus-visible { outline: 3px solid #e5b85a; outline-offset: 3px; }
+    @media (max-width: 800px) { main { width: min(100% - 28px, 560px); padding-top: 36px; } h1 { font-size: 27px; } .grid { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+  <main aria-label="组态设计工作台视觉方向">
+    <p class="eyebrow">OFFLINE HTML EXPLORATIONS</p>
+    <h1>组态设计工作台：三种界面方向</h1>
+    <p class="intro">三版都以画布为中心，但分别强调高密度编辑、安静创作和运行态反馈。点击卡片可在浏览器中单独查看和操作。</p>
+    <section class="grid" aria-label="视觉方向列表">
+      <article>
+        <div class="preview"><div class="mini"><span class="rail"></span><span class="canvas"><i></i><i></i><i></i><i></i></span><span class="inspector"></span></div></div>
+        <div class="card-body"><h2>01 石墨工作台</h2><p>深色高密度，适合熟练工程师长时间编辑。工具与画布边界清晰。</p><a href="workbench-graphite.html" aria-label="查看石墨工作台">查看方案</a></div>
+      </article>
+      <article class="paper">
+        <div class="preview"><div class="mini"><span class="rail"></span><span class="canvas"><i></i><i></i><i></i><i></i></span><span class="inspector"></span></div></div>
+        <div class="card-body"><h2>02 纸面建筑师</h2><p>明亮克制，留白更多。更适合搭建、审阅和模板化设计流程。</p><a href="workbench-paper.html" aria-label="查看纸面建筑师">查看方案</a></div>
+      </article>
+      <article class="signal">
+        <div class="preview"><div class="mini"><span class="rail"></span><span class="canvas"><i></i><i></i><i></i><i></i></span><span class="inspector"></span></div></div>
+        <div class="card-body"><h2>03 信号控制台</h2><p>强化数据绑定和运行态反馈，适合数据密集型的工业大屏配置。</p><a href="workbench-signal.html" aria-label="查看信号控制台">查看方案</a></div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
