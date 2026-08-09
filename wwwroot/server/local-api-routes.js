@@ -275,6 +275,39 @@ function extractImageRefsFromPageText(rawText) {
   return Array.from(refs).sort((a, b) => a.localeCompare(b));
 }
 
+function rewriteImportedPageImageRefs(rawText) {
+  function rewriteValue(value) {
+    if (typeof value === 'string') {
+      const normalizedImageRef = normalizeImageRef(value);
+      if (normalizedImageRef) return normalizedImageRef;
+
+      const trimmed = value.trim();
+      if (!trimmed || !/^[\[{\"]/.test(trimmed)) return value;
+
+      try {
+        return JSON.stringify(rewriteValue(JSON.parse(trimmed)));
+      } catch (error) {
+        return value;
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => rewriteValue(item));
+    }
+
+    if (value && typeof value === 'object') {
+      return Object.keys(value).reduce((result, key) => {
+        result[key] = rewriteValue(value[key]);
+        return result;
+      }, {});
+    }
+
+    return value;
+  }
+
+  return rewriteValue(String(rawText || ''));
+}
+
 function isPathWithin(baseDir, targetPath) {
   const normalizedBase = path.resolve(baseDir);
   const normalizedTarget = path.resolve(targetPath);
@@ -870,11 +903,11 @@ function createExportImportHandler() {
         }
 
         targetFileName = ensureImportTxtName(path.basename(txtEntry.name), 'import_page.txt');
-        pageText = txtEntry.data.toString('utf8');
+        pageText = rewriteImportedPageImageRefs(txtEntry.data.toString('utf8'));
         zipEntriesForImport = zipEntries;
       } else {
         targetFileName = ensureImportTxtName(path.basename(sourceName), 'import_page.txt');
-        pageText = decoded.buffer.toString('utf8');
+        pageText = rewriteImportedPageImageRefs(decoded.buffer.toString('utf8'));
       }
 
       const targetFilePath = path.join(PAGE_DIR, targetFileName);
@@ -928,4 +961,5 @@ function attachLocalApiRoutes(app, basePath = '/api/local') {
 
 module.exports = {
   attachLocalApiRoutes,
+  rewriteImportedPageImageRefs,
 };
