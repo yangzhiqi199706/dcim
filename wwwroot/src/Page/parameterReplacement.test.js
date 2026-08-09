@@ -3,6 +3,7 @@ import {
     createDeviceParameterOptions,
     createParameterReplacementContext,
     isParameterReplacementSelectionCurrent,
+    replaceSelectedParameterBindingMappings,
     replaceSelectedParameterBindings,
 } from './parameterReplacement';
 
@@ -82,6 +83,38 @@ describe('parameter replacement', () => {
         expect(result.shapes[1].moduleJson.attrs.dataKey[0].name).toBe('pressure');
         expect(result.shapes[2]).toBe(shapes[2]);
         expect(shapes[0].moduleJson.attrs.dataKey[0].name).toBe('temperature');
+    });
+
+    test('replaces every configured original parameter without cascading into another mapping', () => {
+        const shapes = [
+            createShape('one', 'device-1', 'temperature'),
+            createShape('two', 'device-1', 'humidity'),
+            createShape('three', 'device-1', 'pressure'),
+            createShape('four', 'device-1', 'humidity'),
+        ];
+        const context = createParameterReplacementContext(shapes, ['one', 'two', 'three']);
+        const result = replaceSelectedParameterBindingMappings(shapes, context, [
+            {
+                originalName: 'temperature',
+                replacement: { name: 'humidity', cmdtype: 'telemetry-2', type: 'mqtt' },
+            },
+            {
+                originalName: 'humidity',
+                replacement: { name: 'temperature', cmdtype: 'telemetry-3', type: 'mqtt' },
+            },
+        ]);
+
+        expect(result.changedCount).toBe(2);
+        expect(result.shapes.map((shape) => shape.moduleJson.attrs.dataKey[0].name)).toEqual([
+            'humidity',
+            'temperature',
+            'pressure',
+            'humidity',
+        ]);
+        expect(result.shapes[0].moduleJson.attrs.dataKey[0].cmdtype).toBe('telemetry-2');
+        expect(result.shapes[1].moduleJson.attrs.dataKey[0].cmdtype).toBe('telemetry-3');
+        expect(result.shapes[2]).toBe(shapes[2]);
+        expect(result.shapes[3]).toBe(shapes[3]);
     });
 
     test('recognizes the current selection regardless of selection order', () => {

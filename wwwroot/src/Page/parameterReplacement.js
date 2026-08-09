@@ -150,3 +150,62 @@ export const replaceSelectedParameterBindings = (shapes, context, originalName, 
     });
     return { shapes: nextShapes, changedCount };
 };
+
+export const replaceSelectedParameterBindingMappings = (shapes, context, mappings) => {
+    if (!context || !context.valid || !Array.isArray(mappings)) {
+        return { shapes, changedCount: 0 };
+    }
+    const replacementsByOriginalName = new Map();
+    mappings.forEach((mapping) => {
+        const originalName = mapping && typeof mapping.originalName === 'string'
+            ? mapping.originalName.trim()
+            : '';
+        const replacement = mapping && mapping.replacement;
+        if (!originalName || !replacement || !replacement.name) return;
+        replacementsByOriginalName.set(originalName, replacement);
+    });
+    if (replacementsByOriginalName.size === 0) {
+        return { shapes, changedCount: 0 };
+    }
+
+    const selectedIds = new Set(context.selectedIds);
+    let changedCount = 0;
+    const nextShapes = (Array.isArray(shapes) ? shapes : []).map((shape) => {
+        if (!shape || !selectedIds.has(shape.id)) return shape;
+        const bindingInfo = getProtocolBinding(shape);
+        if (!bindingInfo || bindingInfo.deviceId !== context.deviceId) return shape;
+        const replacement = replacementsByOriginalName.get(bindingInfo.parameterName);
+        if (!replacement) return shape;
+
+        const nextBinding = {
+            ...bindingInfo.binding,
+            name: replacement.name,
+        };
+        if (replacement.type !== undefined && replacement.type !== null && replacement.type !== '') {
+            nextBinding.type = replacement.type;
+        }
+        if (replacement.cmdtype !== undefined && replacement.cmdtype !== null) {
+            nextBinding.cmdtype = replacement.cmdtype;
+        }
+        if (
+            nextBinding.name === bindingInfo.binding.name
+            && nextBinding.type === bindingInfo.binding.type
+            && nextBinding.cmdtype === bindingInfo.binding.cmdtype
+        ) {
+            return shape;
+        }
+
+        changedCount += 1;
+        return {
+            ...shape,
+            moduleJson: {
+                ...shape.moduleJson,
+                attrs: {
+                    ...shape.moduleJson.attrs,
+                    dataKey: [nextBinding],
+                },
+            },
+        };
+    });
+    return { shapes: nextShapes, changedCount };
+};

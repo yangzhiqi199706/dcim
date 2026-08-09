@@ -35,7 +35,7 @@ import {
     createDeviceParameterOptions,
     createParameterReplacementContext,
     isParameterReplacementSelectionCurrent,
-    replaceSelectedParameterBindings,
+    replaceSelectedParameterBindingMappings,
 } from './parameterReplacement';
 import {
     createMasterControlDefinition,
@@ -188,8 +188,7 @@ function DesignerApp() {
     const [parameterReplacementBox, setParameterReplacementBox] = useState(false);
     const [parameterReplacementContext, setParameterReplacementContext] = useState(null);
     const [parameterReplacementOptions, setParameterReplacementOptions] = useState([]);
-    const [parameterReplacementOriginal, setParameterReplacementOriginal] = useState(null);
-    const [parameterReplacementTarget, setParameterReplacementTarget] = useState(null);
+    const [parameterReplacementTargets, setParameterReplacementTargets] = useState({});
     const [parameterReplacementLoading, setParameterReplacementLoading] = useState(false);
     const parameterReplacementRequestRef = useRef(createParameterReplacementRequestGuard());
     const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
@@ -380,8 +379,7 @@ function DesignerApp() {
         setParameterReplacementLoading(false);
         setParameterReplacementContext(null);
         setParameterReplacementOptions([]);
-        setParameterReplacementOriginal(null);
-        setParameterReplacementTarget(null);
+        setParameterReplacementTargets({});
     };
 
     const openParameterReplacementDialog = async () => {
@@ -396,8 +394,7 @@ function DesignerApp() {
         setParameterReplacementLoading(true);
         setParameterReplacementContext(context);
         setParameterReplacementOptions([]);
-        setParameterReplacementOriginal(context.originalOptions[0] ? context.originalOptions[0].value : null);
-        setParameterReplacementTarget(null);
+        setParameterReplacementTargets({});
         setParameterReplacementBox(true);
         try {
             const response = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
@@ -412,9 +409,6 @@ function DesignerApp() {
                 return;
             }
             setParameterReplacementOptions(options);
-            const originalName = context.originalOptions[0] ? context.originalOptions[0].value : '';
-            const preferred = options.find((item) => item.name !== originalName) || options[0];
-            setParameterReplacementTarget(preferred.value);
         } catch (error) {
             if (parameterReplacementRequestRef.current.isCurrent(requestId)) {
                 message.error(t('parameterReplacement.unavailable'));
@@ -427,8 +421,7 @@ function DesignerApp() {
     };
 
     const applyParameterReplacement = () => {
-        if (!parameterReplacementContext || !parameterReplacementOriginal) {
-            message.warning(t('parameterReplacement.selectOriginal'));
+        if (!parameterReplacementContext) {
             return;
         }
         if (!isParameterReplacementSelectionCurrent(parameterReplacementContext, getParameterReplacementSelectionIds())) {
@@ -436,20 +429,19 @@ function DesignerApp() {
             closeParameterReplacementDialog();
             return;
         }
-        if (!parameterReplacementTarget) {
+        const mappings = parameterReplacementContext.originalOptions.map((original) => {
+            const target = parameterReplacementTargets[original.value];
+            const replacement = parameterReplacementOptions.find((item) => item.value === target);
+            return replacement ? { originalName: original.value, replacement } : null;
+        }).filter(Boolean);
+        if (mappings.length === 0) {
             message.warning(t('parameterReplacement.selectReplacement'));
             return;
         }
-        const replacement = parameterReplacementOptions.find((item) => item.value === parameterReplacementTarget);
-        if (!replacement) {
-            message.warning(t('parameterReplacement.selectReplacement'));
-            return;
-        }
-        const result = replaceSelectedParameterBindings(
+        const result = replaceSelectedParameterBindingMappings(
             imagesRef.current,
             parameterReplacementContext,
-            parameterReplacementOriginal,
-            replacement
+            mappings
         );
         if (result.changedCount === 0) {
             message.warning(t('parameterReplacement.nothingMatched'));
@@ -3765,27 +3757,28 @@ function DesignerApp() {
                     <div className="layui-layer" style={parameterReplacementBox ? { 'display': 'block' } : { 'display': 'none' }}>
                         <div className="layui-layer-title">{t('parameterReplacement.title')}</div>
                         <div className="layui-layer-content">
-                            <div style={{ marginBottom: '10px' }}>
-                                <label style={{ display: 'inline-block', width: '80px' }}>{t('parameterReplacement.original')}</label>
-                                <Select
-                                    value={parameterReplacementOriginal}
-                                    onChange={setParameterReplacementOriginal}
-                                    options={parameterReplacementContext ? parameterReplacementContext.originalOptions : []}
-                                    style={{ width: 'calc(100% - 90px)' }}
-                                    placeholder={t('parameterReplacement.selectOriginal')}
-                                />
+                            <div style={{ display: 'flex', gap: '12px', marginBottom: '8px' }}>
+                                <label style={{ width: 'calc(50% - 6px)' }}>{t('parameterReplacement.original')}</label>
+                                <label style={{ width: 'calc(50% - 6px)' }}>{t('parameterReplacement.replacement')}</label>
                             </div>
-                            <div>
-                                <label style={{ display: 'inline-block', width: '80px' }}>{t('parameterReplacement.replacement')}</label>
-                                <Select
-                                    value={parameterReplacementTarget}
-                                    onChange={setParameterReplacementTarget}
-                                    options={parameterReplacementOptions}
-                                    loading={parameterReplacementLoading}
-                                    style={{ width: 'calc(100% - 90px)' }}
-                                    placeholder={t('parameterReplacement.selectReplacement')}
-                                />
-                            </div>
+                            {parameterReplacementContext && parameterReplacementContext.originalOptions.map((original) => (
+                                <div key={original.value} style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+                                    <input
+                                        value={original.label}
+                                        readOnly
+                                        aria-label={t('parameterReplacement.original')}
+                                        style={{ width: 'calc(50% - 6px)' }}
+                                    />
+                                    <Select
+                                        value={parameterReplacementTargets[original.value]}
+                                        onChange={(value) => setParameterReplacementTargets((current) => ({ ...current, [original.value]: value }))}
+                                        options={parameterReplacementOptions}
+                                        loading={parameterReplacementLoading}
+                                        style={{ width: 'calc(50% - 6px)' }}
+                                        placeholder={t('parameterReplacement.selectReplacement')}
+                                    />
+                                </div>
+                            ))}
                         </div>
                         <span className="layui-layer-setwin" onClick={closeParameterReplacementDialog}>
                             <Close />
