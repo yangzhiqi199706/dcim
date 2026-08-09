@@ -305,7 +305,15 @@ function rewriteImportedPageImageRefs(rawText) {
     return value;
   }
 
-  return rewriteValue(String(rawText || ''));
+  const source = String(rawText || '');
+  const trimmed = source.trim();
+  if (!trimmed || !/^[\[{\"]/.test(trimmed)) return rewriteValue(source);
+
+  try {
+    return JSON.stringify(rewriteValue(JSON.parse(trimmed)));
+  } catch (error) {
+    return rewriteValue(source);
+  }
 }
 
 function isPathWithin(baseDir, targetPath) {
