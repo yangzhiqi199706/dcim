@@ -13,9 +13,9 @@ describe('legacy component rendering', () => {
 
         const styles = fs.readFileSync(stylePath, 'utf8');
         expect(styles).toContain('.numstatus');
-        expect(styles).toContain('/Images/dcim/status.png');
+        expect(styles).toContain("url('./images/status.png')");
         expect(styles).toContain('.tipstxt');
-        expect(styles).toContain('/Images/dcim/pao.png');
+        expect(styles).toContain("url('./images/pao.png')");
     });
 
     test('renders paoHtml components in both designer and preview modes', () => {
@@ -27,11 +27,11 @@ describe('legacy component rendering', () => {
         const styles = readSource('Assets/componentBackgrounds.css');
 
         expect(styles).toContain('.param-status');
-        expect(styles).toContain('/Images/dcim/lang.png');
+        expect(styles).toContain("url('./images/lang.png')");
         expect(styles).toContain('.alarmList thead tr');
-        expect(styles).toContain('/Images/icon/list-head.png');
+        expect(styles).toContain("url('./images/list-head.png')");
         expect(styles).toContain('.rope');
-        expect(styles).toContain('/Images/icon/rope.jpg');
+        expect(styles).toContain("url('./images/rope.jpg')");
     });
 
     test('keeps leak rope dialog styling in the shared bundle', () => {

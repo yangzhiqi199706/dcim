@@ -31,9 +31,18 @@ const precacheIndexEntry = precache.match(/"revision": "([^"]+)",\s*"url": "\/VI
 assert.ok(precacheIndexEntry, 'VIBuilder index entry must be precached');
 assert.strictEqual(precacheIndexEntry[1], indexRevision);
 
+const cssDirectory = path.join(buildDir, 'static', 'css');
+const css = fs.readdirSync(cssDirectory)
+    .filter((file) => file.endsWith('.css'))
+    .map((file) => fs.readFileSync(path.join(cssDirectory, file), 'utf8'))
+    .join('\n');
+assert.match(css, /url\(\/VIBuilder\/static\/media\//);
+assert.doesNotMatch(css, /url\(\/static\/media\//);
+
 const serviceWorker = fs.readFileSync(path.join(buildDir, 'service-worker.js'), 'utf8');
-assert.match(serviceWorker, /\/VIBuilder\/precache-manifest\./);
-assert.match(serviceWorker, /registerNavigationRoute\("\/VIBuilder\/index\.html"/);
+assert.match(serviceWorker, /self\.skipWaiting\(\)/);
+assert.match(serviceWorker, /caches\.keys\(\)/);
+assert.doesNotMatch(serviceWorker, /importScripts\(/);
 assert.match(serviceWorker, new RegExp(`VIBuilder deployment revision: ${indexRevision}`));
 
 console.log('VIBuilder build path test passed');

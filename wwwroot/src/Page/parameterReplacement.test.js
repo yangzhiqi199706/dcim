@@ -2,6 +2,7 @@ import {
     createParameterReplacementRequestGuard,
     createDeviceParameterOptions,
     createParameterReplacementContext,
+    createParameterReplacementMappingPlan,
     isParameterReplacementSelectionCurrent,
     replaceSelectedParameterBindingMappings,
     replaceSelectedParameterBindings,
@@ -44,6 +45,24 @@ describe('parameter replacement', () => {
             ],
         });
         expect(mixedDevices).toMatchObject({ valid: false, reasonKey: 'parameterReplacement.sameDeviceRequired' });
+    });
+
+    test('requires the same data source when device IDs are equal', () => {
+        const mixedSources = createParameterReplacementContext([
+            createShape('one', 'device-1', 'temperature'),
+            createShape('two', 'device-1', 'humidity', { sourceHost: '192.168.0.60' }),
+        ], ['one', 'two']);
+        const remoteSource = createParameterReplacementContext([
+            createShape('one', 'device-1', 'temperature', { sourceHost: '192.168.0.60' }),
+            createShape('two', 'device-1', 'humidity', { sourceHost: '192.168.0.60:8086' }),
+        ], ['one', 'two']);
+
+        expect(mixedSources).toMatchObject({ valid: false, reasonKey: 'parameterReplacement.sameDeviceRequired' });
+        expect(remoteSource).toMatchObject({
+            valid: true,
+            deviceId: 'device-1',
+            sourceHost: '192.168.0.60:8086',
+        });
     });
 
     test('derives replacement parameters from the selected device payload', () => {
@@ -115,6 +134,52 @@ describe('parameter replacement', () => {
         expect(result.shapes[1].moduleJson.attrs.dataKey[0].cmdtype).toBe('telemetry-3');
         expect(result.shapes[2]).toBe(shapes[2]);
         expect(result.shapes[3]).toBe(shapes[3]);
+    });
+
+    test('creates a common-keyword mapping plan only for replacement parameters on the selected device', () => {
+        const plan = createParameterReplacementMappingPlan(
+            [
+                { label: 'active energy', value: 'active energy' },
+                { label: 'reactive energy', value: 'reactive energy' },
+            ],
+            [
+                { label: 'active power', value: 'active power|telemetry', name: 'active power', cmdtype: 'telemetry', type: 'mqtt' },
+                { label: 'reactive energy', value: 'reactive energy|telemetry', name: 'reactive energy', cmdtype: 'telemetry', type: 'mqtt' },
+            ],
+            {},
+            'energy',
+            'power'
+        );
+
+        expect(plan.mappings).toEqual([
+            {
+                originalName: 'active energy',
+                replacement: { label: 'active power', value: 'active power|telemetry', name: 'active power', cmdtype: 'telemetry', type: 'mqtt' },
+            },
+        ]);
+        expect(plan.missingNames).toEqual(['reactive power']);
+    });
+
+    test('keeps manually selected replacements ahead of common-keyword mappings', () => {
+        const plan = createParameterReplacementMappingPlan(
+            [
+                { label: 'active energy', value: 'active energy' },
+                { label: 'reactive energy', value: 'reactive energy' },
+            ],
+            [
+                { label: 'voltage', value: 'voltage|telemetry', name: 'voltage', cmdtype: 'telemetry', type: 'mqtt' },
+                { label: 'reactive power', value: 'reactive power|telemetry', name: 'reactive power', cmdtype: 'telemetry', type: 'mqtt' },
+            ],
+            { 'active energy': 'voltage|telemetry' },
+            'energy',
+            'power'
+        );
+
+        expect(plan.mappings.map((mapping) => [mapping.originalName, mapping.replacement.name])).toEqual([
+            ['active energy', 'voltage'],
+            ['reactive energy', 'reactive power'],
+        ]);
+        expect(plan.missingNames).toEqual([]);
     });
 
     test('recognizes the current selection regardless of selection order', () => {

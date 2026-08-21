@@ -1,5 +1,6 @@
 import * as echarts from "echarts";
 import { t } from '../i18n';
+import { selectDataSourceResponse } from '../Assets/dataSource';
 // Comment translated to English.
 // import * as echarts from 'echarts/lib/echarts';
 // import { LineChart, BarChart, PieChart } from 'echarts/charts';
@@ -2336,6 +2337,13 @@ export const shouldRenderChart = (chartId, changedChartIds) => {
     return !Array.isArray(changedChartIds) || changedChartIds.includes(chartId);
 };
 
+export const selectChartAlarmData = (moduleJson, alarmData) => {
+    const dataKey = moduleJson && moduleJson.attrs && Array.isArray(moduleJson.attrs.dataKey)
+        ? moduleJson.attrs.dataKey
+        : [];
+    return selectDataSourceResponse(alarmData, dataKey[0] && dataKey[0].sourceHost);
+};
+
 function echart(images, selectedId,alarmData, options = {}) {
     const changedChartIds = options.changedChartIds;
     const delay = typeof options.delay === 'number' ? options.delay : 1000;
@@ -2673,7 +2681,7 @@ function echart(images, selectedId,alarmData, options = {}) {
                     bindChartAutoResize(waterBallChart, element);
                     safeSetOption(waterBallChart, buildWaterBallOption(chartInfo));
                 } else if (chartInfo.cat === 'alarmpie') {// Comment translated to English.
-                    getAlarmData(element, chartInfo, alarmData);
+                    getAlarmData(element, chartInfo, selectChartAlarmData(moduleJson, alarmData));
                 } else if (chartInfo.cat === 'huan') {// Comment translated to English.
                     var huanChart = initChart(element);
                     bindChartAutoResize(huanChart, element);

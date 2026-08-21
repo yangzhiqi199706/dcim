@@ -70,6 +70,13 @@ function ItemBox(props) {
     const [showeditPageBox, setshoweditPageBox] = useState(false);
 
     const visiblePaletteData = React.useMemo(() => filterPaletteItems(selectedData, paletteQuery), [selectedData, paletteQuery]);
+    const exportablePages = pagedata
+        .filter((page) => page && page.PageTxt)
+        .map((page) => ({
+            pageName: page.PageName,
+            pageTxt: page.PageTxt,
+            pageIndex: page.PageIndex,
+        }));
 
     useEffect(() => {
         writePaletteFavorites(paletteFavorites);
@@ -645,18 +652,49 @@ function ItemBox(props) {
                 return;
             }
 
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = `../${fileUrl.replace(/^\/+/, '')}`;
             const lowerUrl = fileUrl.toLowerCase();
             const fileExt = lowerUrl.endsWith('.zip') ? '.zip' : (lowerUrl.endsWith('.txt') ? '.txt' : '');
             if (fileExt !== '.zip') {
                 message.warning(t('itemBox.exportNotZipWarning'));
             }
-            a.download = `${editPageName}[${editPageIndex}]${fileExt}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            downloadExportFile(fileUrl, `${editPageName}[${editPageIndex}]${fileExt}`);
+        } else if (conres) {
+            message.error(conres.msg);
+        }
+    };
+
+    const downloadExportFile = (fileUrl, fileName) => {
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = `../${fileUrl.replace(/^\/+/, '')}`;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    const exportAllPages = async () => {
+        if (exportablePages.length === 0) {
+            message.warning(t('itemBox.noPagesToExport'));
+            return;
+        }
+
+        const conres = await httpsend.getDataLocal('exportAll', { pages: exportablePages });
+        if (conres && conres.code === 100) {
+            const exportData = conres.data || {};
+            const fileUrl = exportData.fileUrl;
+            if (!fileUrl) {
+                message.error(t('http.requestFailed'));
+                return;
+            }
+
+            downloadExportFile(fileUrl, 'pages.zip');
+            const skippedCount = Array.isArray(exportData.skippedPages) ? exportData.skippedPages.length : 0;
+            if (skippedCount > 0) {
+                message.warning(t('itemBox.exportAllPartial') + skippedCount);
+            } else {
+                message.success(t('itemBox.exportAllSuccess'));
+            }
         } else if (conres) {
             message.error(conres.msg);
         }
@@ -776,15 +814,16 @@ function ItemBox(props) {
 
                 {selectedNav === 0 && (
                     <>
-                        <div className="uploadBtn">
-                            {editPageId && <Button className="delBtn" type="primary" danger onClick={() => setIsdelModalOpen(true)}>{t('common.delete')}</Button>}
+                        <div className="uploadBtn pageActionToolbar">
                             <Upload {...uploadPageprops}>
                                 <Button type="primary">{t('common.import')}</Button>
                             </Upload>
+                            <Button type="primary" disabled={exportablePages.length === 0} onClick={exportAllPages}>{t('itemBox.exportAll')}</Button>
                             {(editPageId && editPageTxt) && <Button type="primary" onClick={exportPage}>{t('common.export')}</Button>}
                             {editPageId && <Button type="primary" onClick={() => setshoweditPageBox(true)}>{t('common.settings')}</Button>}
+                            {editPageId && <Button className="delBtn" type="primary" danger onClick={() => setIsdelModalOpen(true)}>{t('common.delete')}</Button>}
                         </div>
-                        <div style={{ marginTop: '62px' }}>
+                        <div style={{ marginTop: '84px' }}>
                             {selectedData.length > 0 && (
                                 <Tree
                                     className="pageTree"

@@ -32,6 +32,18 @@ function copyDirectory(source, target) {
     });
 }
 
+function rewriteDirectoryFiles(directory, extension, transform) {
+    if (!fs.existsSync(directory)) return;
+    fs.readdirSync(directory, { withFileTypes: true }).forEach((entry) => {
+        const entryPath = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+            rewriteDirectoryFiles(entryPath, extension, transform);
+        } else if (entry.name.endsWith(extension)) {
+            rewriteFile(entryPath, transform);
+        }
+    });
+}
+
 if (!fs.existsSync(sourceDir)) {
     throw new Error(`Build directory does not exist: ${sourceDir}`);
 }
@@ -52,6 +64,11 @@ rewriteFile(indexPath, (source) => source
 const runtimeEndpointsPath = path.join(targetDir, 'runtime-endpoints.js');
 rewriteFile(runtimeEndpointsPath, (source) => source
     .replace(/appPort:\s*'[^']*'/, "appPort: '8086/VIBuilder'"));
+
+rewriteDirectoryFiles(path.join(targetDir, 'static', 'css'), '.css', (source) => source
+    .replace(/url\(\/static\/media\//g, `url(${publicPath}/static/media/`));
+rewriteDirectoryFiles(path.join(targetDir, 'static', 'css'), '.css.map', (source) => source
+    .replace(/url\(\\?\/static\\?\/media\\?\//g, `url(${publicPath}/static/media/`));
 
 Object.keys(manifest).forEach((key) => {
     manifest[key] = withPublicPath(manifest[key]);

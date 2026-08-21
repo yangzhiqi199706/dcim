@@ -11,6 +11,8 @@ import {
     BlockOutlined,
     ColumnHeightOutlined,
     ColumnWidthOutlined,
+    CloudDownloadOutlined,
+    CloudServerOutlined,
     CopyOutlined,
     DatabaseOutlined,
     DeleteOutlined,
@@ -68,6 +70,8 @@ const COMMANDS = {
     saveTemplate: { icon: SaveOutlined, labelKey: 'ribbonToolbar.commands.saveTemplate' },
     savePage: { icon: SaveOutlined, labelKey: 'ribbonToolbar.commands.savePage' },
     snap: { icon: AimOutlined, labelKey: 'ribbonToolbar.commands.snap' },
+    remoteSync: { icon: CloudDownloadOutlined, labelKey: 'ribbonToolbar.commands.remoteSync' },
+    globalDataSource: { icon: CloudServerOutlined, labelKey: 'ribbonToolbar.commands.globalDataSource' },
 };
 
 const SELECTION_COMMANDS = new Set([
@@ -85,6 +89,7 @@ function DesignerRibbonToolbar({
     canUngroupSelection,
     canSaveMasterControl,
     simulationEnabled,
+    globalDataSourceEnabled,
     snapEnabled,
     snapThreshold,
     commandHandlers,
@@ -148,7 +153,8 @@ function DesignerRibbonToolbar({
             <Tooltip key={command} title={label}>
                 <Button
                     className={`ribbonCommand ${definition.tone === 'danger' ? 'isDanger' : ''}`.trim()}
-                    type={command === 'simulation' && simulationEnabled ? 'primary' : 'default'}
+                    type={(command === 'simulation' && simulationEnabled)
+                        || (command === 'globalDataSource' && globalDataSourceEnabled) ? 'primary' : 'default'}
                     disabled={isCommandDisabled(command)}
                     aria-label={label}
                     icon={<Icon />}

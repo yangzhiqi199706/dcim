@@ -112,6 +112,16 @@ npm run check:no-cjk
 
 部署到生产时只需要修改 `public/runtime-endpoints.js`，无需重新打包。
 
+### 3.1 0.22 VIBuilder 部署目标（强制）
+
+> 用户已明确指定：后续所有针对 0.22 的 VIBuilder 前端、运行时配置、页面与资源部署，唯一目标目录是：
+>
+> `/dcim/admin/localhost_8086/wwwroot/public/VIBuilder/`
+
+- 禁止将 VIBuilder 文件部署到 `/dcim/admin/localhost_8081/wwwroot/` 或其它旧目录。
+- 部署前必须备份上述目标目录中将被替换的文件；部署后必须通过 `http://192.168.0.22:8086/VIBuilder/index.html` 验证。
+- 页面 TXT、上传图片、模板和导出文件均以该目录下的 `Images/` 为准；排查本地 API 时不得混用 8081 旧目录的资源文件。
+
 ---
 
 ## 4. 关键约定（务必遵守）

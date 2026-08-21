@@ -24,7 +24,7 @@ describe('designer diagnostics integration', () => {
         expect(source).toContain("import { getDataSourceHealthReport } from './dataSourceHealth';");
         expect(source).toContain("import DataSourceHealthModal from './DataSourceHealthModal';");
         expect(source).toContain('const openDataSourceHealth = async () =>');
-        expect(source).toContain("httpsend.getData('GetDeviceListKey', { ComboBox: 'all' })");
+        expect(source).toContain("getDataFromActiveSource('GetDeviceListKey', { ComboBox: 'all' })");
         expect(source).toContain('<DataSourceHealthModal');
         expect(source).toContain('onRefresh={refreshDataSourceHealth}');
     });

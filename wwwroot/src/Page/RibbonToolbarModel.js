@@ -23,6 +23,7 @@ const TAB_GROUPS = {
     page: [
         { id: 'workspace', labelKey: 'ribbonToolbar.groups.workspace', commands: ['newPage'] },
         { id: 'save', labelKey: 'ribbonToolbar.groups.save', commands: ['preview', 'saveTemplate', 'savePage'] },
+        { id: 'system', labelKey: 'ribbonToolbar.groups.system', commands: ['globalDataSource', 'remoteSync'] },
     ],
 };
 

@@ -11,7 +11,7 @@ describe('preview data loading integration', () => {
         expect(source).toContain('runPreviewDataBatchWithStatus([');
         expect(source).toContain('mergeSuccessfulPreviewData(');
 
-        const staticRenderIndex = source.indexOf('handlepredata(previewjson);');
+        const staticRenderIndex = source.indexOf('handlepredata(effectivePreviewJson);');
         const initialBatchIndex = source.indexOf('void loadPreviewData(previewRefreshChannels.realtime, {', staticRenderIndex);
 
         expect(staticRenderIndex).toBeGreaterThan(-1);

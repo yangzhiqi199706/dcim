@@ -3,6 +3,7 @@ import { Close, Lock, PermMedia } from '@mui/icons-material';
 import httpsend from '../Assets/httpsend';
 import { Select, Button } from 'antd';
 import { t } from '../i18n';
+import { createLatestDataSourceRequestGuard, normalizeDataSourceHost } from '../Assets/dataSource';
 import { ensureChartAttributeControls } from './chartAttributeControls';
 // import { Select, Button, message } from 'antd';
 // import GifImages from './Data/GifImages';
@@ -12,10 +13,12 @@ const normalizeHostBinding = (binding) => {
     if (!binding || binding.key === undefined || binding.key === null || binding.type === undefined || binding.type === null || binding.src === undefined || binding.src === null) {
         return null;
     }
+    const sourceHost = normalizeDataSourceHost(binding.sourceHost || '');
     return {
         key: String(binding.key),
         type: String(binding.type),
         src: String(binding.src),
+        ...(sourceHost ? { sourceHost } : {}),
     };
 };
 
@@ -46,7 +49,8 @@ const areHostBindingsEqual = (first, second) => (
     first === second || (!!first && !!second
         && first.key === second.key
         && first.type === second.type
-        && first.src === second.src)
+        && first.src === second.src
+        && (first.sourceHost || '') === (second.sourceHost || ''))
 );
 
 export const getBatchHostBindingState = (selectedShapes) => {
@@ -59,9 +63,22 @@ export const getBatchHostBindingState = (selectedShapes) => {
     return { available: true, binding: mixed ? null : firstBinding, mixed };
 };
 
-export const parseHostBindingOption = (value) => {
+export const getBatchHostDataSourceState = (selectedShapes) => {
+    const sourceHosts = Array.from(new Set(
+        (Array.isArray(selectedShapes) ? selectedShapes : [])
+            .map(getHostBinding)
+            .filter(Boolean)
+            .map((binding) => binding.sourceHost || '')
+    ));
+    return {
+        sourceHost: sourceHosts.length === 1 ? sourceHosts[0] : '',
+        mixed: sourceHosts.length > 1,
+    };
+};
+
+export const parseHostBindingOption = (value, sourceHost = '') => {
     const match = String(value || '').match(/^([^&]+)&([^/]+)\/(.+)$/);
-    return match ? normalizeHostBinding({ key: match[1], type: match[2], src: match[3] }) : null;
+    return match ? normalizeHostBinding({ key: match[1], type: match[2], src: match[3], sourceHost }) : null;
 };
 
 export const applyHostBindingToSelection = (allShapes, selectedIds, binding) => {
@@ -74,7 +91,11 @@ export const applyHostBindingToSelection = (allShapes, selectedIds, binding) => 
         const attrs = moduleJson.attrs || {};
         const dataKey = Array.isArray(attrs.dataKey) ? attrs.dataKey : [];
         const nextDataKey = isParameterHostBinding(shape) && dataKey.length > 0
-            ? dataKey.map((item) => ({ ...item, ...normalizedBinding }))
+            ? dataKey.map((item) => {
+                const localItem = { ...item };
+                delete localItem.sourceHost;
+                return { ...localItem, ...normalizedBinding };
+            })
             : [{ ...normalizedBinding }];
         return {
             ...shape,
@@ -211,6 +232,9 @@ const createHostDeviceOptions = (devices, useSlaveId) => (
 const BatchHostAttributes = memo((props) => {
     const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
     const bindingState = getBatchHostBindingState(selectedShapes);
+    const dataSourceState = getBatchHostDataSourceState(selectedShapes);
+    const globalDataSourceHost = normalizeDataSourceHost(props.globalDataSourceHost || '');
+    const dataSourceHost = globalDataSourceHost || dataSourceState.sourceHost;
     const initialHostValue = getHostOptionValue(bindingState.binding);
     const [deviceOptions, setDeviceOptions] = useState([]);
     const [hostValue, setHostValue] = useState(initialHostValue);
@@ -221,21 +245,21 @@ const BatchHostAttributes = memo((props) => {
 
     useEffect(() => {
         let active = true;
-        if (!bindingState.available) {
+        if (!bindingState.available || (!globalDataSourceHost && dataSourceState.mixed)) {
             setDeviceOptions([]);
             return () => {
                 active = false;
             };
         }
         const loadDevices = async () => {
-            const res = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            const res = await httpsend.getDataFrom(dataSourceHost, 'GetDeviceListKey', { ComboBox: 'all' });
             if (active) setDeviceOptions(createHostDeviceOptions(res && res.data, props.useSlaveId === true));
         };
         loadDevices();
         return () => {
             active = false;
         };
-    }, [bindingState.available, props.useSlaveId]);
+    }, [bindingState.available, dataSourceState.mixed, dataSourceHost, globalDataSourceHost, props.useSlaveId]);
 
     if (!bindingState.available) return null;
 
@@ -258,7 +282,7 @@ const BatchHostAttributes = memo((props) => {
                 type="primary"
                 disabled={!hostValue}
                 onClick={() => {
-                    const binding = parseHostBindingOption(hostValue);
+                    const binding = parseHostBindingOption(hostValue, dataSourceHost);
                     if (binding && typeof props.onBatchHostBindingChange === 'function') props.onBatchHostBindingChange(binding);
                 }}
             >{t('designer.batchHost.apply')}</Button>
@@ -355,7 +379,6 @@ const BatchCommonAttributeControl = memo((props) => {
         return <div className="attrBox">
             <label>{attribute.attrName}</label>
             <input
-                key={controlKey}
                 type="color"
                 defaultValue={state.value || '#000000'}
                 onChange={(event) => applyValue(event.target.value)}
@@ -470,6 +493,7 @@ const ElementAttr = memo((props) => {
     // Comment translated to English.
     let newparamDevId = null;
     let newparam = null;
+    let initialDataSourceHost = '';
     if (shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0 && shapeAttr.attrs.dataKey[0].hasOwnProperty('key')) {
         newparamDevId = shapeAttr.attrs.dataKey[0].key + '&' + shapeAttr.attrs.dataKey[0].type + '/' + shapeAttr.attrs.dataKey[0].src
         // Comment translated to English.
@@ -477,6 +501,15 @@ const ElementAttr = memo((props) => {
             newparam = shapeAttr.attrs.dataKey[0].name + '~' + shapeAttr.attrs.dataKey[0].type + '%' + shapeAttr.attrs.dataKey[0].cmdtype + '|' + shapeAttr.attrs.dataKey[0].src
         }
     }
+    if (shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0) {
+        try {
+            initialDataSourceHost = normalizeDataSourceHost(shapeAttr.attrs.dataKey[0].sourceHost || '');
+        } catch (error) {
+            initialDataSourceHost = '';
+        }
+    }
+    const globalDataSourceHost = normalizeDataSourceHost(props.globalDataSourceHost || '');
+    const dataSourceHost = globalDataSourceHost || initialDataSourceHost;
     // Comment translated to English.
     let newparams = [];
     if (shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0 && shapeAttr.attrs.dataKey[0].hasOwnProperty('devkey')) {
@@ -587,6 +620,15 @@ const ElementAttr = memo((props) => {
     const [showParamsBox, setshowParamsBox] = useState(0);// Comment translated to English.
     const [showPagesBox, setshowPagesBox] = useState(0);// Comment translated to English.
     const [showEventsBox, setshowEventsBox] = useState(0);// Comment translated to English.
+    const dataSourceRequestGuardRef = useRef(createLatestDataSourceRequestGuard());
+
+    useEffect(() => {
+        dataSourceRequestGuardRef.current.invalidate();
+    }, [shapeId, initialDataSourceHost, globalDataSourceHost]);
+
+    useEffect(() => () => {
+        dataSourceRequestGuardRef.current.invalidate();
+    }, []);
 
     const [showImgBox, setshowImgBox] = useState(0);// Comment translated to English.
     const [showGifImgBox, setshowGifImgBox] = useState(0);// Comment translated to English.
@@ -773,14 +815,16 @@ const ElementAttr = memo((props) => {
 
     useEffect(() => {// Comment translated to English.
         async function getdataSelect() {
+            const request = dataSourceRequestGuardRef.current.begin('commandSelect');
             if (paraClassName !== 'paraHtml' || !paraDevKey) {
                 setdataSelect(buildParaDataSelect([]));
                 return;
             }
-            let res = await httpsend.getData('GetDeviceCommandListKey', {
+            let res = await httpsend.getDataFrom(dataSourceHost, 'GetDeviceCommandListKey', {
                 DevID: paraDevKey,
                 ComboBox: '1'
             });
+            if (!dataSourceRequestGuardRef.current.isCurrent(request)) return;
             if (res && Array.isArray(res.data)) {
                 setdataSelect(buildParaDataSelect(res.data));
             } else {
@@ -788,7 +832,7 @@ const ElementAttr = memo((props) => {
             }
         }
         getdataSelect();
-    }, [paraClassName, paraDevKey]);
+    }, [paraClassName, paraDevKey, dataSourceHost]);
 
     // Comment translated to English.
     useEffect(() => {
@@ -838,9 +882,11 @@ const ElementAttr = memo((props) => {
     }
     // Comment translated to English.
     const getParamData = async () => {
-        let res = await httpsend.getData('GetParamListKey', {
+        const request = dataSourceRequestGuardRef.current.begin('params');
+        let res = await httpsend.getDataFrom(dataSourceHost, 'GetParamListKey', {
             ComboBox: "all"
         });
+        if (!dataSourceRequestGuardRef.current.isCurrent(request)) return;
         let parData = [];
         let parsData = [];
         if (res && Array.isArray(res.data)) {
@@ -860,9 +906,11 @@ const ElementAttr = memo((props) => {
     }
     // Comment translated to English.
     const getevData = async () => {
-        let res = await httpsend.getData('GetDeviceListKey', {
+        const request = dataSourceRequestGuardRef.current.begin('devices');
+        let res = await httpsend.getDataFrom(dataSourceHost, 'GetDeviceListKey', {
             ComboBox: "all"
         });
+        if (!dataSourceRequestGuardRef.current.isCurrent(request)) return;
         let devList = [];
         if (res && Array.isArray(res.data)) {
             let paramsArr = [];
@@ -1043,7 +1091,7 @@ const ElementAttr = memo((props) => {
             setsavePagePidSel([]);
             setcusparamsList([]);
         }
-    }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox, useSlaveId]);
+    }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox, useSlaveId, dataSourceHost]);
 
     // Comment translated to English.
     const initFormData = shapeAttr.attrs.where;
@@ -2134,6 +2182,7 @@ const ElementAttr = memo((props) => {
                         key: paramDevId.split('&')[0],
                         type: paramDevId.split('&')[1].split('/')[0],
                         src: paramDevId.split('&')[1].split('/')[1],
+                        sourceHost: dataSourceHost,
                     }
                     setparamData(JSON.stringify(desc));
                     shapeAttr.attrs.dataKey = [desc];
@@ -2220,11 +2269,13 @@ const ElementAttr = memo((props) => {
                             name: param.split('~')[0],
                             type: param.split('~')[1].split('%')[0],
                             cmdtype: param.split('~')[1].split('%')[1].split('|')[0],
-                            src: param.split('|')[1]
+                            src: param.split('|')[1],
+                            sourceHost: dataSourceHost
                         }
                     } else {
                         desc = {
-                            parkey: cusparam
+                            parkey: cusparam,
+                            sourceHost: dataSourceHost
                         }
                     }
                     setparamData(JSON.stringify(desc));
@@ -2332,7 +2383,7 @@ const ElementAttr = memo((props) => {
                                 const type = afterType.substring(0, firstPercentIndex);
                                 const cmdtype = afterType.substring(firstPercentIndex + 1);
 
-                                desc.push({ devkey, dev, name, type, cmdtype, src });
+                                desc.push({ devkey, dev, name, type, cmdtype, src, sourceHost: dataSourceHost });
                             } catch (err) {
                                 console.error('\u89e3\u6790\u53c2\u6570\u5931\u8d25:', element, err);
                             }
@@ -2346,7 +2397,7 @@ const ElementAttr = memo((props) => {
                                 if (firstAmpIndex === -1) return;
                                 const paramskey = element.substring(0, firstAmpIndex);
                                 const name = element.substring(firstAmpIndex + 1);
-                                desc.push({ paramskey, name });
+                                desc.push({ paramskey, name, sourceHost: dataSourceHost });
                             } catch (err) {
                                 console.error('\u89e3\u6790\u81ea\u5b9a\u4e49\u53c2\u6570\u5931\u8d25:', element, err);
                             }

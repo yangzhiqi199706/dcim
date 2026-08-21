@@ -13,10 +13,14 @@ import setChart from "./SetChart";
 import { Close } from '@mui/icons-material';
 import { t } from '../i18n';
 import { shouldRequireDesignerLogin } from '../designerLoginAccess';
+import { getLogoConfig, persistLogoRuntimeConfig } from '../config/logoConfig';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import PreflightModal from './PreflightModal';
 import DataSimulationModal from './DataSimulationModal';
 import DataSourceHealthModal from './DataSourceHealthModal';
+import RemoteSyncModal from './RemoteSyncModal';
+import GlobalDataSourceModal from './GlobalDataSourceModal';
+import { readGlobalDataSource } from '../Assets/globalDataSource';
 import { validatePageElements } from './pageValidation';
 import { validateDataBindingAvailability } from './dataBindingAvailability';
 import { applySimulationOverrides, getSimulatableElements } from './simulationOverrides';
@@ -34,6 +38,7 @@ import {
     createParameterReplacementRequestGuard,
     createDeviceParameterOptions,
     createParameterReplacementContext,
+    createParameterReplacementMappingPlan,
     isParameterReplacementSelectionCurrent,
     replaceSelectedParameterBindingMappings,
 } from './parameterReplacement';
@@ -163,7 +168,7 @@ function DesignerApp() {
     const displayedStageHeight = Math.round(safeStageHeight * (stageDimensions ? stageDimensions.scaley || 1 : 1));
     // Comment translated to English.
     const [canvasScale, setcanvasScale] = useState(100);
-    const [useSlaveId] = useState(() => localStorage.getItem('UseSlaveID') === '1');
+    const [useSlaveId, setUseSlaveId] = useState(() => localStorage.getItem('UseSlaveID') === '1');
 
     const savedStatus = t('designer.saved');
     const modifiedStatus = t('designer.modified');
@@ -189,6 +194,8 @@ function DesignerApp() {
     const [parameterReplacementContext, setParameterReplacementContext] = useState(null);
     const [parameterReplacementOptions, setParameterReplacementOptions] = useState([]);
     const [parameterReplacementTargets, setParameterReplacementTargets] = useState({});
+    const [parameterReplacementKeywordFrom, setParameterReplacementKeywordFrom] = useState('');
+    const [parameterReplacementKeywordTo, setParameterReplacementKeywordTo] = useState('');
     const [parameterReplacementLoading, setParameterReplacementLoading] = useState(false);
     const parameterReplacementRequestRef = useRef(createParameterReplacementRequestGuard());
     const [keyboardShortcutsOpen, setKeyboardShortcutsOpen] = useState(false);
@@ -203,6 +210,14 @@ function DesignerApp() {
     const [simulationOpen, setSimulationOpen] = useState(false);
     const [simulationEnabled, setSimulationEnabled] = useState(false);
     const [simulationValues, setSimulationValues] = useState({});
+    const [remoteSyncOpen, setRemoteSyncOpen] = useState(false);
+    const [globalDataSourceOpen, setGlobalDataSourceOpen] = useState(false);
+    const [globalDataSource, setGlobalDataSource] = useState(() => readGlobalDataSource());
+    const getDataFromActiveSource = (path, payload, fallbackHost = '') => httpsend.getDataFrom(
+        globalDataSource.enabled ? globalDataSource.host : fallbackHost,
+        path,
+        payload
+    );
     const simulationEnabledRef = useRef(false);
     const simulatableElements = useMemo(() => getSimulatableElements(images), [images]);
     const renderImages = useMemo(
@@ -213,6 +228,25 @@ function DesignerApp() {
     useEffect(() => {
         simulationEnabledRef.current = simulationEnabled;
     }, [simulationEnabled]);
+
+    useEffect(() => {
+        let isDisposed = false;
+        const syncSlaveIdConfig = async () => {
+            try {
+                const response = await httpsend.getData('GetLogoKey', {});
+                const logoData = getLogoConfig(response);
+                if (!logoData || isDisposed) return;
+                const enabled = persistLogoRuntimeConfig(logoData);
+                setUseSlaveId(enabled);
+            } catch (error) {
+                return;
+            }
+        };
+        syncSlaveIdConfig();
+        return () => {
+            isDisposed = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (savePageId === '0' || renderImages.length === 0) return;
@@ -380,6 +414,8 @@ function DesignerApp() {
         setParameterReplacementContext(null);
         setParameterReplacementOptions([]);
         setParameterReplacementTargets({});
+        setParameterReplacementKeywordFrom('');
+        setParameterReplacementKeywordTo('');
     };
 
     const openParameterReplacementDialog = async () => {
@@ -395,9 +431,11 @@ function DesignerApp() {
         setParameterReplacementContext(context);
         setParameterReplacementOptions([]);
         setParameterReplacementTargets({});
+        setParameterReplacementKeywordFrom('');
+        setParameterReplacementKeywordTo('');
         setParameterReplacementBox(true);
         try {
-            const response = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            const response = await getDataFromActiveSource('GetDeviceListKey', { ComboBox: 'all' }, context.sourceHost);
             if (!parameterReplacementRequestRef.current.isCurrent(requestId)) return;
             const devices = response && Array.isArray(response.data) ? response.data : [];
             const device = devices.find((item) => item && (
@@ -429,11 +467,18 @@ function DesignerApp() {
             closeParameterReplacementDialog();
             return;
         }
-        const mappings = parameterReplacementContext.originalOptions.map((original) => {
-            const target = parameterReplacementTargets[original.value];
-            const replacement = parameterReplacementOptions.find((item) => item.value === target);
-            return replacement ? { originalName: original.value, replacement } : null;
-        }).filter(Boolean);
+        const plan = createParameterReplacementMappingPlan(
+            parameterReplacementContext.originalOptions,
+            parameterReplacementOptions,
+            parameterReplacementTargets,
+            parameterReplacementKeywordFrom,
+            parameterReplacementKeywordTo
+        );
+        if (plan.missingNames.length > 0) {
+            message.warning(t('parameterReplacement.parameterNotFound').replace('{names}', plan.missingNames.join('、')));
+            return;
+        }
+        const mappings = plan.mappings;
         if (mappings.length === 0) {
             message.warning(t('parameterReplacement.selectReplacement'));
             return;
@@ -453,6 +498,30 @@ function DesignerApp() {
         setChart(result.shapes, selectedIdRef.current, null);
         message.success(t('parameterReplacement.replacedCount').replace('{count}', String(result.changedCount)));
         closeParameterReplacementDialog();
+    };
+
+    const prepareKeywordParameterReplacement = () => {
+        if (!parameterReplacementContext) {
+            return;
+        }
+        const plan = createParameterReplacementMappingPlan(
+            parameterReplacementContext.originalOptions,
+            parameterReplacementOptions,
+            {},
+            parameterReplacementKeywordFrom,
+            parameterReplacementKeywordTo
+        );
+        if (plan.mappings.length === 0) {
+            message.warning(t('parameterReplacement.selectReplacement'));
+            return;
+        }
+        setParameterReplacementTargets((current) => {
+            const nextTargets = { ...current };
+            plan.mappings.forEach((mapping) => {
+                nextTargets[mapping.originalName] = mapping.replacement.value;
+            });
+            return nextTargets;
+        });
     };
 
     useEffect(() => {
@@ -524,7 +593,7 @@ function DesignerApp() {
 
     // Comment translated to English.
     const getevData = async (callback) => {
-        let res = await httpsend.getData('GetDeviceListKey', {
+        let res = await getDataFromActiveSource('GetDeviceListKey', {
             ComboBox: "all"
         });
         let devList = [];
@@ -1509,7 +1578,7 @@ function DesignerApp() {
         setPreflightOpen(true);
 
         try {
-            const response = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            const response = await getDataFromActiveSource('GetDeviceListKey', { ComboBox: 'all' });
             if (preflightRequestIdRef.current !== requestId || !response || !Array.isArray(response.data)) return;
             setPreflightFindings(findings.concat(validateDataBindingAvailability(imagesRef.current, response.data)));
         } catch (error) {
@@ -1524,7 +1593,7 @@ function DesignerApp() {
         setDataSourceHealthLoadError(false);
 
         try {
-            const response = await httpsend.getData('GetDeviceListKey', { ComboBox: 'all' });
+            const response = await getDataFromActiveSource('GetDeviceListKey', { ComboBox: 'all' });
             if (dataSourceHealthRequestIdRef.current !== requestId) return;
             if (!response || !Array.isArray(response.data)) {
                 setDataSourceHealthLoadError(true);
@@ -2947,6 +3016,7 @@ function DesignerApp() {
                         canUngroupSelection={canUngroupSelection}
                         canSaveMasterControl={canSaveMasterControl}
                         simulationEnabled={simulationEnabled}
+                        globalDataSourceEnabled={globalDataSource.enabled}
                         snapEnabled={snapEnabled}
                         snapThreshold={snapThreshold}
                         commandHandlers={{
@@ -2990,6 +3060,8 @@ function DesignerApp() {
                             preview: () => savePage('preview'),
                             saveTemplate: () => setshowsaveTplBox(1),
                             savePage: () => savePage('page'),
+                            remoteSync: () => setRemoteSyncOpen(true),
+                            globalDataSource: () => setGlobalDataSourceOpen(true),
                             snap: () => {
                                 setSnapEnabled((prev) => {
                                     if (prev) clearSnapGuides();
@@ -3016,6 +3088,7 @@ function DesignerApp() {
                                 MultiSelect={selectedIds.length !== 0}
                                 dragShape={dragShape}
                                 useSlaveId={useSlaveId}
+                                globalDataSourceHost={globalDataSource.enabled ? globalDataSource.host : ''}
                                 selectedShapes={selectedShapesForAttrPanel}
                                 onBatchHostBindingChange={handleBatchHostBindingChange}
                                 onBatchCommonAttributeChange={handleBatchCommonAttributeChange}
@@ -3333,6 +3406,16 @@ function DesignerApp() {
                             setSimulationEnabled(false);
                         }}
                         onValuesChange={setSimulationValues}
+                    />
+                    <RemoteSyncModal
+                        open={remoteSyncOpen}
+                        onClose={() => setRemoteSyncOpen(false)}
+                    />
+                    <GlobalDataSourceModal
+                        open={globalDataSourceOpen}
+                        config={globalDataSource}
+                        onChange={setGlobalDataSource}
+                        onClose={() => setGlobalDataSourceOpen(false)}
                     />
                     <div className="layui-layer" id="saveTpl" style={showsaveTplBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
                         <div className="layui-layer-title">{t('auto.k0396')}</div>
@@ -3761,6 +3844,27 @@ function DesignerApp() {
                                 <label style={{ width: 'calc(50% - 6px)' }}>{t('parameterReplacement.original')}</label>
                                 <label style={{ width: 'calc(50% - 6px)' }}>{t('parameterReplacement.replacement')}</label>
                             </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                                <label style={{ whiteSpace: 'nowrap' }}>{t('parameterReplacement.keywordReplace')}</label>
+                                <input
+                                    value={parameterReplacementKeywordFrom}
+                                    onChange={(event) => setParameterReplacementKeywordFrom(event.target.value)}
+                                    placeholder={t('parameterReplacement.keywordFrom')}
+                                    style={{ flex: 1, minWidth: 0 }}
+                                />
+                                <span>{t('parameterReplacement.keywordArrow')}</span>
+                                <input
+                                    value={parameterReplacementKeywordTo}
+                                    onChange={(event) => setParameterReplacementKeywordTo(event.target.value)}
+                                    placeholder={t('parameterReplacement.keywordTo')}
+                                    style={{ flex: 1, minWidth: 0 }}
+                                />
+                                <Button
+                                    type="primary"
+                                    loading={parameterReplacementLoading}
+                                    onClick={prepareKeywordParameterReplacement}
+                                >{t('parameterReplacement.keywordApply')}</Button>
+                            </div>
                             {parameterReplacementContext && parameterReplacementContext.originalOptions.map((original) => (
                                 <div key={original.value} style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
                                     <input
@@ -3770,9 +3874,11 @@ function DesignerApp() {
                                         style={{ width: 'calc(50% - 6px)' }}
                                     />
                                     <Select
+                                        showSearch
                                         value={parameterReplacementTargets[original.value]}
                                         onChange={(value) => setParameterReplacementTargets((current) => ({ ...current, [original.value]: value }))}
                                         options={parameterReplacementOptions}
+                                        optionFilterProp="label"
                                         loading={parameterReplacementLoading}
                                         style={{ width: 'calc(50% - 6px)' }}
                                         placeholder={t('parameterReplacement.selectReplacement')}

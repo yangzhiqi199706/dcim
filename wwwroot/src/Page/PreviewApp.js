@@ -21,6 +21,19 @@ import {
     selectPreviewSources
 } from './previewIncrementalRender';
 import { buildMainApiUrl } from '../config/endpoints';
+import { getLogoConfig, persistLogoRuntimeConfig } from '../config/logoConfig';
+import { applyGlobalDataSourceToShapes, readGlobalDataSource } from '../Assets/globalDataSource';
+import {
+    collectPreviewDataSourceGroups,
+    groupPreviewSourcesByDataSource,
+    mergePreviewShapesByDataSource,
+    mergeDataSourceResponse,
+    mergeFailedDataSourceHosts,
+    requestDataSourceGroups,
+    selectDataSourceResponse,
+    splitPreviewShapeByDataSource,
+    tagDataSourceResponse
+} from '../Assets/dataSource';
 import { t } from '../i18n';
 import '../Assets/base.css';
 import '../Assets/preview.css';
@@ -224,6 +237,12 @@ function PreviewApp() {
             let DevParID = [];// Comment translated to English.
             let DevSnmp = [];// Comment translated to English.
             let DevPar = [];// Comment translated to English.
+            let dataSourceGroups = collectPreviewDataSourceGroups([]);
+            let failedProtocolSourceHosts = new Set();
+            const requestFromDataSource = (sourceHost, path, payload) => httpsend.getDataFrom(sourceHost, path, payload);
+            const hasGroupValues = (field) => Object.keys(dataSourceGroups).some((sourceHost) => (
+                Array.isArray(dataSourceGroups[sourceHost][field]) && dataSourceGroups[sourceHost][field].length > 0
+            ));
 
             let pageparamHistoryDate = '';// Comment translated to English.
             if (localStorage.getItem('pageparamHistoryDate')) {
@@ -244,7 +263,7 @@ function PreviewApp() {
                             dataKey.forEach((el) => {
                                 // console.log(el)
                                 if (el.devkey) {// Comment translated to English.
-                                    if (el.src && el.src.indexOf('@') > -1) {
+                                    if (!el.sourceHost && el.src && el.src.indexOf('@') > -1) {
                                         // Comment translated to English.
                                         let serverIP = el.src.split('@')[0];
                                         let devkey = el.src.split('@')[1];
@@ -329,51 +348,65 @@ function PreviewApp() {
                     spare.cmdtype = [...new Set(spare.cmdtype)];
                     spare.devTodev = [...new Set(spare.devTodev)];
                 });
+                dataSourceGroups = collectPreviewDataSourceGroups(imagesdata);
             }
             // Comment translated to English.
             const getpro = async () => {
-                const res = await httpsend.getData('GetDeviceProtocolListKey', {
-                    ComboBox: 'all'
-                });
-                return res || createEmptyPreviewResponse();
+                return requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetDeviceProtocolListKey',
+                    () => ({ ComboBox: 'all' }),
+                    requestFromDataSource
+                );
             }
             // Comment translated to English.
-            const getAllcom = async (id) => {
-                const res = await httpsend.getData('GetDevCommandListKey', {
-                    ComboBox: 'all',
-                    DevIDs: id
-                });
-                return res || createEmptyPreviewResponse();
+            const getAllcom = async () => {
+                return requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetDevCommandListKey',
+                    group => group.realtimeDeviceIds.length > 0 ? {
+                        ComboBox: 'all',
+                        DevIDs: group.realtimeDeviceIds.join(',')
+                    } : null,
+                    requestFromDataSource
+                );
             }
             // Comment translated to English.
             const getParamData = async () => {
-                const res = await httpsend.getData('GetParamListKey', {
-                    ComboBox: 'calc'
-                });
-                return res || createEmptyPreviewResponse();
+                return requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetParamListKey',
+                    group => group.customParameterIds.length > 0 ? { ComboBox: 'calc' } : null,
+                    requestFromDataSource
+                );
             }
             // Comment translated to English.
-            const getSnmpParamData = async (id) => {
-                const res = await httpsend.getData('GetSnmpParamListKey', {
-                    DevIDs: id,
-                    DataType: t('auto.k0335'),
-                    ComboBox: 'all'
-                });
-                return res || createEmptyPreviewResponse();
+            const getSnmpParamData = async () => {
+                return requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetSnmpParamListKey',
+                    group => group.snmpDeviceIds.length > 0 ? {
+                        DevIDs: group.snmpDeviceIds.join(','),
+                        DataType: t('auto.k0335'),
+                        ComboBox: 'all'
+                    } : null,
+                    requestFromDataSource
+                );
             }
             // Comment translated to English.
-            const getHistoryData = async (DevID, DevIDParam, DevSpareID = {}) => {
-                let waitHistoryData = {};
-                if (DevID) {
-                    let res = await httpsend.getData('GetHistoryAlarmsKey', {
+            const getHistoryData = async () => {
+                let waitHistoryData = await requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetHistoryAlarmsKey',
+                    group => group.historyDeviceIds.length > 0 ? {
                         startDateTime: getDateTime(new Date(new Date() - 1000 * 60 * 60 * 24 * 8)) + ' 00:00:00',
                         endDateTime: getDateTime(new Date(new Date())) + ' 23:59:59',
-                        DevID: DevID,
-                        keyword: DevIDParam,
+                        DevID: group.historyDeviceIds.join(','),
+                        keyword: group.historyCommandTypes.join(','),
                         ComboBox: 'all'
-                    })
-                    if (res) waitHistoryData = res;
-                }
+                    } : null,
+                    requestFromDataSource
+                );
                 // Comment translated to English.
                 // console.log(DevSpareID)
                 // console.log(DevSpareID.length)
@@ -417,7 +450,8 @@ function PreviewApp() {
                             if (!waitHistoryData.data) {
                                 waitHistoryData.data = [];
                             }
-                            waitHistoryData.data = waitHistoryData.data.concat(spareRes.data);
+                            const taggedSpare = tagDataSourceResponse(spareRes, '');
+                            waitHistoryData.data = waitHistoryData.data.concat(taggedSpare.data || []);
                             // console.log(waitHistoryData)
                         }
                     }
@@ -427,23 +461,28 @@ function PreviewApp() {
                     : createEmptyPreviewResponse();
             }
             // Comment translated to English.
-            const getHistoryParamData = async (parID) => {
-                const res = await httpsend.getData('GetParamDayListKey', {
-                    startDateTime: getDateTime(new Date(new Date() - 1000 * 60 * 60 * 24 * 8)) + ' 00:00:00',
-                    endDateTime: getDateTime(new Date(new Date())) + ' 23:59:59',
-                    ParamIds: parID,
-                    ComboBox: 'all'
-                });
-                return res || createEmptyPreviewResponse();
+            const getHistoryParamData = async () => {
+                return requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetParamDayListKey',
+                    group => group.historyParameterIds.length > 0 ? {
+                        startDateTime: getDateTime(new Date(new Date() - 1000 * 60 * 60 * 24 * 8)) + ' 00:00:00',
+                        endDateTime: getDateTime(new Date(new Date())) + ' 23:59:59',
+                        ParamIds: group.historyParameterIds.join(','),
+                        ComboBox: 'all'
+                    } : null,
+                    requestFromDataSource
+                );
             }
 
             // Comment translated to English.
             const getAlarmData = async () => {
-                const res = await httpsend.getData('GetAlarmListKey', {
-                    type: '1',
-                    ComboBox: 'all'
-                });
-                return res || createEmptyPreviewResponse();
+                return requestDataSourceGroups(
+                    dataSourceGroups,
+                    'GetAlarmListKey',
+                    () => ({ type: '1', ComboBox: 'all' }),
+                    requestFromDataSource
+                );
             }
 
             const previewRefreshChannels = createPreviewRefreshChannels();
@@ -459,13 +498,20 @@ function PreviewApp() {
                     param: paramData,
                     alarm: alarmData
                 }, batchResult);
-                if (batch.protocol) procotol = batch.protocol;
-                if (batch.realtime) allDevcom = batch.realtime;
-                if (batch.snmp) allsnmplist = batch.snmp;
-                if (batch.history) historyData = batch.history;
-                if (batch.historyParam) historyparamData = batch.historyParam;
-                if (batch.param) paramData = batch.param;
-                if (batch.alarm) alarmData = batch.alarm;
+                if (batch.protocol) procotol = mergeDataSourceResponse(procotol, batch.protocol);
+                if (batch.protocol) {
+                    failedProtocolSourceHosts = mergeFailedDataSourceHosts(
+                        failedProtocolSourceHosts,
+                        batch.protocol,
+                        Object.keys(dataSourceGroups)
+                    );
+                }
+                if (batch.realtime) allDevcom = mergeDataSourceResponse(allDevcom, batch.realtime);
+                if (batch.snmp) allsnmplist = mergeDataSourceResponse(allsnmplist, batch.snmp);
+                if (batch.history) historyData = mergeDataSourceResponse(historyData, batch.history);
+                if (batch.historyParam) historyparamData = mergeDataSourceResponse(historyparamData, batch.historyParam);
+                if (batch.param) paramData = mergeDataSourceResponse(paramData, batch.param);
+                if (batch.alarm) alarmData = mergeDataSourceResponse(alarmData, batch.alarm);
             };
             const schedulePreviewChartRender = (changedChartIds) => {
                 if (!changedChartIds.length) return;
@@ -487,35 +533,35 @@ function PreviewApp() {
                     },
                     options.realtime && {
                         key: 'realtime',
-                        run: () => allDev.length
-                            ? getAllcom(allDev.join(','))
+                        run: () => hasGroupValues('realtimeDeviceIds')
+                            ? getAllcom()
                             : createEmptyPreviewResponse(),
                         fallback: createEmptyPreviewResponse
                     },
                     options.snmp && {
                         key: 'snmp',
-                        run: () => DevSnmp.length
-                            ? getSnmpParamData(DevSnmp.join(','))
+                        run: () => hasGroupValues('snmpDeviceIds')
+                            ? getSnmpParamData()
                             : createEmptyPreviewResponse(),
                         fallback: createEmptyPreviewResponse
                     },
                     options.history && {
                         key: 'history',
-                        run: () => DevID.length || Object.keys(DevSpareID).length
-                            ? getHistoryData(DevID.join(','), DevIDParam.join(','), DevSpareID)
+                        run: () => hasGroupValues('historyDeviceIds') || Object.keys(DevSpareID).length
+                            ? getHistoryData()
                             : createEmptyPreviewResponse(),
                         fallback: createEmptyPreviewResponse
                     },
                     options.historyParam && {
                         key: 'historyParam',
-                        run: () => DevParID.length
-                            ? getHistoryParamData(DevParID.join(','))
+                        run: () => hasGroupValues('historyParameterIds')
+                            ? getHistoryParamData()
                             : createEmptyPreviewResponse(),
                         fallback: createEmptyPreviewResponse
                     },
                     options.param && {
                         key: 'param',
-                        run: () => DevPar.length ? getParamData() : createEmptyPreviewResponse(),
+                        run: () => hasGroupValues('customParameterIds') ? getParamData() : createEmptyPreviewResponse(),
                         fallback: createEmptyPreviewResponse
                     },
                     options.alarm && {
@@ -536,17 +582,11 @@ function PreviewApp() {
             // Comment translated to English.
             const syncSlaveIdConfig = async () => {
                 let res = await httpsend.getData('GetLogoKey', {})
-                if (!res || !res.data || !res.data[0]) return;
-                const logoData = res.data[0];
-                if (logoData.create_time) {
-                    localStorage.setItem('SystemStartTime', logoData.create_time)
-                }
-                const enabled = String(logoData.UseSlaveID) === '1';
+                const logoData = getLogoConfig(res);
+                if (!logoData) return;
+                const enabled = persistLogoRuntimeConfig(logoData);
                 useSlaveIdRef.current = enabled;
-                if (enabled !== (localStorage.getItem('UseSlaveID') === '1')) {
-                    setUseSlaveId(enabled);
-                }
-                localStorage.setItem('UseSlaveID', enabled ? '1' : '0');
+                setUseSlaveId(enabled);
             }
 
             // Comment translated to English.
@@ -563,17 +603,26 @@ function PreviewApp() {
             // Comment translated to English.
             const setNewView = (refreshCategories) => {
                 const sources = selectPreviewSources(preparedPreviewModel, refreshCategories);
-                const candidates = PreviewDeal.PreviewDeal(
-                    sources,
-                    procotol,
-                    allDevcom,
-                    historyData,
-                    paramData,
-                    allsnmplist,
-                    historyparamData,
-                    alarmData,
-                    getNormalizedProtocol(procotol)
-                ) || [];
+                const sourceClones = sources.reduce((items, shape) => (
+                    items.concat(splitPreviewShapeByDataSource(shape))
+                ), []);
+                const groupedSources = groupPreviewSourcesByDataSource(sourceClones);
+                const sourceCandidates = Object.keys(groupedSources).reduce((items, sourceHost) => {
+                    const sourceProtocol = selectDataSourceResponse(procotol, sourceHost);
+                    const sourceCandidates = PreviewDeal.PreviewDeal(
+                        groupedSources[sourceHost],
+                        sourceProtocol,
+                        selectDataSourceResponse(allDevcom, sourceHost),
+                        selectDataSourceResponse(historyData, sourceHost),
+                        selectDataSourceResponse(paramData, sourceHost),
+                        selectDataSourceResponse(allsnmplist, sourceHost),
+                        selectDataSourceResponse(historyparamData, sourceHost),
+                        selectDataSourceResponse(alarmData, sourceHost),
+                        getNormalizedProtocol(sourceProtocol)
+                    ) || [];
+                    return items.concat(sourceCandidates);
+                }, []);
+                const candidates = mergePreviewShapesByDataSource(sourceCandidates);
                 const result = reconcilePreviewElements(preparedPreviewModel, imagesRef.current, candidates);
                 imagesRef.current = result.elements;
                 setImagesdata(result.elements);
@@ -591,20 +640,20 @@ function PreviewApp() {
 
                 registerInterval(() => {
                     void loadPreviewData(previewRefreshChannels.realtime, {
-                        protocol: !procotol,
+                        protocol: !procotol || failedProtocolSourceHosts.size > 0,
                         realtime: true,
                         param: true,
                         alarm: alarmCatchRef.current === '1'
                     });
                 }, PREVIEW_REALTIME_INTERVAL_MS);
 
-                if (DevID.length || Object.keys(DevSpareID).length) {
+                if (hasGroupValues('historyDeviceIds') || Object.keys(DevSpareID).length) {
                     registerInterval(() => {
                         void loadPreviewData(previewRefreshChannels.background, { history: true });
                     }, 600000);
                 }
 
-                if (DevParID.length) {
+                if (hasGroupValues('historyParameterIds')) {
                     registerInterval(() => {
                         const todayDate = getDateTime(new Date());
                         if (pageparamHistoryDate !== todayDate) {
@@ -625,9 +674,22 @@ function PreviewApp() {
                 if (isDisposed) return;
                 const previewjson = previewDataRef.current;
                 if (previewjson) {
-                    await getHisDevId(previewjson.children[0].children);
+                    const layer = previewjson.children[0];
+                    const globalDataSource = readGlobalDataSource();
+                    const effectiveChildren = applyGlobalDataSourceToShapes(
+                        layer.children,
+                        globalDataSource.enabled ? globalDataSource.host : ''
+                    );
+                    const effectivePreviewJson = effectiveChildren === layer.children ? previewjson : {
+                        ...previewjson,
+                        children: [
+                            { ...layer, children: effectiveChildren },
+                            ...previewjson.children.slice(1),
+                        ],
+                    };
+                    await getHisDevId(effectiveChildren);
                     if (isDisposed) return;
-                    const dynamicSources = handlepredata(previewjson);
+                    const dynamicSources = handlepredata(effectivePreviewJson);
                     preparedPreviewModel = createPreparedPreviewModel(dynamicSources);
                     const initialPreviewState = createInitialPreviewRenderState(preparedPreviewModel);
                     imagesRef.current = initialPreviewState.elements;

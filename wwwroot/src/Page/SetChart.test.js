@@ -6,6 +6,7 @@ import {
     buildWaterBallOption,
     getWaterBallRatio,
     getBarDataLabelPosition,
+    selectChartAlarmData,
     shouldRenderChart
 } from './SetChart';
 import * as echarts from 'echarts';
@@ -19,6 +20,27 @@ describe('shouldRenderChart', () => {
     test('renders only chart ids from the changed chart list', () => {
         expect(shouldRenderChart('chart-a', ['chart-a'])).toBe(true);
         expect(shouldRenderChart('chart-b', ['chart-a'])).toBe(false);
+    });
+});
+
+describe('selectChartAlarmData', () => {
+    test('keeps alarm chart data isolated by the binding source host', () => {
+        const alarmData = {
+            code: 100,
+            data: [
+                { AlarmLevel: 1, __sourceHost: '' },
+                { AlarmLevel: 2, __sourceHost: '192.168.0.60:8086' },
+            ],
+        };
+        const remoteModule = {
+            attrs: {
+                dataKey: [{ sourceHost: '192.168.0.60' }],
+            },
+        };
+
+        expect(selectChartAlarmData(remoteModule, alarmData).data).toEqual([
+            { AlarmLevel: 2, __sourceHost: '192.168.0.60:8086' },
+        ]);
     });
 });
 

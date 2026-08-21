@@ -34,6 +34,7 @@ import {
     offsetMultiDragPositions,
 } from './multiDragRuntime';
 import { buildMainApiUrl } from '../config/endpoints';
+import { getLogoConfig, persistLogoRuntimeConfig } from '../config/logoConfig';
 import { t } from '../i18n';
 import { shouldRequireDesignerLogin } from '../designerLoginAccess';
 import {
@@ -2147,17 +2148,11 @@ function Home() {
             // Comment translated to English.
             const syncSlaveIdConfig = async () => {
                 let res = await httpsend.getData('GetLogoKey', {})
-                if (!res || !res.data || !res.data[0]) return;
-                const logoData = res.data[0];
-                if (logoData.create_time) {
-                    localStorage.setItem('SystemStartTime', logoData.create_time)
-                }
-                const enabled = String(logoData.UseSlaveID) === '1';
+                const logoData = getLogoConfig(res);
+                if (!logoData) return;
+                const enabled = persistLogoRuntimeConfig(logoData);
                 useSlaveIdRef.current = enabled;
-                if (enabled !== (localStorage.getItem('UseSlaveID') === '1')) {
-                    setUseSlaveId(enabled);
-                }
-                localStorage.setItem('UseSlaveID', enabled ? '1' : '0');
+                setUseSlaveId(enabled);
             }
 
             // Comment translated to English.

@@ -520,9 +520,9 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                 <div className="rope" style={{ width: img.attrs.width, height: img.attrs.height }}>
                                     {/* Comment translated to English. */}
                                     {leakHaveAlarm === '1' && img.attrs.ropeDirection === '2' && <div className="ropeRed ropeRev" style={{ width: ropeAlarmRange, right: alarmPos }}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
                                     {leakHaveAlarm === '1' && img.attrs.ropeDirection === '1' && <div className="ropeRed" style={{ width: ropeAlarmRange, left: alarmPos }}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
                                     {/* Comment translated to English. */}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '1' && <div className="ropeNumTop ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeStart}</div>}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '2' && <div className="ropeNumBottom ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeStart}</div>}

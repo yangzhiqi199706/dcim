@@ -29,6 +29,14 @@ describe('RibbonToolbarModel', () => {
         expect(commands).toContain('saveMasterControl');
     });
 
+    test('places remote synchronization in the page operations tab', () => {
+        const groups = getRibbonToolbarGroups('page');
+        const commands = groups.reduce((all, group) => all.concat(group.commands), []);
+
+        expect(commands).toContain('remoteSync');
+        expect(commands).toContain('globalDataSource');
+    });
+
     test('falls back to the editing tools for an unknown tab', () => {
         expect(getRibbonToolbarGroups('unknown')).toEqual(getRibbonToolbarGroups('edit'));
     });

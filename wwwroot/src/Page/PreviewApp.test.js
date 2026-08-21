@@ -9,7 +9,7 @@ describe('preview application runtime', () => {
         expect(source).toContain("from './previewIncrementalRender'");
         expect(source).toContain('const previewRefreshChannels = createPreviewRefreshChannels();');
         expect(source).toContain('const loadPreviewData = (runner, options) => runner(async () => {');
-        expect(source).toContain('handlepredata(previewjson);');
+        expect(source).toContain('handlepredata(effectivePreviewJson);');
         expect(source).toContain('}, PREVIEW_REALTIME_INTERVAL_MS);');
         expect(source).toContain('}, 600000);');
         expect(source).toContain('}, 3600000);');

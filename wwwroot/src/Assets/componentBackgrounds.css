@@ -2,7 +2,7 @@
     position: absolute;
     width: 78px;
     height: 48px;
-    background: rgba(14, 67, 166, .8) url('/Images/dcim/status.png') center no-repeat;
+    background: rgba(14, 67, 166, .8) url('./images/status.png') center no-repeat;
     padding: 5px 1px 5px 2px;
     background-size: 100% 100%;
 }
@@ -38,14 +38,14 @@
     min-width: 56px;
     padding: 0 8px;
     height: 32px;
-    background: transparent url('/Images/dcim/pao.png') center no-repeat;
+    background: transparent url('./images/pao.png') center no-repeat;
     background-size: 100% 100%;
     text-align: center;
 }
 
 .param-status {
     border: 16px solid transparent;
-    border-image-source: url('/Images/dcim/lang.png');
+    border-image-source: url('./images/lang.png');
     border-image-slice: 13;
     border-image-width: 9px;
     background-color: #0F1942;
@@ -141,7 +141,7 @@
 .alarmList thead tr {
     height: 32px;
     width: 100%;
-    background: url('/Images/icon/list-head.png') center center no-repeat;
+    background: url('./images/list-head.png') center center no-repeat;
     background-size: contain;
 }
 
@@ -155,11 +155,11 @@
 }
 
 .alarmList tbody tr:nth-child(2n + 1) {
-    background-image: url('/Images/icon/list-1.png');
+    background-image: url('./images/list-1.png');
 }
 
 .alarmList tbody tr:nth-child(2n) {
-    background-image: url('/Images/icon/list-2.png');
+    background-image: url('./images/list-2.png');
 }
 
 .alarmList tbody tr:hover {
@@ -262,7 +262,7 @@
 }
 
 .rope {
-    background-image: url('/Images/icon/rope.jpg');
+    background-image: url('./images/rope.jpg');
     background-repeat: repeat-x;
     background-size: 20px 100%;
     position: relative;

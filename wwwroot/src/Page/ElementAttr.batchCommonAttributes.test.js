@@ -2,7 +2,9 @@ jest.mock('../Assets/httpsend', () => ({
     getData: jest.fn(),
 }));
 
-import * as ElementAttr from './ElementAttr';
+import React, { act, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import ElementAttr, * as ElementAttrUtils from './ElementAttr';
 
 const textAttributes = [
     { attrName: 'Text', attrCode: 'text', attrType: 'textarea', attrWhere: 'description' },
@@ -42,8 +44,8 @@ describe('ElementAttr batch common attributes', () => {
         const first = createTextShape('first');
         const second = createTextShape('second', { fontSize: 24 });
 
-        expect(typeof ElementAttr.getBatchCommonAttributeGroups).toBe('function');
-        expect(ElementAttr.getBatchCommonAttributeGroups([first, second])).toEqual([{
+        expect(typeof ElementAttrUtils.getBatchCommonAttributeGroups).toBe('function');
+        expect(ElementAttrUtils.getBatchCommonAttributeGroups([first, second])).toEqual([{
             name: 'Text settings',
             attributes: textAttributes,
         }]);
@@ -55,8 +57,8 @@ describe('ElementAttr batch common attributes', () => {
         const untouched = createTextShape('untouched', { fontSize: 12 });
         const attribute = textAttributes[2];
 
-        expect(typeof ElementAttr.applyCommonAttributeToSelection).toBe('function');
-        const updated = ElementAttr.applyCommonAttributeToSelection(
+        expect(typeof ElementAttrUtils.applyCommonAttributeToSelection).toBe('function');
+        const updated = ElementAttrUtils.applyCommonAttributeToSelection(
             [first, second, untouched],
             ['first', 'second'],
             attribute,
@@ -67,5 +69,50 @@ describe('ElementAttr batch common attributes', () => {
         expect(updated[1].moduleJson.children[0].attrs.fontSize).toBe(30);
         expect(updated[2]).toBe(untouched);
         expect(first.moduleJson.children[0].attrs.fontSize).toBe(18);
+    });
+
+    test('keeps the batch color input mounted while applying continuous color changes', () => {
+        const attribute = textAttributes[3];
+        const container = document.createElement('div');
+        const root = createRoot(container);
+        const appliedValues = [];
+        const Harness = () => {
+            const [shapes, setShapes] = useState([
+                createTextShape('first', { fill: '#000000' }),
+                createTextShape('second', { fill: '#000000' }),
+            ]);
+            return <ElementAttr
+                MultiSelect
+                selectedShapes={shapes}
+                onBatchCommonAttributeChange={(nextAttribute, value) => {
+                    appliedValues.push(value);
+                    setShapes((current) => ElementAttrUtils.applyCommonAttributeToSelection(
+                        current,
+                        ['first', 'second'],
+                        nextAttribute,
+                        value,
+                    ));
+                }}
+            />;
+        };
+
+        global.IS_REACT_ACT_ENVIRONMENT = true;
+        act(() => {
+            root.render(<Harness />);
+        });
+        const colorInput = container.querySelector('input[type="color"]');
+        expect(colorInput).not.toBeNull();
+
+        act(() => {
+            const setNativeValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+            setNativeValue.call(colorInput, '#00ff00');
+            colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        expect(appliedValues).toEqual(['#00ff00']);
+        expect(container.querySelector('input[type="color"]')).toBe(colorInput);
+        expect(colorInput.value).toBe('#00ff00');
+        act(() => root.unmount());
+        delete global.IS_REACT_ACT_ENVIRONMENT;
     });
 });

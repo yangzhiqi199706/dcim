@@ -378,6 +378,347 @@
     white-space: nowrap;
 }
 
+.remoteSyncDialog {
+    width: min(760px, 100%);
+}
+
+.globalDataSourceDialog {
+    width: min(620px, 100%);
+}
+
+.globalDataSourceDialog .designerDialogHeader h2 {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.globalDataSourceBody {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.globalDataSourceMode {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    background: #f1f5f9;
+    border: 1px solid #dbe3ee;
+    border-radius: 4px;
+}
+
+.globalDataSourceMode button {
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 12px;
+    color: #475569;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.globalDataSourceMode button.isActive {
+    color: #1d4ed8;
+    background: #ffffff;
+    border-color: #93c5fd;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.globalDataSourceField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #475569;
+    font-size: 13px;
+}
+
+.globalDataSourceField input {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: 0;
+}
+
+.globalDataSourceField input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.globalDataSourceField small,
+.globalDataSourceCurrent {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.globalDataSourceSafety,
+.globalDataSourceNotice {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 11px 12px;
+    border: 1px solid;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.globalDataSourceSafety {
+    color: #166534;
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.globalDataSourceSafety > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.globalDataSourceNotice-success {
+    color: #166534;
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.globalDataSourceNotice-error {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: #fca5a5;
+}
+
+.globalDataSourceFooter {
+    flex-wrap: wrap;
+}
+
+.globalDataSourceCurrent {
+    flex: 1 1 160px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.remoteSyncDialog .designerDialogHeader h2 {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.remoteSyncBody {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.remoteSyncTargets {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #dbe3ee;
+    border-radius: 4px;
+}
+
+.remoteSyncTargets > div {
+    display: grid;
+    grid-template-columns: 18px 104px minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+}
+
+.remoteSyncTargets strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #0f172a;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.remoteSyncForm {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.remoteSyncField {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    color: #475569;
+    font-size: 13px;
+}
+
+.remoteSyncFieldWide,
+.remoteSyncConfirm,
+.remoteSyncInlineError {
+    grid-column: 1 / -1;
+}
+
+.remoteSyncField input {
+    width: 100%;
+    min-width: 0;
+    height: 34px;
+    padding: 0 9px;
+    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: 0;
+}
+
+.remoteSyncField input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.remoteSyncField input[aria-invalid="true"] {
+    border-color: #dc2626;
+}
+
+.remoteSyncField small,
+.remoteSyncInlineError {
+    color: #b91c1c;
+    font-size: 12px;
+}
+
+.remoteSyncConfirm {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    color: #7c2d12;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.remoteSyncConfirm input {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    accent-color: #dc2626;
+}
+
+.remoteSyncConfirm.hasError {
+    border-color: #dc2626;
+}
+
+.remoteSyncNotice {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 11px 12px;
+    border: 1px solid;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.remoteSyncNotice > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.remoteSyncNoticeSuccess {
+    color: #166534;
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.remoteSyncNoticeError {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: #fca5a5;
+}
+
+.remoteSyncStatus {
+    padding: 13px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+}
+
+.remoteSyncStatusTitle {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    color: #1e293b;
+}
+
+.remoteSyncProgress {
+    height: 7px;
+    margin: 11px 0;
+    overflow: hidden;
+    background: #e2e8f0;
+    border-radius: 3px;
+}
+
+.remoteSyncProgress span {
+    display: block;
+    height: 100%;
+    background: #0f766e;
+    transition: width 180ms ease-out;
+}
+
+.remoteSyncStatus p {
+    margin: 5px 0 0;
+    overflow-wrap: anywhere;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.remoteSyncFooter {
+    flex-wrap: wrap;
+}
+
+.remoteSyncPrivacy {
+    flex: 1 1 240px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.dialogDangerButton {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    color: #ffffff;
+    background: #b91c1c;
+    border: 1px solid #b91c1c;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dialogDangerButton:hover:not(:disabled) {
+    background: #991b1b;
+}
+
+.dialogDangerButton:disabled,
+.remoteSyncFooter button:disabled,
+.remoteSyncDialog .dialogIconButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .dataSourceHealthItemTitle {
     font-size: 14px;
     font-weight: 500;
@@ -423,6 +764,24 @@
 
     .dataSourceHealthCounts {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .remoteSyncForm {
+        grid-template-columns: 1fr;
+    }
+
+    .remoteSyncFieldWide,
+    .remoteSyncConfirm,
+    .remoteSyncInlineError {
+        grid-column: 1;
+    }
+
+    .remoteSyncTargets > div {
+        grid-template-columns: 18px minmax(0, 1fr);
+    }
+
+    .remoteSyncTargets strong {
+        grid-column: 2;
     }
 }
 
@@ -624,6 +983,7 @@
 .ribbonGroup-replace .ribbonCommand,
 .ribbonGroup-workspace .ribbonCommand,
 .ribbonGroup-save .ribbonCommand,
+.ribbonGroup-system .ribbonCommand,
 .ribbonSnapGroup .ribbonCommand {
     min-width: 0;
 }
@@ -632,6 +992,7 @@
 .ribbonGroup-replace .ribbonCommandLabel,
 .ribbonGroup-workspace .ribbonCommandLabel,
 .ribbonGroup-save .ribbonCommandLabel,
+.ribbonGroup-system .ribbonCommandLabel,
 .ribbonSnapGroup .ribbonCommandLabel {
     display: inline;
 }

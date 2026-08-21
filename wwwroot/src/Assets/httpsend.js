@@ -3,6 +3,7 @@ import request from '../Assets/httpload';
 import requestnode from '../Assets/httploadnode';
 import httploadvideo from '../Assets/httploadvideo';
 import { appBase, mainApiBase } from '../config/endpoints';
+import { buildDataSourceApiUrl, normalizeDataSourceHost, tagDataSourceResponse } from './dataSource';
 import { t } from '../i18n';
 
 const VIDEO_TOKEN_KEY = 'videoToken';
@@ -55,6 +56,22 @@ export default {
       url,
       method: 'post',
       data,
+    });
+  },
+  getDataFrom(sourceHost, url, data) {
+    const normalizedHost = normalizeDataSourceHost(sourceHost);
+    if (!normalizedHost) return this.getData(url, data).then(res => tagDataSourceResponse(res, ''));
+    return axios.post(buildDataSourceApiUrl(normalizedHost, url), data, {
+      timeout: 300000,
+      headers: {
+        'Content-Type': 'multipart/form-data;application/json;charset=UTF-8;',
+      },
+    }).then(res => {
+      const payload = res && res.data ? res.data : null;
+      if (!payload || payload.code !== 100) {
+        throw new Error((payload && payload.msg) || t('http.requestFailed'));
+      }
+      return tagDataSourceResponse(payload, normalizedHost);
     });
   },
   getDataLocal(url, data) {

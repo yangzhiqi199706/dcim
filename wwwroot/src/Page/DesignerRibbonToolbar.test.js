@@ -10,4 +10,15 @@ describe('DesignerRibbonToolbar', () => {
         expect(source).toContain('ribbonToolbarMore');
         expect(source).toContain('getRibbonToolbarGroups(activeTab)');
     });
+
+    test('keeps the remote synchronization label visible in the system group', () => {
+        const style = fs.readFileSync(path.join(__dirname, '..', 'Assets', 'designer.css'), 'utf8');
+        const compactDesktopRules = style.slice(
+            style.indexOf('@media (max-width: 1320px)'),
+            style.indexOf('@media (max-width: 980px)')
+        );
+
+        expect(style).toMatch(/\.ribbonGroup-system \.ribbonCommandLabel,[\s\S]*?\{[\s\S]*?display:\s*inline;/);
+        expect(compactDesktopRules).not.toContain('.ribbonGroup-system .ribbonCommandLabel');
+    });
 });

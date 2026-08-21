@@ -4,6 +4,7 @@ import useImage from 'use-image';
 // import debounce from 'lodash.debounce';
 import { Html } from "react-konva-utils";
 import { t } from '../i18n';
+import { normalizeImageAssetSrc } from '../Assets/imageSource';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
 const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmentAnchor, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack, isSimulationMode = false }) => {
@@ -16,12 +17,11 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
     const moduleChildren = Array.isArray(shapeProps.moduleJson.children) ? shapeProps.moduleJson.children : [];
     const firstModuleChild = moduleChildren.length > 0 ? moduleChildren[0] : null;
     const canEdit = shapeProps.draggable !== false && !isSimulationMode;
-    const srcText = typeof shapeProps.src === 'string' ? shapeProps.src : '';
-    const fallbackImage = srcText.indexOf('http') > -1 ? '../Images/' + srcText.split('/Images/')[0] : srcText;
+    const imageSource = (firstModuleChild && (firstModuleChild.className === 'Image' || firstModuleChild.className === 'videoSwiper') && firstModuleChild.attrs)
+        ? firstModuleChild.attrs.image
+        : shapeProps.src;
     const [imgurl] = useImage(
-        (firstModuleChild && (firstModuleChild.className === 'Image' || firstModuleChild.className === 'videoSwiper') && firstModuleChild.attrs)
-            ? firstModuleChild.attrs.image
-            : fallbackImage
+        normalizeImageAssetSrc(imageSource)
     );
     const groupRef = useRef();
     const transformRef = useRef();
@@ -254,7 +254,7 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
                             
                             return <Fragment key={i}>
                                 <Html divProps={{ style: { pointerEvents: "none" } }}>
-                                    <img src="../Images/icon/error.png" width={img.attrs.width} height={img.attrs.height} alt=""/>
+                                    <img src="Images/icon/error.png" width={img.attrs.width} height={img.attrs.height} alt=""/>
                                 </Html>
                                 <Rect width={img.attrs.width} height={img.attrs.height} />
                             </Fragment>
@@ -305,9 +305,9 @@ const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmen
                                 <div className="rope" style={{ width: img.attrs.width, height: img.attrs.height }}>
                                     
                                     {img.attrs.ropeDirection === '2' && <div className="ropeRed ropeRev" style={{ width: ropeAlarmRange,right:alarmPos}}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
                                     {img.attrs.ropeDirection === '1' && <div className="ropeRed" style={{ width: ropeAlarmRange,left:alarmPos}}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
                                     
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '1' && <div className="ropeNumTop ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor,fontSize:img.attrs.ropeDataSize}}>{img.attrs.ropeStart}</div>}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '2' && <div className="ropeNumBottom ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor,fontSize:img.attrs.ropeDataSize}}>{img.attrs.ropeStart}</div>}

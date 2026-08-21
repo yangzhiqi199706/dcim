@@ -1,3 +1,5 @@
+import { normalizeDataSourceHost } from '../Assets/dataSource';
+
 const getDataKey = (shape) => {
     const dataKey = shape && shape.moduleJson && shape.moduleJson.attrs
         ? shape.moduleJson.attrs.dataKey
@@ -18,7 +20,13 @@ const getProtocolBinding = (shape) => {
     const deviceId = getDeviceId(binding);
     const parameterName = binding && typeof binding.name === 'string' ? binding.name.trim() : '';
     if (!deviceId || !parameterName) return null;
-    return { binding, deviceId, parameterName };
+    let sourceHost;
+    try {
+        sourceHost = normalizeDataSourceHost(binding.sourceHost);
+    } catch (error) {
+        return null;
+    }
+    return { binding, deviceId, parameterName, sourceHost };
 };
 
 const parseDeviceData = (value) => {
@@ -72,15 +80,18 @@ export const createParameterReplacementContext = (shapes, selectedIds) => {
     if (bindings.some((binding) => !binding)) {
         return { valid: false, reasonKey: 'parameterReplacement.protocolBindingRequired' };
     }
-    const deviceIds = Array.from(new Set(bindings.map((binding) => binding.deviceId)));
-    if (deviceIds.length !== 1) {
+    const deviceSources = Array.from(new Set(bindings.map((binding) => (
+        `${binding.sourceHost}\u0000${binding.deviceId}`
+    ))));
+    if (deviceSources.length !== 1) {
         return { valid: false, reasonKey: 'parameterReplacement.sameDeviceRequired' };
     }
     const originalOptions = Array.from(new Set(bindings.map((binding) => binding.parameterName)))
         .map((parameterName) => ({ label: parameterName, value: parameterName }));
     return {
         valid: true,
-        deviceId: deviceIds[0],
+        deviceId: bindings[0].deviceId,
+        sourceHost: bindings[0].sourceHost,
         selectedIds: ids,
         originalOptions,
     };
@@ -114,6 +125,47 @@ export const createDeviceParameterOptions = (device) => {
     return Array.from(optionByValue.values());
 };
 
+export const createParameterReplacementMappingPlan = (
+    originalOptions,
+    replacementOptions,
+    selectedTargets,
+    keywordFrom,
+    keywordTo
+) => {
+    const options = Array.isArray(replacementOptions) ? replacementOptions : [];
+    const optionsByValue = new Map(options.map((option) => [option.value, option]));
+    const optionsByName = new Map();
+    options.forEach((option) => {
+        if (!option || typeof option.name !== 'string' || !option.name) return;
+        if (!optionsByName.has(option.name)) optionsByName.set(option.name, option);
+    });
+
+    const manualTargets = selectedTargets && typeof selectedTargets === 'object' ? selectedTargets : {};
+    const from = typeof keywordFrom === 'string' ? keywordFrom.trim() : '';
+    const to = typeof keywordTo === 'string' ? keywordTo.trim() : '';
+    const mappings = [];
+    const missingNames = [];
+
+    (Array.isArray(originalOptions) ? originalOptions : []).forEach((original) => {
+        if (!original || typeof original.value !== 'string' || !original.value) return;
+        const manualReplacement = optionsByValue.get(manualTargets[original.value]);
+        if (manualReplacement) {
+            mappings.push({ originalName: original.value, replacement: manualReplacement });
+            return;
+        }
+        if (!from || !original.value.includes(from)) return;
+        const expectedName = original.value.split(from).join(to);
+        const keywordReplacement = optionsByName.get(expectedName);
+        if (keywordReplacement) {
+            mappings.push({ originalName: original.value, replacement: keywordReplacement });
+        } else {
+            missingNames.push(expectedName);
+        }
+    });
+
+    return { mappings, missingNames: Array.from(new Set(missingNames)) };
+};
+
 export const replaceSelectedParameterBindings = (shapes, context, originalName, replacement) => {
     if (!context || !context.valid || !originalName || !replacement || !replacement.name) {
         return { shapes, changedCount: 0 };
@@ -123,7 +175,12 @@ export const replaceSelectedParameterBindings = (shapes, context, originalName, 
     const nextShapes = (Array.isArray(shapes) ? shapes : []).map((shape) => {
         if (!shape || !selectedIds.has(shape.id)) return shape;
         const bindingInfo = getProtocolBinding(shape);
-        if (!bindingInfo || bindingInfo.deviceId !== context.deviceId || bindingInfo.parameterName !== originalName) {
+        if (
+            !bindingInfo
+            || bindingInfo.deviceId !== context.deviceId
+            || bindingInfo.sourceHost !== context.sourceHost
+            || bindingInfo.parameterName !== originalName
+        ) {
             return shape;
         }
         const nextBinding = {
@@ -173,7 +230,11 @@ export const replaceSelectedParameterBindingMappings = (shapes, context, mapping
     const nextShapes = (Array.isArray(shapes) ? shapes : []).map((shape) => {
         if (!shape || !selectedIds.has(shape.id)) return shape;
         const bindingInfo = getProtocolBinding(shape);
-        if (!bindingInfo || bindingInfo.deviceId !== context.deviceId) return shape;
+        if (
+            !bindingInfo
+            || bindingInfo.deviceId !== context.deviceId
+            || bindingInfo.sourceHost !== context.sourceHost
+        ) return shape;
         const replacement = replacementsByOriginalName.get(bindingInfo.parameterName);
         if (!replacement) return shape;
 

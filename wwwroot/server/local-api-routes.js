@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { createRemoteSyncDevelopmentHandlers } = require('./remote-sync-dev');
 const zlib = require('zlib');
 const { createMasterControlStore } = require('./masterControlStore');
 
@@ -807,6 +808,59 @@ function createSaveMasterControlHandler() {
   };
 }
 
+function createPageExportZip(sourceFile) {
+  const parsedSource = path.parse(sourceFile);
+  const sourceTxtEntryName = sanitizeName(parsedSource.base || `${parsedSource.name}.txt`, 'page.txt');
+  const pageText = fs.readFileSync(sourceFile, 'utf8');
+  const imageRefs = extractImageRefsFromPageText(pageText);
+
+  const imageEntries = [];
+  const imageZipNames = new Set();
+  imageRefs.forEach((imageRef) => {
+    if (!isUserUploadImageRef(imageRef)) return;
+    const normalizedRef = normalizeImageRef(imageRef);
+    const absImagePath = resolveImageAbsolutePath(normalizedRef);
+    if (!absImagePath) return;
+
+    const relativeToImages = normalizedRef.replace(/^images\//i, '');
+    const zipImagePath = `img/${relativeToImages}`;
+    if (imageZipNames.has(zipImagePath)) return;
+    imageZipNames.add(zipImagePath);
+
+    imageEntries.push({
+      name: zipImagePath,
+      data: fs.readFileSync(absImagePath),
+      mtime: fs.statSync(absImagePath).mtime,
+    });
+  });
+
+  return createZipBuffer([
+    { name: sourceTxtEntryName, data: Buffer.from(pageText, 'utf8') },
+    { name: 'img/' },
+    ...imageEntries,
+  ]);
+}
+
+function createUniquePageZipName(rawPageName, pageIndex, fallbackName, usedNames) {
+  const normalizedIndex = pageIndex === undefined || pageIndex === null
+    ? ''
+    : String(pageIndex).trim();
+  const pageNameWithIndex = normalizedIndex
+    ? `${rawPageName || fallbackName}[${normalizedIndex}]`
+    : rawPageName;
+  const baseName = sanitizeName(pageNameWithIndex, fallbackName);
+  let sequence = 1;
+  let candidate = `${baseName}.zip`;
+
+  while (usedNames.has(candidate.toLowerCase())) {
+    sequence += 1;
+    candidate = `${baseName}-${sequence}.zip`;
+  }
+
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+}
+
 function createExportHandler() {
   return (req, res) => {
     try {
@@ -821,43 +875,73 @@ function createExportHandler() {
 
       const parsedSource = path.parse(sourceFile);
       const exportPrefix = sanitizeName(payload.pageName || parsedSource.name, 'page');
-      const sourceTxtEntryName = sanitizeName(parsedSource.base || `${parsedSource.name}.txt`, 'page.txt');
-      const pageText = fs.readFileSync(sourceFile, 'utf8');
-      const imageRefs = extractImageRefsFromPageText(pageText);
-
-      const imageEntries = [];
-      const imageZipNames = new Set();
-      imageRefs.forEach((imageRef) => {
-        if (!isUserUploadImageRef(imageRef)) return;
-        const normalizedRef = normalizeImageRef(imageRef);
-        const absImagePath = resolveImageAbsolutePath(normalizedRef);
-        if (!absImagePath) return;
-
-        const relativeToImages = normalizedRef.replace(/^images\//i, '');
-        const zipImagePath = `img/${relativeToImages}`;
-        if (imageZipNames.has(zipImagePath)) return;
-        imageZipNames.add(zipImagePath);
-
-        imageEntries.push({
-          name: zipImagePath,
-          data: fs.readFileSync(absImagePath),
-          mtime: fs.statSync(absImagePath).mtime,
-        });
-      });
-
-      const zipEntries = [
-        { name: sourceTxtEntryName, data: Buffer.from(pageText, 'utf8') },
-        { name: 'img/' },
-        ...imageEntries,
-      ];
-
-      const zipBuffer = createZipBuffer(zipEntries);
+      const zipBuffer = createPageExportZip(sourceFile);
       const targetFileName = createTimestampName(exportPrefix, '.zip');
       const targetFilePath = path.join(EXPORT_DIR, targetFileName);
       fs.writeFileSync(targetFilePath, zipBuffer);
       return ok(res, toPublicImageUrl(targetFilePath), 'exported');
     } catch (error) {
       return fail(res, `export local api error: ${error.message}`);
+    }
+  };
+}
+
+function createExportAllHandler() {
+  return (req, res) => {
+    try {
+      ensureDirectory(PAGE_DIR);
+      ensureDirectory(EXPORT_DIR);
+
+      const payload = req.body || {};
+      const pages = Array.isArray(payload.pages) ? payload.pages : [];
+      const skippedPages = [];
+      const usedZipNames = new Set();
+      const zipEntries = [];
+
+      pages.forEach((page) => {
+        const pageInfo = page && typeof page === 'object' ? page : {};
+        const sourceFile = resolveExistingFile(PAGE_DIR, pageInfo.pageTxt);
+        if (!sourceFile) {
+          skippedPages.push({
+            pageName: pageInfo.pageName,
+            pageTxt: pageInfo.pageTxt,
+            pageIndex: pageInfo.pageIndex,
+          });
+          return;
+        }
+
+        const parsedSource = path.parse(sourceFile);
+        const entryName = createUniquePageZipName(
+          pageInfo.pageName,
+          pageInfo.pageIndex,
+          sanitizeName(parsedSource.name, 'page'),
+          usedZipNames
+        );
+        zipEntries.push({
+          name: entryName,
+          data: createPageExportZip(sourceFile),
+          mtime: fs.statSync(sourceFile).mtime,
+        });
+      });
+
+      if (zipEntries.length === 0) {
+        return fail(res, 'no page files exported');
+      }
+
+      const targetFileName = createTimestampName('pages', '.zip');
+      const targetFilePath = path.join(EXPORT_DIR, targetFileName);
+      fs.writeFileSync(targetFilePath, createZipBuffer(zipEntries));
+      return ok(
+        res,
+        {
+          fileUrl: toPublicImageUrl(targetFilePath),
+          exportedCount: zipEntries.length,
+          skippedPages,
+        },
+        'exported'
+      );
+    } catch (error) {
+      return fail(res, `exportAll local api error: ${error.message}`);
     }
   };
 }
@@ -874,7 +958,7 @@ function createUploadHandler() {
 
       const ext = extensionFromNameOrMime(payload.fileName, decoded.mime) || '.png';
       const baseName = sanitizeName(path.parse(String(payload.fileName || '')).name, 'upload');
-      const targetFileName = createTimestampName(baseName, ext);
+      const targetFileName = `${baseName}${ext}`;
       const targetFilePath = path.join(UPLOAD_DIR, targetFileName);
 
       fs.writeFileSync(targetFilePath, decoded.buffer);
@@ -958,13 +1042,18 @@ function routePath(basePath, endpoint) {
 }
 
 function attachLocalApiRoutes(app, basePath = '/api/local') {
+  const remoteSyncHandlers = createRemoteSyncDevelopmentHandlers();
   app.post(routePath(basePath, 'imgData'), createImgDataHandler());
   app.post(routePath(basePath, 'saveTpl'), createSaveTplHandler());
   app.post(routePath(basePath, 'savePage'), createSavePageHandler());
   app.post(routePath(basePath, 'saveMasterControl'), createSaveMasterControlHandler());
   app.post(routePath(basePath, 'export'), createExportHandler());
+  app.post(routePath(basePath, 'exportAll'), createExportAllHandler());
   app.post(routePath(basePath, 'upload'), createUploadHandler());
   app.post(routePath(basePath, 'exportImport'), createExportImportHandler());
+  app.post(routePath(basePath, 'remoteSyncPreflight'), remoteSyncHandlers.preflight);
+  app.post(routePath(basePath, 'remoteSyncStart'), remoteSyncHandlers.start);
+  app.post(routePath(basePath, 'remoteSyncStatus'), remoteSyncHandlers.status);
 }
 
 module.exports = {
