@@ -4,10 +4,11 @@ import useImage from 'use-image';
 // import debounce from 'lodash.debounce';
 import { Html } from "react-konva-utils";
 import { t } from '../i18n';
+import { normalizeImageAssetSrc } from '../Assets/imageSource';
 // import httpsend from '../Assets/httpsend';
 // import * as echarts from "echarts";
+const ConElement = ({ shapeProps, id, isSelected, showSelectionFrame, isAlignmentAnchor, isHoverHighlighted, isElementHover, onHoverEnter, onHoverLeave, onSelect, onChange, onDragStart: onDragStartProp, onDragMove, toolType, onToolBack, isSimulationMode = false }) => {
 
-const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, onToolBack }) => {
     const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '');
     
     if (!shapeProps.moduleJson) {
@@ -15,17 +16,42 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
     }
     const moduleChildren = Array.isArray(shapeProps.moduleJson.children) ? shapeProps.moduleJson.children : [];
     const firstModuleChild = moduleChildren.length > 0 ? moduleChildren[0] : null;
-    const srcText = typeof shapeProps.src === 'string' ? shapeProps.src : '';
-    const fallbackImage = srcText.indexOf('http') > -1 ? '../Images/' + srcText.split('/Images/')[0] : srcText;
+    const canEdit = shapeProps.draggable !== false && !isSimulationMode;
+    const imageSource = (firstModuleChild && (firstModuleChild.className === 'Image' || firstModuleChild.className === 'videoSwiper') && firstModuleChild.attrs)
+        ? firstModuleChild.attrs.image
+        : shapeProps.src;
     const [imgurl] = useImage(
-        (firstModuleChild && (firstModuleChild.className === 'Image' || firstModuleChild.className === 'videoSwiper') && firstModuleChild.attrs)
-            ? firstModuleChild.attrs.image
-            : fallbackImage
+        normalizeImageAssetSrc(imageSource)
     );
     const groupRef = useRef();
     const transformRef = useRef();
+    const hoverTransformRef = useRef();
+    const elementHoverTransformRef = useRef();
     const [newshapeProps, setnewshapeProps] = useState(null);
+    const [hoverPulseTick, setHoverPulseTick] = useState(0);
     const [divTab, setdivTab] = useState(0);
+
+    useEffect(() => {
+        if (!isHoverHighlighted) return undefined;
+        const timer = window.setInterval(() => {
+            setHoverPulseTick((prev) => prev + 1);
+        }, 450);
+        return () => window.clearInterval(timer);
+    }, [isHoverHighlighted]);
+
+    useEffect(() => {
+        if (isHoverHighlighted && hoverTransformRef.current) {
+            hoverTransformRef.current.nodes([groupRef.current]);
+            hoverTransformRef.current.getLayer().batchDraw();
+        }
+    }, [isHoverHighlighted, shapeProps, hoverPulseTick]);
+
+    useEffect(() => {
+        if (isElementHover && elementHoverTransformRef.current && groupRef.current) {
+            elementHoverTransformRef.current.nodes([groupRef.current]);
+            elementHoverTransformRef.current.getLayer().batchDraw();
+        }
+    }, [isElementHover, shapeProps]);
 
     const toPositiveNumber = (value, fallback) => {
         const num = Number(value);
@@ -94,14 +120,12 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
     };
 
     useEffect(() => {
-        if (isSelected) {
+        if ((isSelected || showSelectionFrame) && transformRef.current) {
             transformRef.current.nodes([groupRef.current]);
             transformRef.current.getLayer().batchDraw();
-            // console.log(transformRef.current.width())
-            // console.log(transformRef.current.height())
             setnewshapeProps(shapeProps);
         }
-    }, [isSelected]);
+    }, [isSelected, showSelectionFrame, shapeProps]);
 
     useEffect(() => {
         if (transformRef.current != null) {
@@ -110,10 +134,17 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
     });
 
     const handleDragStart = e => {
+        if (!canEdit) return;
+        if (e && e.evt) {
+            e.evt.__draggingSelection = true;
+        }
+        // \u5148\u8ba9\u7236\u7ea7\u6709\u673a\u4f1a\u9884\u521d\u59cb\u5316\u591a\u9009\u62d6\u52a8\u72b6\u6001，\u518d\u8d70 onSelect
+        if (onDragStartProp) onDragStartProp(e, shapeProps);
         onSelect(e);
     };
     
     const handleDragEnd = e => {
+        if (!canEdit) return;
         
         onChange({
             ...shapeProps,
@@ -124,6 +155,7 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
     };
 
     const handeleGroupTransformEnd = (newbox) => {
+        if (!canEdit) return;
         const group = groupRef.current;
         const scaleX = group.scaleX();
         const scaleY = group.scaleY();
@@ -167,7 +199,7 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
     }
 
     const handleToolChange = (toolType) => {
-        if (toolType !== null && isSelected) {
+        if (toolType !== null && isSelected && canEdit) {
             const node = groupRef.current;
             switch (toolType) {
                 case 'copy': onToolBack(newshapeProps, 'copy'); break;
@@ -195,13 +227,17 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
             <Group
                 id={id}
                 onDragStart={handleDragStart}
+                onDragMove={(e) => { if (onDragMove) onDragMove(e, shapeProps); }}
                 onDragEnd={handleDragEnd}
+                onMouseEnter={() => { if (onHoverEnter) onHoverEnter(shapeProps); }}
+                onMouseLeave={() => { if (onHoverLeave) onHoverLeave(shapeProps); }}
                 onClick={onSelect}
                 onTap={onSelect}
-                handleTool={isSelected && handleToolChange(toolType)}
+                handleTool={isSelected && canEdit && handleToolChange(toolType)}
                 {...shapeProps}
+                draggable={canEdit}
                 ref={groupRef}
-                onTransformEnd={(newbox) => isSelected && shapeProps.draggable && handeleGroupTransformEnd(newbox)}
+                onTransformEnd={(newbox) => isSelected && canEdit && handeleGroupTransformEnd(newbox)}
                 name="group"
             >
                 {shapeProps.moduleJson.children.map((img, i) => {
@@ -218,7 +254,7 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
                             
                             return <Fragment key={i}>
                                 <Html divProps={{ style: { pointerEvents: "none" } }}>
-                                    <img src="../Images/icon/error.png" width={img.attrs.width} height={img.attrs.height} alt=""/>
+                                    <img src="Images/icon/error.png" width={img.attrs.width} height={img.attrs.height} alt=""/>
                                 </Html>
                                 <Rect width={img.attrs.width} height={img.attrs.height} />
                             </Fragment>
@@ -269,9 +305,9 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
                                 <div className="rope" style={{ width: img.attrs.width, height: img.attrs.height }}>
                                     
                                     {img.attrs.ropeDirection === '2' && <div className="ropeRed ropeRev" style={{ width: ropeAlarmRange,right:alarmPos}}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
                                     {img.attrs.ropeDirection === '1' && <div className="ropeRed" style={{ width: ropeAlarmRange,left:alarmPos}}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt=""/></div>}
                                     
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '1' && <div className="ropeNumTop ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor,fontSize:img.attrs.ropeDataSize}}>{img.attrs.ropeStart}</div>}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '2' && <div className="ropeNumBottom ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor,fontSize:img.attrs.ropeDataSize}}>{img.attrs.ropeStart}</div>}
@@ -499,6 +535,28 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
 
                 })}
             </Group>
+            {isHoverHighlighted && (
+                <Transformer
+                    ref={hoverTransformRef}
+                    borderStroke="#13c2c2"
+                    borderStrokeWidth={hoverPulseTick % 2 === 0 ? 3 : 1}
+                    anchorSize={0}
+                    resizeEnabled={false}
+                    rotateEnabled={false}
+                    listening={false}
+                />
+            )}
+            {(isElementHover && !isSelected && !showSelectionFrame && !isHoverHighlighted) && (
+                <Transformer
+                    ref={elementHoverTransformRef}
+                    borderStroke={shapeProps.draggable === false ? '#ff7875' : '#13c2c2'}
+                    borderStrokeWidth={1}
+                    anchorSize={0}
+                    resizeEnabled={false}
+                    rotateEnabled={false}
+                    listening={false}
+                />
+            )}
             {(isSelected && shapeProps.draggable) && (
                 <Transformer
                     ref={transformRef}
@@ -510,6 +568,18 @@ const ConElement = ({ shapeProps, id, isSelected, onSelect, onChange, toolType, 
                         // debounceHandleInfo(newBox)
                         return newBox;
                     }}
+                />
+            )}
+            {(!isSelected && showSelectionFrame && shapeProps.draggable) && (
+                <Transformer
+                    ref={transformRef}
+                    borderStroke={isAlignmentAnchor ? "#9254de" : "#52c41a"}
+                    borderStrokeWidth={isAlignmentAnchor ? 2 : 1}
+                    anchorSize={0}
+                    resizeEnabled={false}
+                    rotateEnabled={false}
+                    listening={false}
+                    flipEnabled={false}
                 />
             )}
             {(isSelected && !shapeProps.draggable) && (

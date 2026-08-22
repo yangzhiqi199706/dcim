@@ -1,9 +1,11 @@
 import React from 'react';
 import { Rect } from 'react-konva';
 import useImage from 'use-image';
+import { normalizeImageAssetSrc } from '../Assets/imageSource';
 
 function SvgBackground({ backgroundUrl, width, height}) {
-  if(backgroundUrl.indexOf('#')>-1){// Comment translated to English.
+  const normalizedBackgroundUrl = normalizeImageAssetSrc(backgroundUrl);
+  if(normalizedBackgroundUrl.indexOf('#')>-1){// Comment translated to English.
     return (
       <Rect
         x={0}
@@ -11,7 +13,7 @@ function SvgBackground({ backgroundUrl, width, height}) {
         zIndex={-10000}
         width={width}
         height={height}
-        fill={backgroundUrl}
+        fill={normalizedBackgroundUrl}
         id="canvasBackground"
         draggable={false}
         >
@@ -19,7 +21,7 @@ function SvgBackground({ backgroundUrl, width, height}) {
     )
   }else{// Comment translated to English.
     // create image of image src
-    const [background] = useImage(backgroundUrl);
+    const [background] = useImage(normalizedBackgroundUrl);
     let widthRatio = 1, heightRatio = 1;
     if(background !== undefined) {
       widthRatio = width / background.width;

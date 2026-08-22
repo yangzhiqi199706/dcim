@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>组态设计</title>
     <script type="text/JavaScript" src="./js/jquery-2.2.4.min.js"></script>
+    <script type="text/JavaScript" src="./js/login-response.js"></script>
     <script type="text/JavaScript" src="./runtime-endpoints.js"></script>
     <style>
         * {
@@ -118,7 +119,16 @@
                 'account':$('input[name=account]').val(),
                 'password':$('input[name=password]').val(),
             },function(r){
-                let res = JSON.parse(r);
+                let res = null;
+                try {
+                    res = window.parseLoginResponse(r);
+                } catch (e) {
+                    $('.tips').html('Login response parse error').show();
+                    setTimeout(function(){
+                        $('.tips').hide()
+                    },2000)
+                    return;
+                }
                 if (res.code == 100) {
                     localStorage.setItem('wl',res.data.token)
                     window.location.href=`${APP_BASE}/index.html`;

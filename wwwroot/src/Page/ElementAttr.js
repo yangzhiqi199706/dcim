@@ -1,11 +1,438 @@
-﻿import React, { memo, useState, useEffect, useReducer } from 'react';
+﻿import React, { memo, useState, useEffect, useReducer, useRef, useCallback } from 'react';
 import { Close, Lock, PermMedia } from '@mui/icons-material';
 import httpsend from '../Assets/httpsend';
 import { Select, Button } from 'antd';
 import { t } from '../i18n';
+import { createLatestDataSourceRequestGuard, normalizeDataSourceHost } from '../Assets/dataSource';
+import { ensureChartAttributeControls } from './chartAttributeControls';
 // import { Select, Button, message } from 'antd';
 // import GifImages from './Data/GifImages';
 import debounce from 'lodash.debounce';
+
+const normalizeHostBinding = (binding) => {
+    if (!binding || binding.key === undefined || binding.key === null || binding.type === undefined || binding.type === null || binding.src === undefined || binding.src === null) {
+        return null;
+    }
+    const sourceHost = normalizeDataSourceHost(binding.sourceHost || '');
+    return {
+        key: String(binding.key),
+        type: String(binding.type),
+        src: String(binding.src),
+        ...(sourceHost ? { sourceHost } : {}),
+    };
+};
+
+const getHostBinding = (shape) => {
+    const dataKey = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.dataKey;
+    return Array.isArray(dataKey) && dataKey.length > 0 ? normalizeHostBinding(dataKey[0]) : null;
+};
+
+export const isHostBindingEditable = (shape) => {
+    const moduleAttr = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.moduleAttr;
+    return Array.isArray(moduleAttr) && moduleAttr.some((group) => (
+        group && Array.isArray(group.attrGroupContent) && group.attrGroupContent.some((attr) => (
+            attr && attr.attrType === 'hardwareInputNew' && (attr.attrCode === 'dataDevKey' || attr.attrCode === 'dataKey')
+        ))
+    ));
+};
+
+const isParameterHostBinding = (shape) => {
+    const moduleAttr = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.moduleAttr;
+    return Array.isArray(moduleAttr) && moduleAttr.some((group) => (
+        group && Array.isArray(group.attrGroupContent) && group.attrGroupContent.some((attr) => (
+            attr && attr.attrType === 'hardwareInputNew' && attr.attrCode === 'dataKey'
+        ))
+    ));
+};
+
+const areHostBindingsEqual = (first, second) => (
+    first === second || (!!first && !!second
+        && first.key === second.key
+        && first.type === second.type
+        && first.src === second.src
+        && (first.sourceHost || '') === (second.sourceHost || ''))
+);
+
+export const getBatchHostBindingState = (selectedShapes) => {
+    const shapes = Array.isArray(selectedShapes) ? selectedShapes.filter(Boolean) : [];
+    if (shapes.length === 0 || !shapes.every(isHostBindingEditable)) {
+        return { available: false, binding: null, mixed: false };
+    }
+    const firstBinding = getHostBinding(shapes[0]);
+    const mixed = !shapes.every((shape) => areHostBindingsEqual(firstBinding, getHostBinding(shape)));
+    return { available: true, binding: mixed ? null : firstBinding, mixed };
+};
+
+export const getBatchHostDataSourceState = (selectedShapes) => {
+    const sourceHosts = Array.from(new Set(
+        (Array.isArray(selectedShapes) ? selectedShapes : [])
+            .map(getHostBinding)
+            .filter(Boolean)
+            .map((binding) => binding.sourceHost || '')
+    ));
+    return {
+        sourceHost: sourceHosts.length === 1 ? sourceHosts[0] : '',
+        mixed: sourceHosts.length > 1,
+    };
+};
+
+export const parseHostBindingOption = (value, sourceHost = '') => {
+    const match = String(value || '').match(/^([^&]+)&([^/]+)\/(.+)$/);
+    return match ? normalizeHostBinding({ key: match[1], type: match[2], src: match[3], sourceHost }) : null;
+};
+
+export const applyHostBindingToSelection = (allShapes, selectedIds, binding) => {
+    const normalizedBinding = normalizeHostBinding(binding);
+    const selectedIdSet = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+    if (!normalizedBinding || selectedIdSet.size === 0) return allShapes;
+    return (Array.isArray(allShapes) ? allShapes : []).map((shape) => {
+        if (!shape || !selectedIdSet.has(shape.id) || !isHostBindingEditable(shape)) return shape;
+        const moduleJson = shape.moduleJson || {};
+        const attrs = moduleJson.attrs || {};
+        const dataKey = Array.isArray(attrs.dataKey) ? attrs.dataKey : [];
+        const nextDataKey = isParameterHostBinding(shape) && dataKey.length > 0
+            ? dataKey.map((item) => {
+                const localItem = { ...item };
+                delete localItem.sourceHost;
+                return { ...localItem, ...normalizedBinding };
+            })
+            : [{ ...normalizedBinding }];
+        return {
+            ...shape,
+            moduleJson: {
+                ...moduleJson,
+                attrs: {
+                    ...attrs,
+                    dataKey: nextDataKey,
+                },
+            },
+        };
+    });
+};
+
+const batchCommonAttributeTypes = new Set([
+    'textarea',
+    'number',
+    'text',
+    'color',
+    'selectFamily',
+    'select',
+    'selectAlign',
+    'selectverticalAlign',
+    'selectTime',
+    'selectDataType',
+    'aniSelect',
+]);
+
+const getAttributeIdentity = (attribute) => (
+    `${attribute.attrType}|${attribute.attrWhere}|${attribute.attrCode}`
+);
+
+const getShapeAttributeDeclaration = (shape, attribute) => {
+    const moduleAttr = shape && shape.moduleJson && shape.moduleJson.attrs && shape.moduleJson.attrs.moduleAttr;
+    if (!Array.isArray(moduleAttr)) return null;
+    const identity = getAttributeIdentity(attribute);
+    for (let groupIndex = 0; groupIndex < moduleAttr.length; groupIndex += 1) {
+        const content = moduleAttr[groupIndex] && moduleAttr[groupIndex].attrGroupContent;
+        if (!Array.isArray(content)) continue;
+        const match = content.find((item) => item && getAttributeIdentity(item) === identity);
+        if (match) return match;
+    }
+    return null;
+};
+
+const getShapeAttributeTarget = (shape, attribute) => {
+    const children = shape && shape.moduleJson && shape.moduleJson.children;
+    if (!Array.isArray(children)) return null;
+    return children.find((child) => (
+        child && child.attrs && child.attrs.name === attribute.attrWhere
+        && Object.prototype.hasOwnProperty.call(child.attrs, attribute.attrCode)
+    )) || null;
+};
+
+const isBatchCommonAttributeEditable = (shape, attribute) => (
+    !!attribute
+    && batchCommonAttributeTypes.has(attribute.attrType)
+    && !!getShapeAttributeDeclaration(shape, attribute)
+    && !!getShapeAttributeTarget(shape, attribute)
+);
+
+export const getBatchCommonAttributeGroups = (selectedShapes) => {
+    const shapes = Array.isArray(selectedShapes) ? selectedShapes.filter(Boolean) : [];
+    const firstShapeGroups = shapes[0] && shapes[0].moduleJson && shapes[0].moduleJson.attrs && shapes[0].moduleJson.attrs.moduleAttr;
+    if (shapes.length === 0 || !Array.isArray(firstShapeGroups)) return [];
+    return firstShapeGroups.map((group) => {
+        const attributes = Array.isArray(group && group.attrGroupContent)
+            ? group.attrGroupContent.filter((attribute) => (
+                isBatchCommonAttributeEditable(shapes[0], attribute)
+                && shapes.every((shape) => isBatchCommonAttributeEditable(shape, attribute))
+            ))
+            : [];
+        return {
+            name: group && group.attrGroupName,
+            attributes,
+        };
+    }).filter((group) => group.attributes.length > 0);
+};
+
+const getBatchCommonAttributeState = (selectedShapes, attribute) => {
+    const values = (Array.isArray(selectedShapes) ? selectedShapes : []).map((shape) => {
+        const target = getShapeAttributeTarget(shape, attribute);
+        return target && target.attrs ? target.attrs[attribute.attrCode] : undefined;
+    });
+    const value = values[0];
+    return {
+        value,
+        mixed: values.some((item) => item !== value),
+    };
+};
+
+export const applyCommonAttributeToSelection = (allShapes, selectedIds, attribute, value) => {
+    const selectedIdSet = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+    if (!attribute || selectedIdSet.size === 0) return allShapes;
+    const nextValue = attribute.attrType === 'number' ? Number(value) : value;
+    if (attribute.attrType === 'number' && !Number.isFinite(nextValue)) return allShapes;
+    return (Array.isArray(allShapes) ? allShapes : []).map((shape) => {
+        if (!shape || !selectedIdSet.has(shape.id) || !isBatchCommonAttributeEditable(shape, attribute)) return shape;
+        const moduleJson = shape.moduleJson || {};
+        const children = Array.isArray(moduleJson.children) ? moduleJson.children : [];
+        return {
+            ...shape,
+            moduleJson: {
+                ...moduleJson,
+                children: children.map((child) => {
+                    if (!child || !child.attrs || child.attrs.name !== attribute.attrWhere) return child;
+                    return {
+                        ...child,
+                        attrs: {
+                            ...child.attrs,
+                            [attribute.attrCode]: nextValue,
+                        },
+                    };
+                }),
+            },
+        };
+    });
+};
+
+const getHostOptionValue = (binding) => (
+    binding ? `${binding.key}&${binding.type}/${binding.src}` : undefined
+);
+
+const createHostDeviceOptions = (devices, useSlaveId) => (
+    (Array.isArray(devices) ? devices : []).filter((device) => device && device.id !== undefined && device.id !== null).map((device) => {
+        const source = useSlaveId && device.SlaveID ? `${device.ServerIP}@${device.SlaveID}` : '1';
+        return {
+            value: `${device.id}&${device.LinkMode}/${source}`,
+            label: device.DeviceName || String(device.id),
+        };
+    })
+);
+
+const BatchHostAttributes = memo((props) => {
+    const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
+    const bindingState = getBatchHostBindingState(selectedShapes);
+    const dataSourceState = getBatchHostDataSourceState(selectedShapes);
+    const globalDataSourceHost = normalizeDataSourceHost(props.globalDataSourceHost || '');
+    const dataSourceHost = globalDataSourceHost || dataSourceState.sourceHost;
+    const initialHostValue = getHostOptionValue(bindingState.binding);
+    const [deviceOptions, setDeviceOptions] = useState([]);
+    const [hostValue, setHostValue] = useState(initialHostValue);
+
+    useEffect(() => {
+        setHostValue(initialHostValue);
+    }, [initialHostValue, bindingState.mixed]);
+
+    useEffect(() => {
+        let active = true;
+        if (!bindingState.available || (!globalDataSourceHost && dataSourceState.mixed)) {
+            setDeviceOptions([]);
+            return () => {
+                active = false;
+            };
+        }
+        const loadDevices = async () => {
+            const res = await httpsend.getDataFrom(dataSourceHost, 'GetDeviceListKey', { ComboBox: 'all' });
+            if (active) setDeviceOptions(createHostDeviceOptions(res && res.data, props.useSlaveId === true));
+        };
+        loadDevices();
+        return () => {
+            active = false;
+        };
+    }, [bindingState.available, dataSourceState.mixed, dataSourceHost, globalDataSourceHost, props.useSlaveId]);
+
+    if (!bindingState.available) return null;
+
+    return <>
+        <div className="attrTitle">{t('designer.batchHost.title')}</div>
+        <div className="attrBox batchHostSelectionCount">{t('designer.batchHost.selectedElements').replace('{count}', String(selectedShapes.length))}</div>
+        <div className="attrBox">
+            <label>{t('designer.batchHost.host')}</label>
+            <Select
+                showSearch
+                value={hostValue}
+                placeholder={t(bindingState.mixed ? 'designer.batchHost.mixedHost' : 'designer.batchHost.selectHost')}
+                optionFilterProp="label"
+                onChange={setHostValue}
+                options={deviceOptions}
+            />
+        </div>
+        <div className="attrBox batchHostApply">
+            <Button
+                type="primary"
+                disabled={!hostValue}
+                onClick={() => {
+                    const binding = parseHostBindingOption(hostValue, dataSourceHost);
+                    if (binding && typeof props.onBatchHostBindingChange === 'function') props.onBatchHostBindingChange(binding);
+                }}
+            >{t('designer.batchHost.apply')}</Button>
+        </div>
+    </>;
+});
+
+const getBatchSelectOptions = (attributeType) => {
+    if (attributeType === 'selectFamily') {
+        return [
+            [t('auto.k0011'), t('auto.k0011')],
+            [t('auto.k0231'), t('auto.k0231')],
+            [t('auto.k0232'), t('auto.k0232')],
+            [t('auto.k0233'), t('auto.k0233')],
+        ];
+    }
+    if (attributeType === 'select') return [
+        ['normal', t('auto.k0438')],
+        ['bold', t('auto.k0439')],
+        ['italic normal', t('auto.k0440')],
+        ['italic bold', t('auto.k0613')],
+    ];
+    if (attributeType === 'selectAlign') return [
+        ['center', t('auto.k0614')],
+        ['left', t('auto.k0615')],
+        ['right', t('auto.k0616')],
+    ];
+    if (attributeType === 'selectverticalAlign') return [
+        ['middle', t('auto.k0617')],
+        ['top', t('auto.k0618')],
+        ['bottom', t('auto.k0619')],
+    ];
+    if (attributeType === 'selectTime') return [
+        ['1', 'y/m/d h:m:s'],
+        ['2', 'y-m-d h:m:s'],
+        ['3', 'y/m/d'],
+        ['4', 'y-m-d'],
+        ['5', 'h:m:s'],
+    ];
+    if (attributeType === 'selectDataType') return [
+        ['hour', t('auto.k0435')],
+        ['day', t('auto.k0436')],
+        ['month', t('auto.k0437')],
+    ];
+    if (attributeType === 'aniSelect') return [
+        ['slide', t('auto.k0430')],
+        ['fade', t('auto.k0431')],
+        ['cube', t('auto.k0432')],
+        ['coverflow', t('auto.k0433')],
+        ['flip', t('auto.k0434')],
+    ];
+    return [];
+};
+
+const BatchCommonAttributeControl = memo((props) => {
+    const attribute = props.attribute;
+    const state = getBatchCommonAttributeState(props.selectedShapes, attribute);
+    const inputValue = state.mixed ? '' : state.value;
+    const controlKey = `${getAttributeIdentity(attribute)}|${state.mixed}|${String(inputValue)}`;
+    const applyValue = (value) => {
+        if (typeof props.onApply === 'function') props.onApply(attribute, value);
+    };
+    const applyBlurValue = (event) => {
+        if (event.target.value !== String(inputValue === undefined || inputValue === null ? '' : inputValue)) {
+            applyValue(event.target.value);
+        }
+    };
+
+    if (attribute.attrType === 'textarea') {
+        return <div className="attrBox">
+            <label>{attribute.attrName}</label>
+            <textarea
+                key={controlKey}
+                defaultValue={inputValue}
+                placeholder={state.mixed ? t('designer.batchAttributes.mixedValue') : ''}
+                onBlur={applyBlurValue}
+            />
+        </div>;
+    }
+    if (attribute.attrType === 'text' || attribute.attrType === 'number') {
+        return <div className="attrBox">
+            <label>{attribute.attrName}</label>
+            <input
+                key={controlKey}
+                type={attribute.attrType === 'number' ? 'number' : 'text'}
+                step={attribute.attrType === 'number' ? '0.1' : undefined}
+                defaultValue={inputValue}
+                placeholder={state.mixed ? t('designer.batchAttributes.mixedValue') : ''}
+                onBlur={applyBlurValue}
+            />
+        </div>;
+    }
+    if (attribute.attrType === 'color') {
+        return <div className="attrBox">
+            <label>{attribute.attrName}</label>
+            <input
+                type="color"
+                defaultValue={state.value || '#000000'}
+                onChange={(event) => applyValue(event.target.value)}
+            />
+        </div>;
+    }
+    const options = getBatchSelectOptions(attribute.attrType);
+    return <div className="attrBox">
+        <label>{attribute.attrName}</label>
+        <select
+            key={controlKey}
+            defaultValue={inputValue}
+            onChange={(event) => applyValue(event.target.value)}
+        >
+            {state.mixed && <option value="" disabled>{t('designer.batchAttributes.mixedValue')}</option>}
+            {options.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+        </select>
+    </div>;
+});
+
+const BatchCommonAttributes = memo((props) => {
+    const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
+    const groups = getBatchCommonAttributeGroups(selectedShapes);
+    if (groups.length === 0) return null;
+    return <>
+        <div className="attrTitle">{t('designer.batchAttributes.title')}</div>
+        <div className="attrBox batchHostSelectionCount">{t('designer.batchHost.selectedElements').replace('{count}', String(selectedShapes.length))}</div>
+        {groups.map((group, groupIndex) => <React.Fragment key={`${group.name || 'group'}-${groupIndex}`}>
+            <div className="attrTitle">{group.name}</div>
+            {group.attributes.map((attribute) => <BatchCommonAttributeControl
+                key={getAttributeIdentity(attribute)}
+                attribute={attribute}
+                selectedShapes={selectedShapes}
+                onApply={props.onBatchCommonAttributeChange}
+            />)}
+        </React.Fragment>)}
+    </>;
+});
+
+const BatchAttributes = memo((props) => {
+    const selectedShapes = Array.isArray(props.selectedShapes) ? props.selectedShapes : [];
+    const hasHostBinding = getBatchHostBindingState(selectedShapes).available;
+    const hasCommonAttributes = getBatchCommonAttributeGroups(selectedShapes).length > 0;
+    if (!hasHostBinding && !hasCommonAttributes) {
+        return <div className="attrLocked">
+            <PermMedia fontSize="large" color="disabled" />
+            <div>{t('designer.batchAttributes.noCommonAttributes')}</div>
+        </div>;
+    }
+    return <>
+        <BatchHostAttributes {...props} />
+        <BatchCommonAttributes {...props} />
+    </>;
+});
 
 const ElementAttr = memo((props) => {
     const useSlaveId = props.useSlaveId === true;
@@ -16,11 +443,12 @@ const ElementAttr = memo((props) => {
     };
 
     if (props.MultiSelect) {
-        return [<div className="attrLocked" key='123456'>
-            <PermMedia fontSize="large" color="disabled" />
-            <div>{t('auto.k0423')}</div>
-        </div>
-        ]
+        return <BatchAttributes
+            selectedShapes={props.selectedShapes}
+            useSlaveId={useSlaveId}
+            onBatchHostBindingChange={props.onBatchHostBindingChange}
+            onBatchCommonAttributeChange={props.onBatchCommonAttributeChange}
+        />;
     }
 
     let dragShape = props.dragShape ? JSON.parse(JSON.stringify(props.dragShape)) : null;
@@ -46,9 +474,26 @@ const ElementAttr = memo((props) => {
     let shapeAttr = dragShape.moduleJson;// Comment translated to English.
     if (!shapeAttr.attrs) shapeAttr.attrs = {};
     if (!Array.isArray(shapeAttr.children)) shapeAttr.children = [];
+    const isEchartComponent = !!(shapeAttr.children && shapeAttr.children.some((v) => v.className === 'Echart'));
+    if (isEchartComponent) {
+        const echartChild = shapeAttr.children.find((v) => v.className === 'Echart');
+        if (echartChild && echartChild.attrs) {
+            if (!echartChild.attrs.chartStyle) echartChild.attrs.chartStyle = 'original';
+            if (!echartChild.attrs.chartAnimation) echartChild.attrs.chartAnimation = 'off';
+            if (echartChild.attrs.cat === 'bar' && !echartChild.attrs.chartBarStyle) echartChild.attrs.chartBarStyle = 'original';
+        }
+        if (shapeAttr.attrs && shapeAttr.attrs.moduleAttr) {
+            shapeAttr.attrs.moduleAttr = ensureChartAttributeControls(
+                shapeAttr.attrs.moduleAttr,
+                true,
+                echartChild && echartChild.attrs ? echartChild.attrs.cat : undefined
+            );
+        }
+    }
     // Comment translated to English.
     let newparamDevId = null;
     let newparam = null;
+    let initialDataSourceHost = '';
     if (shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0 && shapeAttr.attrs.dataKey[0].hasOwnProperty('key')) {
         newparamDevId = shapeAttr.attrs.dataKey[0].key + '&' + shapeAttr.attrs.dataKey[0].type + '/' + shapeAttr.attrs.dataKey[0].src
         // Comment translated to English.
@@ -56,6 +501,15 @@ const ElementAttr = memo((props) => {
             newparam = shapeAttr.attrs.dataKey[0].name + '~' + shapeAttr.attrs.dataKey[0].type + '%' + shapeAttr.attrs.dataKey[0].cmdtype + '|' + shapeAttr.attrs.dataKey[0].src
         }
     }
+    if (shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0) {
+        try {
+            initialDataSourceHost = normalizeDataSourceHost(shapeAttr.attrs.dataKey[0].sourceHost || '');
+        } catch (error) {
+            initialDataSourceHost = '';
+        }
+    }
+    const globalDataSourceHost = normalizeDataSourceHost(props.globalDataSourceHost || '');
+    const dataSourceHost = globalDataSourceHost || initialDataSourceHost;
     // Comment translated to English.
     let newparams = [];
     if (shapeAttr.attrs.dataKey && shapeAttr.attrs.dataKey.length > 0 && shapeAttr.attrs.dataKey[0].hasOwnProperty('devkey')) {
@@ -166,6 +620,15 @@ const ElementAttr = memo((props) => {
     const [showParamsBox, setshowParamsBox] = useState(0);// Comment translated to English.
     const [showPagesBox, setshowPagesBox] = useState(0);// Comment translated to English.
     const [showEventsBox, setshowEventsBox] = useState(0);// Comment translated to English.
+    const dataSourceRequestGuardRef = useRef(createLatestDataSourceRequestGuard());
+
+    useEffect(() => {
+        dataSourceRequestGuardRef.current.invalidate();
+    }, [shapeId, initialDataSourceHost, globalDataSourceHost]);
+
+    useEffect(() => () => {
+        dataSourceRequestGuardRef.current.invalidate();
+    }, []);
 
     const [showImgBox, setshowImgBox] = useState(0);// Comment translated to English.
     const [showGifImgBox, setshowGifImgBox] = useState(0);// Comment translated to English.
@@ -177,6 +640,85 @@ const ElementAttr = memo((props) => {
     const [MyImages, setMyImages] = useState([]);// Comment translated to English.
     const [DefImages, setDefImages] = useState([]);// Comment translated to English.
     const [ShowImagesIndex, setShowImagesIndex] = useState(0);// Comment translated to English.
+    const [hoverPreviewImg, setHoverPreviewImg] = useState(null);
+    const [hoverPreviewKey, setHoverPreviewKey] = useState('');
+
+    const [dialogPositions, setDialogPositions] = useState({});
+    const dialogRefs = useRef({});
+    const draggingDialogIdRef = useRef('');
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+    const handleDialogMouseMove = useCallback((e) => {
+        const dialogId = draggingDialogIdRef.current;
+        if (!dialogId) return;
+        const dialog = dialogRefs.current[dialogId];
+        if (!dialog) return;
+
+        const rect = dialog.getBoundingClientRect();
+        const canvasBody = document.querySelector('.canvasBody');
+        const boundaryRect = canvasBody ? canvasBody.getBoundingClientRect() : {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight,
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+        const dialogWidth = Math.min(rect.width, boundaryRect.width || rect.width);
+        const dialogHeight = Math.min(rect.height, boundaryRect.height || rect.height);
+        const minLeft = boundaryRect.left;
+        const maxLeft = Math.max(minLeft, boundaryRect.right - dialogWidth);
+        const minTop = boundaryRect.top;
+        const maxTop = Math.max(minTop, boundaryRect.bottom - dialogHeight);
+        const nextLeft = Math.min(Math.max(e.clientX - dragOffsetRef.current.x, minLeft), maxLeft);
+        const nextTop = Math.min(Math.max(e.clientY - dragOffsetRef.current.y, minTop), maxTop);
+
+        setDialogPositions((prev) => ({
+            ...prev,
+            [dialogId]: { left: nextLeft, top: nextTop }
+        }));
+    }, []);
+
+    const handleDialogMouseUp = useCallback(() => {
+        draggingDialogIdRef.current = '';
+        window.removeEventListener('mousemove', handleDialogMouseMove);
+        window.removeEventListener('mouseup', handleDialogMouseUp);
+    }, [handleDialogMouseMove]);
+
+    const handleDialogMouseDown = useCallback((dialogId, e) => {
+        if (e.button !== 0) return;
+        const dialog = dialogRefs.current[dialogId];
+        if (!dialog) return;
+
+        const rect = dialog.getBoundingClientRect();
+        draggingDialogIdRef.current = dialogId;
+        dragOffsetRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+
+        window.addEventListener('mousemove', handleDialogMouseMove);
+        window.addEventListener('mouseup', handleDialogMouseUp);
+    }, [handleDialogMouseMove, handleDialogMouseUp]);
+
+    const getDialogStyle = useCallback((dialogId, visible) => {
+        if (!visible) return { display: 'none' };
+        const position = dialogPositions[dialogId];
+        if (!position) return { display: 'block' };
+        return {
+            display: 'block',
+            left: position.left,
+            top: position.top,
+            transform: 'none'
+        };
+    }, [dialogPositions]);
+
+    useEffect(() => {
+        return () => {
+            window.removeEventListener('mousemove', handleDialogMouseMove);
+            window.removeEventListener('mouseup', handleDialogMouseUp);
+        };
+    }, [handleDialogMouseMove, handleDialogMouseUp]);
 
     const [dataSelect, setdataSelect] = useState({
         all: [],
@@ -273,14 +815,16 @@ const ElementAttr = memo((props) => {
 
     useEffect(() => {// Comment translated to English.
         async function getdataSelect() {
+            const request = dataSourceRequestGuardRef.current.begin('commandSelect');
             if (paraClassName !== 'paraHtml' || !paraDevKey) {
                 setdataSelect(buildParaDataSelect([]));
                 return;
             }
-            let res = await httpsend.getData('GetDeviceCommandListKey', {
+            let res = await httpsend.getDataFrom(dataSourceHost, 'GetDeviceCommandListKey', {
                 DevID: paraDevKey,
                 ComboBox: '1'
             });
+            if (!dataSourceRequestGuardRef.current.isCurrent(request)) return;
             if (res && Array.isArray(res.data)) {
                 setdataSelect(buildParaDataSelect(res.data));
             } else {
@@ -288,7 +832,7 @@ const ElementAttr = memo((props) => {
             }
         }
         getdataSelect();
-    }, [paraClassName, paraDevKey]);
+    }, [paraClassName, paraDevKey, dataSourceHost]);
 
     // Comment translated to English.
     useEffect(() => {
@@ -338,9 +882,11 @@ const ElementAttr = memo((props) => {
     }
     // Comment translated to English.
     const getParamData = async () => {
-        let res = await httpsend.getData('GetParamListKey', {
+        const request = dataSourceRequestGuardRef.current.begin('params');
+        let res = await httpsend.getDataFrom(dataSourceHost, 'GetParamListKey', {
             ComboBox: "all"
         });
+        if (!dataSourceRequestGuardRef.current.isCurrent(request)) return;
         let parData = [];
         let parsData = [];
         if (res && Array.isArray(res.data)) {
@@ -360,9 +906,11 @@ const ElementAttr = memo((props) => {
     }
     // Comment translated to English.
     const getevData = async () => {
-        let res = await httpsend.getData('GetDeviceListKey', {
+        const request = dataSourceRequestGuardRef.current.begin('devices');
+        let res = await httpsend.getDataFrom(dataSourceHost, 'GetDeviceListKey', {
             ComboBox: "all"
         });
+        if (!dataSourceRequestGuardRef.current.isCurrent(request)) return;
         let devList = [];
         if (res && Array.isArray(res.data)) {
             let paramsArr = [];
@@ -452,17 +1000,17 @@ const ElementAttr = memo((props) => {
         let pname = '';
         if (res && Array.isArray(res.data)) {
             res.data.forEach((el) => {
-                const firstChildren = Array.isArray(el.children) ? el.children : [];
                 // Comment translated to English.
                 if (savePagePid === el.id) pname = el.PageName;
+                const firstChildren = Array.isArray(el.children) ? el.children : [];
                 let firstop = {
                     value: el.id + '-' + el.PageName,
                     label: el.PageName
                 }
                 if (firstChildren.length !== 0) {
                     firstChildren.forEach((y) => {
-                        const secondChildren = Array.isArray(y.children) ? y.children : [];
                         if (savePagePid === y.id) pname = y.PageName;
+                        const secondChildren = Array.isArray(y.children) ? y.children : [];
                         let secop = {
                             value: y.id + '-' + y.PageName,
                             label: y.PageName
@@ -543,7 +1091,7 @@ const ElementAttr = memo((props) => {
             setsavePagePidSel([]);
             setcusparamsList([]);
         }
-    }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox, useSlaveId]);
+    }, [showDevBox, showParamBox, showParamsBox, showClickBox, showPagesBox, showEventsBox, useSlaveId, dataSourceHost]);
 
     // Comment translated to English.
     const initFormData = shapeAttr.attrs.where;
@@ -573,9 +1121,9 @@ const ElementAttr = memo((props) => {
         // Comment translated to English.
         // Comment translated to English.
         const findAttr = shapeAttr.children.filter((v) => v.attrs.name === e.target.dataset.attrwhere);
-        if (!Array.isArray(findAttr) || findAttr.length === 0 || !findAttr[0] || !findAttr[0].attrs) return;
         // Comment translated to English.
         if (e.target.dataset.attrcode === 'rowNum' || e.target.dataset.attrcode === 'colNum' || e.target.dataset.attrcode === 'cellWidth' || e.target.dataset.attrcode === 'cellHeight') {
+            if (!Array.isArray(findAttr) || findAttr.length === 0 || !findAttr[0] || !findAttr[0].attrs) return;
             // Comment translated to English.
             if (e.target.dataset.attrcode === 'rowNum') findAttr[0].attrs['rowNum'] = e.target.value;
             if (e.target.dataset.attrcode === 'colNum') findAttr[0].attrs['colNum'] = e.target.value;
@@ -620,7 +1168,8 @@ const ElementAttr = memo((props) => {
         } else {
             findAttr.forEach(element => {
                 // if (e.target.value) {
-                element['attrs'][e.target.dataset.attrcode] = e.target.dataset.attrtype === 'number' ? parseFloat(e.target.value) : e.target.value;
+                const isNumberLike = e.target.dataset.attrtype === 'number' || e.target.dataset.attrtype === 'sortTopN';
+                element['attrs'][e.target.dataset.attrcode] = isNumberLike ? parseFloat(e.target.value) : e.target.value;
                 if (e.target.dataset.attrwhere === 'buttonRect') {// Comment translated to English.
                     if (e.target.dataset.attrcode === 'width' || e.target.dataset.attrcode === 'height') {
                         if (shapeAttr.children[1] && shapeAttr.children[1].attrs) {
@@ -639,6 +1188,7 @@ const ElementAttr = memo((props) => {
             ...dragShape
         })
     }, 100)
+
     // Comment translated to English.
     // Comment translated to English.
     const ondataDevOptionChange = (value) => {
@@ -1131,6 +1681,104 @@ const ElementAttr = memo((props) => {
                         </select>
                     </div>)
                 }
+                if (a.attrType === 'chartStyleSelect' || a.attrType === 'chartAnimationSelect' || a.attrType === 'chartBarStyleSelect') {
+                    const chartStyleOptions = a.attrType === 'chartStyleSelect' ? [
+                        { value: 'original', label: t('chart.styleOriginal') },
+                        { value: 'neon', label: t('chart.styleNeon') },
+                        { value: 'aurora', label: t('chart.styleAurora') },
+                        { value: 'amber', label: t('chart.styleAmber') }
+                    ] : (a.attrType === 'chartAnimationSelect' ? [
+                        { value: 'off', label: t('chart.animationOff') },
+                        { value: 'entrance', label: t('chart.animationEntrance') },
+                        { value: 'pulse', label: t('chart.animationPulse') },
+                        { value: 'flow', label: t('chart.animationFlow') }
+                    ] : [
+                        { value: 'original', label: t('chart.styleOriginal') },
+                        { value: 'rounded', label: t('chart.barStyleRounded') },
+                        { value: 'cylinder', label: t('chart.barStyleCylinder') },
+                        { value: 'diamond', label: t('chart.barStyleDiamond') },
+                        { value: 'hexagon', label: t('chart.barStyleHexagon') },
+                        { value: 'prism', label: t('chart.barStylePrism') },
+                        { value: 'trapezoid', label: t('chart.barStyleTrapezoid') },
+                        { value: 'pyramid', label: t('chart.barStylePyramid') },
+                        { value: 'battery', label: t('chart.barStyleBattery') },
+                        { value: 'stereoGroup', label: t('chart.barStyleStereoGroup') }
+                    ]);
+                    const defaultChartSelectValue = a.attrType === 'chartStyleSelect'
+                        ? 'original'
+                        : (a.attrType === 'chartAnimationSelect' ? 'off' : 'original');
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <select
+                            defaultValue={val.attrs[a.attrCode] || defaultChartSelectValue}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere}>
+                            {chartStyleOptions.map((option) => (
+                                <option value={option.value} key={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>)
+                }
+                if (a.attrType === 'waterBallShapeSelect') {
+                    const waterBallShapeOptions = [
+                        { value: 'circle', label: t('chart.waterBallCircle') },
+                        { value: 'rect', label: t('chart.waterBallRect') },
+                        { value: 'roundedRect', label: t('chart.waterBallRoundedRect') },
+                        { value: 'triangle', label: t('chart.waterBallTriangle') },
+                        { value: 'diamond', label: t('chart.waterBallDiamond') },
+                        { value: 'drop', label: t('chart.waterBallDrop') },
+                        { value: 'arrow', label: t('chart.waterBallArrow') }
+                    ];
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <select
+                            defaultValue={val.attrs[a.attrCode] || 'circle'}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere}>
+                            {waterBallShapeOptions.map((option) => (
+                                <option value={option.value} key={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>)
+                }
+                if (a.attrType === 'sortOrderSelect') {
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <select
+                            defaultValue={val.attrs[a.attrCode]}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere}>
+                            <option value='desc'>{t('auto.k2004')}</option>
+                            <option value='asc'>{t('auto.k2005')}</option>
+                        </select>
+                    </div>)
+                }
+                // \u6392\u5e8f\u67f1\u72b6\u56fe：\u663e\u793a\u524d N \u4e2a\u67f1\u4f53（0 = \u663e\u793a\u5168\u90e8）
+                if (a.attrType === 'sortTopN') {
+                    attrList.push(<div className="attrBox" key={unikey}>
+                        <label>{a.attrName}</label>
+                        <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder={t('chart.topNPlaceholder')}
+                            defaultValue={val.attrs[a.attrCode] == null ? 0 : val.attrs[a.attrCode]}
+                            onChange={handleValChange}
+                            data-attrcode={a.attrCode}
+                            data-attrtype={a.attrType}
+                            data-attrwhere={a.attrWhere} />
+                    </div>)
+                }
                 if (a.attrType === 'orientSelect') {// Comment translated to English.
                     attrList.push(<div className="attrBox" key={unikey}>
                         <label>{a.attrName}</label>
@@ -1260,8 +1908,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0002'} id="chooseClick" style={showClickBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0477')}</div>
+        <div className="layui-layer" key={shapeId + '0002'} id="chooseClick" ref={(node) => { dialogRefs.current.chooseClick = node; }} style={getDialogStyle('chooseClick', showClickBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseClick', e)}>{t('auto.k0477')}</div>
             <div className="layui-layer-content">
                 <div className="attrBox">
                     <label>{t('auto.k0478')}</label>
@@ -1370,11 +2018,11 @@ const ElementAttr = memo((props) => {
                     if (clickType === 'order') {
                         command.forEach(element => {
                             desc.push({
-                                devkey: splitToken(element, '/', 0),
-                                command: splitToken(element, '/', 1),
-                                devname: splitToken(element, '/', 2),
-                                desc: splitToken(element, '/', 3),
-                                src: splitToken(element, '/', 4)
+                                devkey: element.split('/')[0],
+                                command: element.split('/')[1],
+                                devname: element.split('/')[2],
+                                desc: element.split('/')[3],
+                                src: element.split('/')[4]
                             })
                         });
                     }
@@ -1469,16 +2117,47 @@ const ElementAttr = memo((props) => {
     attrList.push(<div className="attrBox" key={shapeId + '005'}>
         <label>{t('auto.k0489')}</label>
         <input defaultValue={rotation ? parseFloat(rotation).toFixed(2) : 0} onChange={(e) => {
+            // Rotate around the element's own visual center.
+            // Konva rotates around (x, y) i.e. the group's top-left, so changing rotation alone
+            // makes the element swing around its top-left corner. We compensate by also adjusting
+            // x/y so the visual center stays put before/after the rotation change.
+            const newRot = parseFloat(e.target.value) || 0;
+            const oldRot = parseFloat(dragShape.rotation) || 0;
+            const grpAttrs = (dragShape.moduleJson && dragShape.moduleJson.children && dragShape.moduleJson.children[0] && dragShape.moduleJson.children[0].attrs) || {};
+            // Pick the unrotated bbox dims (mirrors Home.js getShapeRenderMetrics fallback path).
+            let w = dragShape.width || (dragShape.moduleJson && dragShape.moduleJson.width) || grpAttrs.width || 0;
+            let h = dragShape.height || (dragShape.moduleJson && dragShape.moduleJson.height) || grpAttrs.height || 0;
+            const groupName = grpAttrs.name;
+            if (groupName === 'rectBackground'
+                && dragShape.moduleJson && dragShape.moduleJson.children
+                && dragShape.moduleJson.children[3] && dragShape.moduleJson.children[3].attrs) {
+                const rectAttrs = dragShape.moduleJson.children[3].attrs;
+                w = rectAttrs.width || w;
+                h = rectAttrs.height || h;
+            }
+            const sx = dragShape.scaleX || 1;
+            const sy = dragShape.scaleY || 1;
+            const aw = (Number(w) || 0) * sx;
+            const ah = (Number(h) || 0) * sy;
+            const rad0 = oldRot * Math.PI / 180;
+            const rad1 = newRot * Math.PI / 180;
+            const cos0 = Math.cos(rad0), sin0 = Math.sin(rad0);
+            const cos1 = Math.cos(rad1), sin1 = Math.sin(rad1);
+            // dx/dy keeps the visual center invariant: (cx, cy) = old (x,y) + R0(w/2, h/2) = new (x,y) + R1(w/2, h/2)
+            const dx = (aw / 2) * (cos0 - cos1) - (ah / 2) * (sin0 - sin1);
+            const dy = (aw / 2) * (sin0 - sin1) + (ah / 2) * (cos0 - cos1);
             props.onChange({
                 ...dragShape,
-                rotation: parseFloat(e.target.value)
+                rotation: newRot,
+                x: (Number(dragShape.x) || 0) + dx,
+                y: (Number(dragShape.y) || 0) + dy,
             })
         }} />
     </div>)
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0005'} id="chooseDev" style={showDevBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0490')}</div>
+        <div className="layui-layer" key={shapeId + '0005'} id="chooseDev" ref={(node) => { dialogRefs.current.chooseDev = node; }} style={getDialogStyle('chooseDev', showDevBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseDev', e)}>{t('auto.k0490')}</div>
             <div className="layui-layer-content">
                 <div>
                     <label>{t('auto.k0491')}</label>
@@ -1499,12 +2178,11 @@ const ElementAttr = memo((props) => {
             </span>
             <div className="layui-layer-btn">
                 <Button type="primary" onClick={async () => {
-                    const paramDevIdKey = splitToken(paramDevId, '&', 0);
-                    const paramDevIdTypeSrc = splitToken(paramDevId, '&', 1);
                     let desc = {
-                        key: paramDevIdKey,
-                        type: splitToken(paramDevIdTypeSrc, '/', 0),
-                        src: splitToken(paramDevIdTypeSrc, '/', 1),
+                        key: paramDevId.split('&')[0],
+                        type: paramDevId.split('&')[1].split('/')[0],
+                        src: paramDevId.split('&')[1].split('/')[1],
+                        sourceHost: dataSourceHost,
                     }
                     setparamData(JSON.stringify(desc));
                     shapeAttr.attrs.dataKey = [desc];
@@ -1518,8 +2196,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0003'} id="chooseParam" style={showParamBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0492')}</div>
+        <div className="layui-layer" key={shapeId + '0003'} id="chooseParam" ref={(node) => { dialogRefs.current.chooseParam = node; }} style={getDialogStyle('chooseParam', showParamBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseParam', e)}>{t('auto.k0492')}</div>
             <ul className="layui-nav">
                 {ShowParaIndex === 0 &&
                     <>
@@ -1586,20 +2264,18 @@ const ElementAttr = memo((props) => {
                 <Button type="primary" onClick={async () => {
                     let desc;
                     if (ShowParaIndex === 0) {
-                        const paramDevIdKey = splitToken(paramDevId, '&', 0);
-                        const paramTypeCmd = splitToken(param, '~', 1);
-                        const paramType = splitToken(paramTypeCmd, '%', 0);
-                        const paramCmdSrc = splitToken(paramTypeCmd, '%', 1);
                         desc = {
-                            key: paramDevIdKey,
-                            name: splitToken(param, '~', 0),
-                            type: paramType,
-                            cmdtype: splitToken(paramCmdSrc, '|', 0),
-                            src: splitToken(param, '|', 1)
+                            key: paramDevId.split('&')[0],
+                            name: param.split('~')[0],
+                            type: param.split('~')[1].split('%')[0],
+                            cmdtype: param.split('~')[1].split('%')[1].split('|')[0],
+                            src: param.split('|')[1],
+                            sourceHost: dataSourceHost
                         }
                     } else {
                         desc = {
-                            parkey: cusparam
+                            parkey: cusparam,
+                            sourceHost: dataSourceHost
                         }
                     }
                     setparamData(JSON.stringify(desc));
@@ -1614,8 +2290,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0006'} id="chooseParams" style={showParamsBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0498')}</div>
+        <div className="layui-layer" key={shapeId + '0006'} id="chooseParams" ref={(node) => { dialogRefs.current.chooseParams = node; }} style={getDialogStyle('chooseParams', showParamsBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseParams', e)}>{t('auto.k0498')}</div>
             <ul className="layui-nav">
                 {ShowParasIndex === 0 &&
                     <>
@@ -1673,25 +2349,58 @@ const ElementAttr = memo((props) => {
                     if (ShowParasIndex === 0) {
                         params.forEach(element => {
                             console.log(element)
-                            const elementPart1 = splitToken(element, '&', 1);
-                            const elementSlash1 = splitToken(elementPart1, '/', 1);
-                            const elementNameType = splitToken(elementSlash1, '~', 1);
-                            const elementTypeCmd = splitToken(elementNameType, '%', 1);
-                            desc.push({
-                                devkey: splitToken(element, '&', 0),
-                                dev: splitToken(elementPart1, '/', 0),
-                                name: splitToken(elementSlash1, '~', 0),
-                                type: splitToken(elementNameType, '%', 0),
-                                cmdtype: splitToken(elementTypeCmd, '|', 0),
-                                src: splitToken(element, '|', 1)
-                            })
+                            // \u5b89\u5168\u89e3\u6790：\u9632\u6b62\u8bbe\u5907\u540d/\u70b9\u4f4d\u540d\u4e2d\u5305\u542b\u5206\u9694\u7b26\u5bfc\u81f4\u5d29\u6e83
+                            try {
+                                if (!element || typeof element !== 'string') return;
+
+                                // \u6309\u6700\u540e\u4e00\u4e2a | \u5206\u5272 src
+                                const lastPipeIndex = element.lastIndexOf('|');
+                                if (lastPipeIndex === -1) return;
+                                const src = element.substring(lastPipeIndex + 1);
+                                const beforeSrc = element.substring(0, lastPipeIndex);
+
+                                // \u6309\u7b2c\u4e00\u4e2a & \u5206\u5272 devkey
+                                const firstAmpIndex = beforeSrc.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const devkey = beforeSrc.substring(0, firstAmpIndex);
+                                const afterDevkey = beforeSrc.substring(firstAmpIndex + 1);
+
+                                // \u6309\u6700\u540e\u4e00\u4e2a ~ \u5206\u5272 type \u548c cmdtype（\u56e0\u4e3a name \u53ef\u80fd\u5305\u542b /）
+                                const lastTildeIndex = afterDevkey.lastIndexOf('~');
+                                if (lastTildeIndex === -1) return;
+                                const beforeType = afterDevkey.substring(0, lastTildeIndex);
+                                const afterType = afterDevkey.substring(lastTildeIndex + 1);
+
+                                // \u6309\u7b2c\u4e00\u4e2a / \u5206\u5272 dev \u548c name（\u5047\u8bbe dev \u4e0d\u542b /，name \u53ef\u80fd\u542b /）
+                                const firstSlashIndex = beforeType.indexOf('/');
+                                if (firstSlashIndex === -1) return;
+                                const dev = beforeType.substring(0, firstSlashIndex);
+                                const name = beforeType.substring(firstSlashIndex + 1);
+
+                                // \u6309\u7b2c\u4e00\u4e2a % \u5206\u5272 type \u548c cmdtype
+                                const firstPercentIndex = afterType.indexOf('%');
+                                if (firstPercentIndex === -1) return;
+                                const type = afterType.substring(0, firstPercentIndex);
+                                const cmdtype = afterType.substring(firstPercentIndex + 1);
+
+                                desc.push({ devkey, dev, name, type, cmdtype, src, sourceHost: dataSourceHost });
+                            } catch (err) {
+                                console.error('\u89e3\u6790\u53c2\u6570\u5931\u8d25:', element, err);
+                            }
                         });
                     } else {
                         cusparams.forEach(element => {
-                            desc.push({
-                                paramskey: splitToken(element, '&', 0),
-                                name: splitToken(element, '&', 1)
-                            })
+                            // \u5b89\u5168\u89e3\u6790：\u6309\u7b2c\u4e00\u4e2a & \u5206\u5272，\u5141\u8bb8 name \u5305\u542b &
+                            try {
+                                if (!element || typeof element !== 'string') return;
+                                const firstAmpIndex = element.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const paramskey = element.substring(0, firstAmpIndex);
+                                const name = element.substring(firstAmpIndex + 1);
+                                desc.push({ paramskey, name, sourceHost: dataSourceHost });
+                            } catch (err) {
+                                console.error('\u89e3\u6790\u81ea\u5b9a\u4e49\u53c2\u6570\u5931\u8d25:', element, err);
+                            }
                         });
                     }
 
@@ -1707,8 +2416,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0008'} id="choosePage" style={showPagesBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0502')}</div>
+        <div className="layui-layer" key={shapeId + '0008'} id="choosePage" ref={(node) => { dialogRefs.current.choosePage = node; }} style={getDialogStyle('choosePage', showPagesBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('choosePage', e)}>{t('auto.k0502')}</div>
             <div className="layui-layer-content">
                 <div>
                     <label>{t('auto.k0503')}</label>
@@ -1732,10 +2441,17 @@ const ElementAttr = memo((props) => {
                 <Button type="primary" onClick={async () => {
                     let desc = [];
                     pages.forEach(element => {
-                        desc.push({
-                            pagekey: splitToken(element, '-', 0),
-                            name: splitToken(element, '-', 1)
-                        })
+                        // \u5b89\u5168\u89e3\u6790：\u6309\u7b2c\u4e00\u4e2a - \u5206\u5272，\u5141\u8bb8 name \u5305\u542b -
+                        try {
+                            if (!element || typeof element !== 'string') return;
+                            const firstDashIndex = element.indexOf('-');
+                            if (firstDashIndex === -1) return;
+                            const pagekey = element.substring(0, firstDashIndex);
+                            const name = element.substring(firstDashIndex + 1);
+                            desc.push({ pagekey, name });
+                        } catch (err) {
+                            console.error('\u89e3\u6790\u9875\u9762\u5931\u8d25:', element, err);
+                        }
                     });
                     setparamData(JSON.stringify(desc));
                     shapeAttr.attrs.dataKey = desc;
@@ -1749,8 +2465,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0009'} id="chooseEvents" style={showEventsBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0504')}</div>
+        <div className="layui-layer" key={shapeId + '0009'} id="chooseEvents" ref={(node) => { dialogRefs.current.chooseEvents = node; }} style={getDialogStyle('chooseEvents', showEventsBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseEvents', e)}>{t('auto.k0504')}</div>
             <ul className="layui-nav">
                 {ShowEventIndex === 0 &&
                     <>
@@ -1807,25 +2523,63 @@ const ElementAttr = memo((props) => {
                     let desc = [];
                     if (ShowEventIndex === 0) {
                         devevents.forEach(element => {
-                            const elementPart1 = splitToken(element, '&', 1);
-                            desc.push({
-                                deveventskey: splitToken(element, '&', 0),
-                                type: splitToken(elementPart1, '/', 0),
-                                src: splitToken(elementPart1, '/', 1),
-                            })
+                            // \u5b89\u5168\u89e3\u6790：deveventskey & type / src
+                            try {
+                                if (!element || typeof element !== 'string') return;
+                                const firstAmpIndex = element.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const deveventskey = element.substring(0, firstAmpIndex);
+                                const afterAmp = element.substring(firstAmpIndex + 1);
+
+                                const firstSlashIndex = afterAmp.indexOf('/');
+                                if (firstSlashIndex === -1) return;
+                                const type = afterAmp.substring(0, firstSlashIndex);
+                                const src = afterAmp.substring(firstSlashIndex + 1);
+
+                                desc.push({ deveventskey, type, src });
+                            } catch (err) {
+                                console.error('\u89e3\u6790\u8bbe\u5907\u4e8b\u4ef6\u5931\u8d25:', element, err);
+                            }
                         })
                     } else {
                         events.forEach(element => {
-                            const elementPart1 = splitToken(element, '&', 1);
-                            const elementSlash1 = splitToken(elementPart1, '/', 1);
-                            const elementNameType = splitToken(elementSlash1, '~', 1);
-                            desc.push({
-                                eventsdevname: splitToken(element, '&', 0),
-                                eventskey: splitToken(elementPart1, '/', 0),
-                                name: splitToken(elementSlash1, '~', 0),
-                                eventsdevkey: splitToken(elementNameType, '%', 1),
-                                src: splitToken(element, '%', 1),
-                            })
+                            // \u5b89\u5168\u89e3\u6790：eventsdevname & eventskey / name ~ eventsdevkey % src
+                            // \u683c\u5f0f：eventsdevname & eventskey / name ~ ? % eventsdevkey % src
+                            try {
+                                if (!element || typeof element !== 'string') return;
+
+                                // \u6309\u6700\u540e\u4e00\u4e2a % \u5206\u5272 src
+                                const lastPercentIndex = element.lastIndexOf('%');
+                                if (lastPercentIndex === -1) return;
+                                const src = element.substring(lastPercentIndex + 1);
+                                const beforeSrc = element.substring(0, lastPercentIndex);
+
+                                // \u6309\u5012\u6570\u7b2c\u4e8c\u4e2a % \u5206\u5272 eventsdevkey
+                                const secondLastPercentIndex = beforeSrc.lastIndexOf('%');
+                                if (secondLastPercentIndex === -1) return;
+                                const eventsdevkey = beforeSrc.substring(secondLastPercentIndex + 1);
+                                const beforeEventsdevkey = beforeSrc.substring(0, secondLastPercentIndex);
+
+                                // \u6309\u7b2c\u4e00\u4e2a & \u5206\u5272 eventsdevname
+                                const firstAmpIndex = beforeEventsdevkey.indexOf('&');
+                                if (firstAmpIndex === -1) return;
+                                const eventsdevname = beforeEventsdevkey.substring(0, firstAmpIndex);
+                                const afterAmp = beforeEventsdevkey.substring(firstAmpIndex + 1);
+
+                                // \u6309\u7b2c\u4e00\u4e2a / \u5206\u5272 eventskey \u548c name（\u5141\u8bb8 name \u5305\u542b /）
+                                const firstSlashIndex = afterAmp.indexOf('/');
+                                if (firstSlashIndex === -1) return;
+                                const eventskey = afterAmp.substring(0, firstSlashIndex);
+                                const nameWithTilde = afterAmp.substring(firstSlashIndex + 1);
+
+                                // \u6309\u7b2c\u4e00\u4e2a ~ \u5206\u5272 name（\u5141\u8bb8 name \u5305\u542b ~）
+                                const firstTildeIndex = nameWithTilde.indexOf('~');
+                                const name = firstTildeIndex === -1 ? nameWithTilde : nameWithTilde.substring(0, firstTildeIndex);
+
+                                desc.push({ eventsdevname, eventskey, name, eventsdevkey, src });
+                            } catch (err) {
+                                console.error('\u89e3\u6790\u4e8b\u4ef6\u5931\u8d25:', element, err);
+                            }
                         });
                     }
                     // console.log(desc)
@@ -1841,8 +2595,8 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0004'} id="chooseImg" style={showImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0508')}</div>
+        <div className="layui-layer" key={shapeId + '0004'} id="chooseImg" ref={(node) => { dialogRefs.current.chooseImg = node; }} style={getDialogStyle('chooseImg', showImgBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseImg', e)}>{t('auto.k0508')}</div>
             <ul className="layui-nav">
                 {ShowImagesIndex === 0 &&
                     <>
@@ -1858,21 +2612,48 @@ const ElementAttr = memo((props) => {
                 }
 
             </ul>
-            {ShowImagesIndex === 0 && <div className="layui-layer-content">
-                {
-                    MyImages.map((imgs, n) => {
-                        let unikey = shapeId + '0004' + n;
-                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => setimgChange(imgs.img, e)} alt={imgs.img} />)
-                    })
-                }
+            {ShowImagesIndex === 0 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => { setHoverPreviewImg(null); setHoverPreviewKey(''); }}>
+                <div className="selImgBox">
+                    {
+                        MyImages.map((imgs, n) => {
+                            let unikey = shapeId + '0004' + n;
+                            return (<img
+                                src={imgs.img}
+                                key={unikey}
+                                data-attrcode="image"
+                                data-attrwhere="myImage"
+                                onMouseEnter={() => { setHoverPreviewImg(imgs.img); setHoverPreviewKey(unikey); }}
+                                onClick={(e) => setimgChange(imgs.img, e)}
+                                alt={imgs.img}
+                                style={hoverPreviewKey === unikey ? { border: '2px solid red' } : undefined}
+                            />)
+                        })
+                    }
+                </div>
+                <div className="selImgPreview">
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>{t('chart.imagePreviewHint')}</span>}
+                </div>
             </div>}
-            {ShowImagesIndex === 1 && <div className="layui-layer-content">
-                {
-                    DefImages.map((imgs, n) => {
-                        let unikey = shapeId + '0004' + n;
-                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => setimgChange(imgs.img, e)} alt={imgs.img} />)
-                    })
-                }
+            {ShowImagesIndex === 1 && <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
+                <div className="selImgBox">
+                    {
+                        DefImages.map((imgs, n) => {
+                            let unikey = shapeId + '0004' + n;
+                            return (<img
+                                src={imgs.img}
+                                key={unikey}
+                                data-attrcode="image"
+                                data-attrwhere="myImage"
+                                onMouseEnter={() => setHoverPreviewImg(imgs.img)}
+                                onClick={(e) => setimgChange(imgs.img, e)}
+                                alt={imgs.img}
+                            />)
+                        })
+                    }
+                </div>
+                <div className="selImgPreview">
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>{t('chart.imagePreviewHint')}</span>}
+                </div>
             </div>}
             <span className="layui-layer-setwin" onClick={() => { setshowImgBox(0); setimgUrlId(0); }}>
                 <Close />
@@ -1889,15 +2670,28 @@ const ElementAttr = memo((props) => {
     )
     // Comment translated to English.
     attrList.push(
-        <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" style={showGifImgBox === 1 ? { 'display': 'block' } : { 'display': 'none' }}>
-            <div className="layui-layer-title">{t('auto.k0511')}</div>
-            <div className="layui-layer-content">
-                {
-                    MyImages.map((imgs, n) => {
-                        let unikey = shapeId + '0007' + n;
-                        return (<img src={imgs.img} key={unikey} data-attrcode="image" data-attrwhere="myImage" onClick={(e) => dispatch({ type: "patch", formData: { val: imgs.img, name: "statusSelectColor", id: imgUrlId } })} alt={imgs.img} />)
-                    })
-                }
+        <div className="layui-layer" key={shapeId + '0007'} id="chooseGifImg" ref={(node) => { dialogRefs.current.chooseGifImg = node; }} style={getDialogStyle('chooseGifImg', showGifImgBox === 1)}>
+            <div className="layui-layer-title" onMouseDown={(e) => handleDialogMouseDown('chooseGifImg', e)}>{t('auto.k0511')}</div>
+            <div className="layui-layer-content selImgBoxWrap" onMouseLeave={() => setHoverPreviewImg(null)}>
+                <div className="selImgBox">
+                    {
+                        MyImages.map((imgs, n) => {
+                            let unikey = shapeId + '0007' + n;
+                            return (<img
+                                src={imgs.img}
+                                key={unikey}
+                                data-attrcode="image"
+                                data-attrwhere="myImage"
+                                onMouseEnter={() => setHoverPreviewImg(imgs.img)}
+                                onClick={(e) => dispatch({ type: "patch", formData: { val: imgs.img, name: "statusSelectColor", id: imgUrlId } })}
+                                alt={imgs.img}
+                            />)
+                        })
+                    }
+                </div>
+                <div className="selImgPreview">
+                    {hoverPreviewImg ? <img src={hoverPreviewImg} alt="preview" /> : <span>{t('chart.imagePreview')}</span>}
+                </div>
             </div>
             <span className="layui-layer-setwin" onClick={() => { setshowGifImgBox(0); setimgUrlId(0); }}>
                 <Close />

@@ -5,17 +5,56 @@ import ScreenTemplate from './Data/ScreenTemplate';
 import httpsend from '../Assets/httpsend';
 import { localizeDeep, t } from '../i18n';
 import { CloseCircleOutlined, FileExclamationOutlined, FileOutlined, FileProtectOutlined } from '@ant-design/icons';
+import { StarFilled, StarOutlined } from '@ant-design/icons';
 import { Button, Cascader, message, Tree, Upload } from 'antd';
 import { Close } from '@mui/icons-material';
+import {
+    createPaletteItem,
+    filterPaletteItems,
+    readPaletteFavorites,
+    togglePaletteFavorite,
+    writePaletteFavorites,
+} from './paletteLibrary';
+
+export const isWaterBallComponent = (item) => (
+    item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
+    && item.moduleJson.children[0].attrs
+    && item.moduleJson.children[0].attrs.cat === 'waterBall'
+);
+
+export const isChartPaletteComponent = (item) => (
+    item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
+    && item.moduleJson.children[0].className === 'Echart'
+    && !isWaterBallComponent(item)
+);
+
+export const isBasicPaletteComponent = (item) => (
+    item && item.moduleJson && item.moduleJson.children && item.moduleJson.children[0]
+    && (item.moduleJson.children[0].className !== 'Echart' || isWaterBallComponent(item))
+);
+
+export const getImageAssetName = (imageUrl) => {
+    const pathValue = String(imageUrl || '').split(/[?#]/)[0].replace(/\\/g, '/');
+    const fileName = pathValue.split('/').pop() || '';
+    try {
+        return decodeURIComponent(fileName).replace(/\.[a-z0-9]{1,10}$/i, '').trim();
+    } catch (error) {
+        return fileName.replace(/\.[a-z0-9]{1,10}$/i, '').trim();
+    }
+};
 
 function ItemBox(props) {
     const [selectedNav, setSelectedNav] = useState(0);
     const [selectedData, setSelectedData] = useState([]);
+    const [paletteQuery, setPaletteQuery] = useState('');
+    const [paletteFavorites, setPaletteFavorites] = useState(() => readPaletteFavorites());
     const [pagedata, setpagedata] = useState([]);
     const [savePagePidSel, setsavePagePidSel] = useState();
 
     const [showDelbtn, setshowDelbtn] = useState(0);
     const [showTplDelbtn, setshowTplDelbtn] = useState(0);
+    const [hoverPreviewImg, setHoverPreviewImg] = useState('');
+    const [hoverPreviewPos, setHoverPreviewPos] = useState({ x: 0, y: 0 });
 
     const [editPageId, seteditPageId] = useState();
     const [editPageName, seteditPageName] = useState();
@@ -30,6 +69,38 @@ function ItemBox(props) {
     const [isdelModalOpen, setIsdelModalOpen] = useState(false);
     const [showeditPageBox, setshoweditPageBox] = useState(false);
 
+    const visiblePaletteData = React.useMemo(() => filterPaletteItems(selectedData, paletteQuery), [selectedData, paletteQuery]);
+    const exportablePages = pagedata
+        .filter((page) => page && page.PageTxt)
+        .map((page) => ({
+            pageName: page.PageName,
+            pageTxt: page.PageTxt,
+            pageIndex: page.PageIndex,
+        }));
+
+    useEffect(() => {
+        writePaletteFavorites(paletteFavorites);
+    }, [paletteFavorites]);
+
+    useEffect(() => {
+        if (selectedNav === 8) setSelectedData(paletteFavorites);
+    }, [paletteFavorites, selectedNav]);
+
+    const setPaletteData = (items, source) => {
+        setSelectedData((Array.isArray(items) ? items : []).map((item) => createPaletteItem(item, source)));
+    };
+
+    const isPaletteFavorite = (item) => paletteFavorites.some((favorite) => favorite && favorite.favoriteId === item.favoriteId);
+
+    const toggleFavorite = (item) => {
+        setPaletteFavorites((current) => togglePaletteFavorite(current, item));
+    };
+
+    const removeFavorite = (favoriteId) => {
+        if (!favoriteId) return;
+        setPaletteFavorites((current) => current.filter((favorite) => favorite.favoriteId !== favoriteId));
+    };
+
     const normalizePageTxt = (val) => String(val || '')
         .replace(/\\/g, '/')
         .split('/')
@@ -37,7 +108,7 @@ function ItemBox(props) {
         .replace(/\.txt$/i, '')
         .trim();
 
-    const duplicateMsgHints = ['已存在', 'already exists', 'duplicate', '重复'];
+    const duplicateMsgHints = ['\u5df2\u5b58\u5728', 'already exists', 'duplicate', '\u91cd\u590d'];
     const isDuplicateCreateError = (res) => {
         if (!res || res.code === 100) return false;
         const msg = String((res.msg || '')).toLowerCase();
@@ -135,25 +206,36 @@ function ItemBox(props) {
 
     const changeSelectedNav = (id) => {
         setSelectedNav(id);
+        setPaletteQuery('');
+        const localizedBasicComponents = localizeDeep(BasicComponents);
         switch (id) {
             case 1:
-                setSelectedData(localizeDeep(BasicComponents));
+                setPaletteData(localizedBasicComponents.filter(isBasicPaletteComponent), 'basic');
                 break;
             case 2:
-                setSelectedData(localizeDeep(ScreenTemplate));
+                setPaletteData(localizedBasicComponents.filter(isChartPaletteComponent), 'chart');
                 break;
             case 3:
-                getImgData('tpl');
+                setPaletteData(localizeDeep(ScreenTemplate), 'template');
                 break;
             case 4:
-                getImgData('system');
+                getImgData('tpl');
                 break;
             case 5:
-                getImgData('upload');
+                getImgData('system');
                 break;
-            case 0:
-                getImgData('page');
-                break;
+                case 6:
+                    getImgData('upload');
+                    break;
+                case 7:
+                    getImgData('master-control');
+                    break;
+                case 0:
+                    getImgData('page');
+                    break;
+                case 8:
+                    setSelectedData(paletteFavorites);
+                    break;
             default:
                 break;
         }
@@ -251,17 +333,17 @@ function ItemBox(props) {
 
         let res = await httpsend.getDataLocal('imgData', { action: type });
             if (res) {
-                if (type === 'tpl') {
+                if (type === 'tpl' || type === 'master-control') {
                     imgData = Array.isArray(res.data) ? localizeDeep(res.data) : [];
                 } else {
                 if (!Array.isArray(res.data)) {
-                    setSelectedData(imgData);
+                    setPaletteData(imgData, type);
                     return;
-                }
-                res.data.forEach((element) => {
-                    let imgOne = {
-                        moduleName: t('itemBox.image'),
-                        iconBase64: element.imgUrl,
+                    }
+                    res.data.forEach((element) => {
+                        let imgOne = {
+                            moduleName: getImageAssetName(element.imgUrl) || t('itemBox.image'),
+                            iconBase64: element.imgUrl,
                         moduleJson: {
                             attrs: {
                                 moduleAttr: [
@@ -304,7 +386,7 @@ function ItemBox(props) {
             }
         }
 
-        setSelectedData(imgData);
+        setPaletteData(imgData, type);
     };
 
     const toBase64DataUrl = (file) => new Promise((resolve, reject) => {
@@ -358,7 +440,7 @@ function ItemBox(props) {
         },
     };
 
-    const delThisImg = async (txt, type) => {
+    const delThisImg = async (txt, type, favoriteId) => {
         let delinfo = {};
         if (type === 'img') {
             delinfo = { action: 'del', img: txt };
@@ -380,12 +462,17 @@ function ItemBox(props) {
             }
             delinfo = { action: 'deltpl', name: txt };
         }
+        if (type === 'master-control') {
+            delinfo = { action: 'delmastercontrol', name: txt };
+        }
 
         let res = await httpsend.getDataLocal('imgData', delinfo);
-        if (res) {
+        if (res && (res.code === undefined || res.code === 100)) {
             message.success(t('itemBox.deleteSuccess'));
+            removeFavorite(favoriteId);
             if (type === 'img') getImgData('upload');
             if (type === 'tpl') getImgData('tpl');
+            if (type === 'master-control') getImgData('master-control');
         }
         return true;
     };
@@ -565,24 +652,56 @@ function ItemBox(props) {
                 return;
             }
 
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = `../${fileUrl.replace(/^\/+/, '')}`;
             const lowerUrl = fileUrl.toLowerCase();
             const fileExt = lowerUrl.endsWith('.zip') ? '.zip' : (lowerUrl.endsWith('.txt') ? '.txt' : '');
             if (fileExt !== '.zip') {
                 message.warning(t('itemBox.exportNotZipWarning'));
             }
-            a.download = `${editPageName}[${editPageIndex}]${fileExt}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            downloadExportFile(fileUrl, `${editPageName}[${editPageIndex}]${fileExt}`);
+        } else if (conres) {
+            message.error(conres.msg);
+        }
+    };
+
+    const downloadExportFile = (fileUrl, fileName) => {
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = `../${fileUrl.replace(/^\/+/, '')}`;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    };
+
+    const exportAllPages = async () => {
+        if (exportablePages.length === 0) {
+            message.warning(t('itemBox.noPagesToExport'));
+            return;
+        }
+
+        const conres = await httpsend.getDataLocal('exportAll', { pages: exportablePages });
+        if (conres && conres.code === 100) {
+            const exportData = conres.data || {};
+            const fileUrl = exportData.fileUrl;
+            if (!fileUrl) {
+                message.error(t('http.requestFailed'));
+                return;
+            }
+
+            downloadExportFile(fileUrl, 'pages.zip');
+            const skippedCount = Array.isArray(exportData.skippedPages) ? exportData.skippedPages.length : 0;
+            if (skippedCount > 0) {
+                message.warning(t('itemBox.exportAllPartial') + skippedCount);
+            } else {
+                message.success(t('itemBox.exportAllSuccess'));
+            }
         } else if (conres) {
             message.error(conres.msg);
         }
     };
 
     return (
+        <>
         <div className="left">
             <ul>
                 {nav.map((val, i) => (
@@ -594,46 +713,93 @@ function ItemBox(props) {
                 ))}
             </ul>
             <div>
-                {selectedNav === 5 && (
+                {selectedNav !== 0 && (
+                    <div className={`paletteSearchToolbar ${selectedNav === 4 || selectedNav === 6 || selectedNav === 7 ? 'paletteSearchToolbar-withActions' : ''}`}>
+                        <input
+                            type="search"
+                            data-palette-search
+                            value={paletteQuery}
+                            onChange={(event) => setPaletteQuery(event.target.value)}
+                            placeholder={t('itemBox.searchPlaceholder')}
+                            aria-label={t('itemBox.searchPlaceholder')}
+                        />
+                    </div>
+                )}
+                {selectedNav === 6 && (
                     <>
-                        <div className="uploadBtn">
-                            <Upload {...uploadprops}>
-                                <Button type="primary">{t('common.upload')}</Button>
-                            </Upload>
-                            <Button className="delBtn" type="primary" danger onClick={() => setshowDelbtn(1)} style={showDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
-                            <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
+                        <div className="galleryToolbar uploadBtn">
+                            <div className="galleryToolbarLeft">
+                                <Upload {...uploadprops}>
+                                    <Button type="primary">{t('common.upload')}</Button>
+                                </Upload>
+                            </div>
+                            <div className="galleryToolbarRight">
+                                <Button className="delBtn" type="primary" danger onClick={() => setshowDelbtn(1)} style={showDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
+                                <Button className="delBtn" danger onClick={() => setshowDelbtn(0)} style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
+                            </div>
                         </div>
-                        <div style={{ marginTop: '42px' }}>
-                            {selectedData.map((v, index) => (
-                                <div className="itmeOne" key={index}>
-                                    <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img')} />
+                        <div className="paletteAssetList galleryListOnly" style={{ marginTop: '4px' }} onMouseLeave={() => setHoverPreviewImg('')}>
+                            {visiblePaletteData.map((v) => (
+                                <div className="paletteAssetRow itmeOne" key={v.favoriteId}>
+                                    <CloseCircleOutlined className="delOne" style={showDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.iconBase64, 'img', v.favoriteId)} />
+                                    <button
+                                        type="button"
+                                        className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''} ${showDelbtn === 1 ? 'hidden' : ''}`}
+                                        data-palette-favorite={v.favoriteId}
+                                        title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        onClick={() => toggleFavorite(v)}
+                                    >
+                                        {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                                    </button>
                                     <img
                                         src={v.iconBase64}
                                         alt={JSON.stringify(v.moduleJson)}
+                                        onMouseEnter={(e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setHoverPreviewImg(v.iconBase64);
+                                            setHoverPreviewPos({ x: rect.right + 16, y: rect.top });
+                                        }}
                                         onDragStart={(e) => {
                                             const moduleJson = parseDragModuleFromAlt(e.target.alt);
                                             if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
                                         }}
+                                        className={hoverPreviewImg === v.iconBase64 ? 'galleryThumb active' : 'galleryThumb'}
                                     />
+                                    <span className="paletteAssetName" title={v.moduleName}>{v.moduleName || t('itemBox.image')}</span>
                                 </div>
                             ))}
                         </div>
+                        {hoverPreviewImg && <div className="galleryHoverPreview" style={{ left: hoverPreviewPos.x, top: hoverPreviewPos.y }}>
+                            <img src={hoverPreviewImg} alt="preview" className="galleryPreviewImg" />
+                        </div>}
                     </>
                 )}
 
-                {selectedNav === 3 && (
+                {(selectedNav === 4 || selectedNav === 7) && (
                     <>
                         <div className="uploadBtn">
                             <Button className="delBtn" type="primary" danger onClick={() => setshowTplDelbtn(1)} style={showTplDelbtn === 0 ? { display: 'block' } : { display: 'none' }}>{t('common.delete')}</Button>
                             <Button className="delBtn" danger onClick={() => setshowTplDelbtn(0)} style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }}>{t('common.done')}</Button>
                         </div>
-                        <div style={{ marginTop: '42px' }}>
-                            {selectedData.map((v, index) => (
-                                <div className="itmeOne" key={index}>
-                                    <CloseCircleOutlined className="delOne" style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.moduleName, 'tpl')} />
+                        <div style={{ marginTop: '4px' }}>
+                            {visiblePaletteData.map((v) => (
+                                <div className="itmeOne" key={v.favoriteId}>
+                                    <CloseCircleOutlined className="delOne" style={showTplDelbtn === 1 ? { display: 'block' } : { display: 'none' }} onClick={() => delThisImg(v.moduleName, selectedNav === 7 ? 'master-control' : 'tpl', v.favoriteId)} />
+                                    <button
+                                        type="button"
+                                        className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''} ${showTplDelbtn === 1 ? 'hidden' : ''}`}
+                                        data-palette-favorite={v.favoriteId}
+                                        title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                        onClick={() => toggleFavorite(v)}
+                                    >
+                                        {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                                    </button>
                                     <img
                                         src="Images/icon/tpl.png"
                                         alt={JSON.stringify(v.moduleJson)}
+                                        className="galleryThumb"
                                         onDragStart={(e) => {
                                             const moduleJson = parseDragModuleFromAlt(e.target.alt);
                                             if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
@@ -648,17 +814,19 @@ function ItemBox(props) {
 
                 {selectedNav === 0 && (
                     <>
-                        <div className="uploadBtn">
-                            {editPageId && <Button className="delBtn" type="primary" danger onClick={() => setIsdelModalOpen(true)}>{t('common.delete')}</Button>}
+                        <div className="uploadBtn pageActionToolbar">
                             <Upload {...uploadPageprops}>
                                 <Button type="primary">{t('common.import')}</Button>
                             </Upload>
+                            <Button type="primary" disabled={exportablePages.length === 0} onClick={exportAllPages}>{t('itemBox.exportAll')}</Button>
                             {(editPageId && editPageTxt) && <Button type="primary" onClick={exportPage}>{t('common.export')}</Button>}
                             {editPageId && <Button type="primary" onClick={() => setshoweditPageBox(true)}>{t('common.settings')}</Button>}
+                            {editPageId && <Button className="delBtn" type="primary" danger onClick={() => setIsdelModalOpen(true)}>{t('common.delete')}</Button>}
                         </div>
-                        <div style={{ marginTop: '62px' }}>
+                        <div style={{ marginTop: '84px' }}>
                             {selectedData.length > 0 && (
                                 <Tree
+                                    className="pageTree"
                                     showLine
                                     showIcon
                                     onSelect={onTreeSelect}
@@ -666,120 +834,164 @@ function ItemBox(props) {
                                 />
                             )}
                         </div>
-
-                        <div className="layui-layer" style={isdelModalOpen ? { display: 'block' } : { display: 'none' }}>
-                            <div className="layui-layer-title">{t('common.reminder')}</div>
-                            <div className="layui-layer-content">{t('itemBox.deleteConfirmPrefix')}<span style={{ color: '#1E9FFF', fontSize: 18 }}>{editPageName}</span>{t('itemBox.deleteConfirmSuffix')}</div>
-                            <span className="layui-layer-setwin" onClick={() => setIsdelModalOpen(false)}>
-                                <Close />
-                            </span>
-                            <div className="layui-layer-btn">
-                                <Button
-                                    type="primary"
-                                    onClick={async () => {
-                                        let res = await httpsend.getData('DelDmpageKey', {
-                                            id: editPageId
-                                        });
-                                        if (res) {
-                                            if (res.code === 100) {
-                                                let txtres = await httpsend.getDataLocal('imgData', { action: 'delpage', name: editPageTxt });
-                                                if (txtres.code === 100) {
-                                                    message.success(t('itemBox.deleteSuccess'));
-                                                    getImgData('page');
-                                                } else {
-                                                    message.error(t('itemBox.removePageFileFailed'));
-                                                }
-                                            } else {
-                                                message.error(t('itemBox.deleteFailed'));
-                                            }
-                                        }
-                                        setIsdelModalOpen(false);
-                                    }}
-                                >
-                                    {t('common.confirm')}
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="layui-layer" id="editPage" style={showeditPageBox ? { display: 'block' } : { display: 'none' }} key={editPageId}>
-                            <div className="layui-layer-title">{t('itemBox.editPage')}</div>
-                            <div className="layui-layer-content">
-                                <div>
-                                    <label>{t('itemBox.pageName')}</label>
-                                    <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageName(e.target.value)} defaultValue={editPageName} />
-                                </div>
-                                <div>
-                                    <label>{t('itemBox.parentPage')}</label>
-                                    <Cascader options={savePagePidSel} defaultValue={editPagePidName} onChange={(val) => seteditPagePid(val[val.length - 1])} style={{ width: '167px' }} changeOnSelect />
-                                </div>
-                                <div>
-                                    <label>{t('itemBox.pageOrder')}</label>
-                                    <input style={{ width: '167px' }} type="number" onChange={(e) => seteditPageIndex(e.target.value)} defaultValue={editPageIndex} />
-                                </div>
-                                {editPageType === '3' && (
-                                    <div>
-                                        <label>{t('itemBox.jumpUrl')}</label>
-                                        <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageLink(e.target.value)} defaultValue={editPageLink} />
-                                    </div>
-                                )}
-                                <div>
-                                    <label>{t('itemBox.homepageDisplay')}</label>
-                                    <select style={{ width: '167px' }} onChange={(e) => seteditPageTop(e.target.value)}>
-                                        <option value="1" selected={editPageTop === '1'}>{t('common.yes')}</option>
-                                        <option value="-1" selected={editPageTop === '-1'}>{t('common.no')}</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <span className="layui-layer-setwin" onClick={() => setshoweditPageBox(false)}>
-                                <Close />
-                            </span>
-                            <div className="layui-layer-btn">
-                                <Button
-                                    type="primary"
-                                    onClick={async () => {
-                                        let params = {
-                                            id: editPageId,
-                                            PageName: editPageName,
-                                            PageIndex: editPageIndex,
-                                            pid: editPagePid,
-                                            PageTop: editPageTop
-                                        };
-                                        if (editPageType === '3') {
-                                            params.PageTxt = editPageLink;
-                                        }
-                                        let res = await httpsend.getData('ChangeDmpageKey', params);
-                                        if (res && res.code === 100) {
-                                            message.success(t('itemBox.updateSuccess'));
-                                            getImgData('page');
-                                        } else {
-                                            message.error(t('itemBox.updateFailed'));
-                                        }
-                                        setshoweditPageBox(false);
-                                        seteditPageTop('-1');
-                                    }}
-                                >
-                                    {t('common.confirm')}
-                                </Button>
-                            </div>
-                        </div>
                     </>
                 )}
 
-                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 4) && selectedData.map((v, index) => (
-                    <div className="itmeOne" key={index}>
+                {selectedNav === 5 && (
+                    <div className="paletteAssetList defaultGalleryList">
+                        {visiblePaletteData.map((v) => (
+                            <div className="paletteAssetRow itmeOne" key={v.favoriteId}>
+                                <button
+                                    type="button"
+                                    className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''}`}
+                                    data-palette-favorite={v.favoriteId}
+                                    title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                    aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                                    onClick={() => toggleFavorite(v)}
+                                >
+                                    {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                                </button>
+                                <img
+                                    className="galleryThumb"
+                                    src={v.iconBase64}
+                                    alt={JSON.stringify(v.moduleJson)}
+                                    onDragStart={(e) => {
+                                        const moduleJson = parseDragModuleFromAlt(e.target.alt);
+                                        if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
+                                    }}
+                                />
+                                <span className="paletteAssetName" title={v.moduleName}>{v.moduleName || t('itemBox.image')}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {(selectedNav === 1 || selectedNav === 2 || selectedNav === 3 || selectedNav === 8) && visiblePaletteData.map((v) => (
+                    <div className="itmeOne" key={v.favoriteId}>
+                        <button
+                            type="button"
+                            className={`paletteFavoriteButton ${isPaletteFavorite(v) ? 'active' : ''}`}
+                            data-palette-favorite={v.favoriteId}
+                            title={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                            aria-label={t(isPaletteFavorite(v) ? 'itemBox.removeFavorite' : 'itemBox.addFavorite')}
+                            onClick={() => toggleFavorite(v)}
+                        >
+                            {isPaletteFavorite(v) ? <StarFilled /> : <StarOutlined />}
+                        </button>
                         <img
-                            src={v.iconBase64}
+                            className="galleryThumb"
+                            src={v.iconBase64 || (v.paletteSource === 'tpl' ? 'Images/icon/tpl.png' : '')}
                             alt={JSON.stringify(v.moduleJson)}
                             onDragStart={(e) => {
                                 const moduleJson = parseDragModuleFromAlt(e.target.alt);
                                 if (moduleJson) props.onChangeDragUrl(e.target.src, moduleJson);
                             }}
                         />
-                        {selectedNav !== 3 && <div>{v.moduleName}</div>}
+                        {v.moduleName && <div>{v.moduleName}</div>}
                     </div>
                 ))}
+                {selectedNav !== 0 && paletteQuery && visiblePaletteData.length === 0 && <div className="paletteEmptyState">{t('itemBox.noSearchResults')}</div>}
             </div>
         </div>
+
+        {/* \u5220\u9664\u786e\u8ba4\u5f39\u7a97 - \u79fb\u5230 .left \u5916\u9762\u907f\u514d\u88ab\u5bb9\u5668\u88c1\u526a */}
+        <div className="layui-layer" style={isdelModalOpen ? { display: 'block' } : { display: 'none' }}>
+            <div className="layui-layer-title">{t('common.reminder')}</div>
+            <div className="layui-layer-content">{t('itemBox.deleteConfirmPrefix')}<span style={{ color: '#1E9FFF', fontSize: 18 }}>{editPageName}</span>{t('itemBox.deleteConfirmSuffix')}</div>
+            <span className="layui-layer-setwin" onClick={() => setIsdelModalOpen(false)}>
+                <Close />
+            </span>
+            <div className="layui-layer-btn">
+                <Button
+                    type="primary"
+                    onClick={async () => {
+                        let res = await httpsend.getData('DelDmpageKey', {
+                            id: editPageId
+                        });
+                        if (res) {
+                            if (res.code === 100) {
+                                let txtres = await httpsend.getDataLocal('imgData', { action: 'delpage', name: editPageTxt });
+                                if (txtres.code === 100) {
+                                    message.success(t('itemBox.deleteSuccess'));
+                                    getImgData('page');
+                                } else {
+                                    message.error(t('itemBox.removePageFileFailed'));
+                                }
+                            } else {
+                                message.error(t('itemBox.deleteFailed'));
+                            }
+                        }
+                        setIsdelModalOpen(false);
+                    }}
+                >
+                    {t('common.confirm')}
+                </Button>
+            </div>
+        </div>
+
+        {/* \u7f16\u8f91\u9875\u9762\u5f39\u7a97 - \u79fb\u5230 .left \u5916\u9762\u907f\u514d\u88ab\u5bb9\u5668\u88c1\u526a */}
+        <div className="layui-layer" id="editPage" style={showeditPageBox ? { display: 'block' } : { display: 'none' }} key={editPageId}>
+            <div className="layui-layer-title">{t('itemBox.editPage')}</div>
+            <div className="layui-layer-content">
+                <div>
+                    <label>{t('itemBox.pageName')}</label>
+                    <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageName(e.target.value)} defaultValue={editPageName} />
+                </div>
+                <div>
+                    <label>{t('itemBox.parentPage')}</label>
+                    <Cascader options={savePagePidSel} defaultValue={editPagePidName} onChange={(val) => seteditPagePid(val[val.length - 1])} style={{ width: '167px' }} changeOnSelect />
+                </div>
+                <div>
+                    <label>{t('itemBox.pageOrder')}</label>
+                    <input style={{ width: '167px' }} type="number" onChange={(e) => seteditPageIndex(e.target.value)} defaultValue={editPageIndex} />
+                </div>
+                {editPageType === '3' && (
+                    <div>
+                        <label>{t('itemBox.jumpUrl')}</label>
+                        <input style={{ width: '167px' }} type="text" onChange={(e) => seteditPageLink(e.target.value)} defaultValue={editPageLink} />
+                    </div>
+                )}
+                <div>
+                    <label>{t('itemBox.homepageDisplay')}</label>
+                    <select style={{ width: '167px' }} onChange={(e) => seteditPageTop(e.target.value)}>
+                        <option value="1" selected={editPageTop === '1'}>{t('common.yes')}</option>
+                        <option value="-1" selected={editPageTop === '-1'}>{t('common.no')}</option>
+                    </select>
+                </div>
+            </div>
+            <span className="layui-layer-setwin" onClick={() => setshoweditPageBox(false)}>
+                <Close />
+            </span>
+            <div className="layui-layer-btn">
+                <Button
+                    type="primary"
+                    onClick={async () => {
+                        let params = {
+                            id: editPageId,
+                            PageName: editPageName,
+                            PageIndex: editPageIndex,
+                            pid: editPagePid,
+                            PageTop: editPageTop
+                        };
+                        if (editPageType === '3') {
+                            params.PageTxt = editPageLink;
+                        }
+                        let res = await httpsend.getData('ChangeDmpageKey', params);
+                        if (res && res.code === 100) {
+                            message.success(t('itemBox.updateSuccess'));
+                            getImgData('page');
+                        } else {
+                            message.error(t('itemBox.updateFailed'));
+                        }
+                        setshoweditPageBox(false);
+                        seteditPageTop('-1');
+                    }}
+                >
+                    {t('common.confirm')}
+                </Button>
+            </div>
+        </div>
+        </>
     );
 }
 

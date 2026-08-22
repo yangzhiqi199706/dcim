@@ -10,6 +10,7 @@ import PreviewImage from "./PreviewImage";
 import axios from 'axios';
 import { buildMainApiUrl } from '../config/endpoints';
 import PreviewGif from "./PreviewGif.js";
+import { arePreviewElementPropsEqual, getAlarmListRows } from './previewElementMemo';
 
 const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResize, isSwiper, useSlaveId }) => {
     // console.log(shapeProps);
@@ -519,9 +520,9 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                 <div className="rope" style={{ width: img.attrs.width, height: img.attrs.height }}>
                                     {/* Comment translated to English. */}
                                     {leakHaveAlarm === '1' && img.attrs.ropeDirection === '2' && <div className="ropeRed ropeRev" style={{ width: ropeAlarmRange, right: alarmPos }}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
                                     {leakHaveAlarm === '1' && img.attrs.ropeDirection === '1' && <div className="ropeRed" style={{ width: ropeAlarmRange, left: alarmPos }}>
-                                        <img src="../Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
+                                        <img src="Images/icon/water.gif" className="ropeIcon" alt="" /></div>}
                                     {/* Comment translated to English. */}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '1' && <div className="ropeNumTop ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeStart}</div>}
                                     {img.attrs.ropeDataShow === '2' && img.attrs.ropeDirection === '2' && img.attrs.ropeDataShowPos === '2' && <div className="ropeNumBottom ropeNumS ropeRev" style={{ color: img.attrs.ropeDataColor, fontSize: img.attrs.ropeDataSize }}>{img.attrs.ropeStart}</div>}
@@ -691,6 +692,7 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                             <Rect width={img.attrs.width} height={img.attrs.height} />
                         </Fragment>
                     } else if (Ele === 'alarmList') {// Comment translated to English.
+                        const alarmRows = getAlarmListRows(img.attrs.data);
                         return <Fragment key={i}>
                             <Html>
                                 <div className="alarmList" style={{ width: img.attrs.width, height: img.attrs.height, backgroundColor: 'transparent' }}>
@@ -703,13 +705,17 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
                                             </tr>
                                         </thead>
                                         <tbody style={{ fontSize: img.attrs.tbodySize, lineHeight: img.attrs.lineHeight }}>
-                                            {img.attrs.data && img.attrs.data.map((val, n) => {
+                                            {alarmRows.length > 0 ? alarmRows.map((val, n) => {
                                                 return <tr key={i + n + 0} className={val.colorName}>
                                                     <td>{val.AlarmName}</td>
                                                     <td>{val.LevelName}</td>
                                                     <td>{val.AlarmTime}</td>
                                                 </tr>
-                                            })}
+                                            }) : <tr className="alarmList-empty">
+                                                <td colSpan={3} style={{ textAlign: 'center', color: img.attrs.tbodyColor || img.attrs.theadColor }}>
+                                                    {t('chart.noData')}
+                                                </td>
+                                            </tr>}
                                         </tbody>
                                     </table>
                                 </div>
@@ -837,4 +843,4 @@ const PreviewElement = ({ shapeProps, id, wheight, wwidth, wscale, onhandleResiz
     );
 };
 
-export default PreviewElement;
+export default React.memo(PreviewElement, arePreviewElementPropsEqual);

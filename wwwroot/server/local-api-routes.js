@@ -1,14 +1,18 @@
 const fs = require('fs');
 const path = require('path');
+const { createRemoteSyncDevelopmentHandlers } = require('./remote-sync-dev');
 const zlib = require('zlib');
+const { createMasterControlStore } = require('./masterControlStore');
 
 const PUBLIC_DIR = path.resolve(__dirname, '../public');
 const IMAGES_DIR = path.join(PUBLIC_DIR, 'Images');
 const SYSTEM_DIR = path.join(IMAGES_DIR, 'dcim');
 const UPLOAD_DIR = path.join(IMAGES_DIR, 'uploads');
 const TEMPLATE_DIR = path.join(IMAGES_DIR, 'pagetpl');
+const MASTER_CONTROL_DIR = path.join(IMAGES_DIR, 'master-controls');
 const PAGE_DIR = path.join(IMAGES_DIR, 'page');
 const EXPORT_DIR = path.join(IMAGES_DIR, 'exports');
+const masterControlStore = createMasterControlStore(MASTER_CONTROL_DIR);
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp']);
 const MIME_EXTENSION_MAP = {
@@ -270,6 +274,47 @@ function extractImageRefsFromPageText(rawText) {
   });
 
   return Array.from(refs).sort((a, b) => a.localeCompare(b));
+}
+
+function rewriteImportedPageImageRefs(rawText) {
+  function rewriteValue(value) {
+    if (typeof value === 'string') {
+      const normalizedImageRef = normalizeImageRef(value);
+      if (normalizedImageRef) return normalizedImageRef;
+
+      const trimmed = value.trim();
+      if (!trimmed || !/^[\[{\"]/.test(trimmed)) return value;
+
+      try {
+        return JSON.stringify(rewriteValue(JSON.parse(trimmed)));
+      } catch (error) {
+        return value;
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => rewriteValue(item));
+    }
+
+    if (value && typeof value === 'object') {
+      return Object.keys(value).reduce((result, key) => {
+        result[key] = rewriteValue(value[key]);
+        return result;
+      }, {});
+    }
+
+    return value;
+  }
+
+  const source = String(rawText || '');
+  const trimmed = source.trim();
+  if (!trimmed || !/^[\[{\"]/.test(trimmed)) return rewriteValue(source);
+
+  try {
+    return JSON.stringify(rewriteValue(JSON.parse(trimmed)));
+  } catch (error) {
+    return rewriteValue(source);
+  }
 }
 
 function isPathWithin(baseDir, targetPath) {
@@ -644,6 +689,7 @@ function createImgDataHandler() {
       ensureDirectory(UPLOAD_DIR);
       ensureDirectory(PAGE_DIR);
       ensureDirectory(TEMPLATE_DIR);
+      ensureDirectory(MASTER_CONTROL_DIR);
       ensureDirectory(EXPORT_DIR);
 
       if (action === 'system') {
@@ -662,6 +708,10 @@ function createImgDataHandler() {
 
       if (action === 'tpl') {
         return ok(res, listTemplateData());
+      }
+
+      if (action === 'master-control') {
+        return ok(res, masterControlStore.list());
       }
 
       if (action === 'page') {
@@ -686,6 +736,14 @@ function createImgDataHandler() {
         const filePath = resolveExistingFile(TEMPLATE_DIR, payload.name);
         if (!deleteFileIfExists(filePath)) {
           return fail(res, 'template not found');
+        }
+        return ok(res, [], 'deleted');
+      }
+
+      if (action === 'delmastercontrol') {
+        const result = masterControlStore.remove(payload.name);
+        if (!result.ok) {
+          return fail(res, result.message);
         }
         return ok(res, [], 'deleted');
       }
@@ -735,6 +793,74 @@ function createSavePageHandler() {
   };
 }
 
+function createSaveMasterControlHandler() {
+  return (req, res) => {
+    try {
+      const payload = req.body || {};
+      const result = masterControlStore.save(payload.name, payload.definition);
+      if (!result.ok) {
+        return fail(res, result.message);
+      }
+      return ok(res, result.data, 'saved');
+    } catch (error) {
+      return fail(res, `saveMasterControl local api error: ${error.message}`);
+    }
+  };
+}
+
+function createPageExportZip(sourceFile) {
+  const parsedSource = path.parse(sourceFile);
+  const sourceTxtEntryName = sanitizeName(parsedSource.base || `${parsedSource.name}.txt`, 'page.txt');
+  const pageText = fs.readFileSync(sourceFile, 'utf8');
+  const imageRefs = extractImageRefsFromPageText(pageText);
+
+  const imageEntries = [];
+  const imageZipNames = new Set();
+  imageRefs.forEach((imageRef) => {
+    if (!isUserUploadImageRef(imageRef)) return;
+    const normalizedRef = normalizeImageRef(imageRef);
+    const absImagePath = resolveImageAbsolutePath(normalizedRef);
+    if (!absImagePath) return;
+
+    const relativeToImages = normalizedRef.replace(/^images\//i, '');
+    const zipImagePath = `img/${relativeToImages}`;
+    if (imageZipNames.has(zipImagePath)) return;
+    imageZipNames.add(zipImagePath);
+
+    imageEntries.push({
+      name: zipImagePath,
+      data: fs.readFileSync(absImagePath),
+      mtime: fs.statSync(absImagePath).mtime,
+    });
+  });
+
+  return createZipBuffer([
+    { name: sourceTxtEntryName, data: Buffer.from(pageText, 'utf8') },
+    { name: 'img/' },
+    ...imageEntries,
+  ]);
+}
+
+function createUniquePageZipName(rawPageName, pageIndex, fallbackName, usedNames) {
+  const normalizedIndex = pageIndex === undefined || pageIndex === null
+    ? ''
+    : String(pageIndex).trim();
+  const pageNameWithIndex = normalizedIndex
+    ? `${rawPageName || fallbackName}[${normalizedIndex}]`
+    : rawPageName;
+  const baseName = sanitizeName(pageNameWithIndex, fallbackName);
+  let sequence = 1;
+  let candidate = `${baseName}.zip`;
+
+  while (usedNames.has(candidate.toLowerCase())) {
+    sequence += 1;
+    candidate = `${baseName}-${sequence}.zip`;
+  }
+
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+}
+
 function createExportHandler() {
   return (req, res) => {
     try {
@@ -749,43 +875,73 @@ function createExportHandler() {
 
       const parsedSource = path.parse(sourceFile);
       const exportPrefix = sanitizeName(payload.pageName || parsedSource.name, 'page');
-      const sourceTxtEntryName = sanitizeName(parsedSource.base || `${parsedSource.name}.txt`, 'page.txt');
-      const pageText = fs.readFileSync(sourceFile, 'utf8');
-      const imageRefs = extractImageRefsFromPageText(pageText);
-
-      const imageEntries = [];
-      const imageZipNames = new Set();
-      imageRefs.forEach((imageRef) => {
-        if (!isUserUploadImageRef(imageRef)) return;
-        const normalizedRef = normalizeImageRef(imageRef);
-        const absImagePath = resolveImageAbsolutePath(normalizedRef);
-        if (!absImagePath) return;
-
-        const relativeToImages = normalizedRef.replace(/^images\//i, '');
-        const zipImagePath = `img/${relativeToImages}`;
-        if (imageZipNames.has(zipImagePath)) return;
-        imageZipNames.add(zipImagePath);
-
-        imageEntries.push({
-          name: zipImagePath,
-          data: fs.readFileSync(absImagePath),
-          mtime: fs.statSync(absImagePath).mtime,
-        });
-      });
-
-      const zipEntries = [
-        { name: sourceTxtEntryName, data: Buffer.from(pageText, 'utf8') },
-        { name: 'img/' },
-        ...imageEntries,
-      ];
-
-      const zipBuffer = createZipBuffer(zipEntries);
+      const zipBuffer = createPageExportZip(sourceFile);
       const targetFileName = createTimestampName(exportPrefix, '.zip');
       const targetFilePath = path.join(EXPORT_DIR, targetFileName);
       fs.writeFileSync(targetFilePath, zipBuffer);
       return ok(res, toPublicImageUrl(targetFilePath), 'exported');
     } catch (error) {
       return fail(res, `export local api error: ${error.message}`);
+    }
+  };
+}
+
+function createExportAllHandler() {
+  return (req, res) => {
+    try {
+      ensureDirectory(PAGE_DIR);
+      ensureDirectory(EXPORT_DIR);
+
+      const payload = req.body || {};
+      const pages = Array.isArray(payload.pages) ? payload.pages : [];
+      const skippedPages = [];
+      const usedZipNames = new Set();
+      const zipEntries = [];
+
+      pages.forEach((page) => {
+        const pageInfo = page && typeof page === 'object' ? page : {};
+        const sourceFile = resolveExistingFile(PAGE_DIR, pageInfo.pageTxt);
+        if (!sourceFile) {
+          skippedPages.push({
+            pageName: pageInfo.pageName,
+            pageTxt: pageInfo.pageTxt,
+            pageIndex: pageInfo.pageIndex,
+          });
+          return;
+        }
+
+        const parsedSource = path.parse(sourceFile);
+        const entryName = createUniquePageZipName(
+          pageInfo.pageName,
+          pageInfo.pageIndex,
+          sanitizeName(parsedSource.name, 'page'),
+          usedZipNames
+        );
+        zipEntries.push({
+          name: entryName,
+          data: createPageExportZip(sourceFile),
+          mtime: fs.statSync(sourceFile).mtime,
+        });
+      });
+
+      if (zipEntries.length === 0) {
+        return fail(res, 'no page files exported');
+      }
+
+      const targetFileName = createTimestampName('pages', '.zip');
+      const targetFilePath = path.join(EXPORT_DIR, targetFileName);
+      fs.writeFileSync(targetFilePath, createZipBuffer(zipEntries));
+      return ok(
+        res,
+        {
+          fileUrl: toPublicImageUrl(targetFilePath),
+          exportedCount: zipEntries.length,
+          skippedPages,
+        },
+        'exported'
+      );
+    } catch (error) {
+      return fail(res, `exportAll local api error: ${error.message}`);
     }
   };
 }
@@ -802,7 +958,7 @@ function createUploadHandler() {
 
       const ext = extensionFromNameOrMime(payload.fileName, decoded.mime) || '.png';
       const baseName = sanitizeName(path.parse(String(payload.fileName || '')).name, 'upload');
-      const targetFileName = createTimestampName(baseName, ext);
+      const targetFileName = `${baseName}${ext}`;
       const targetFilePath = path.join(UPLOAD_DIR, targetFileName);
 
       fs.writeFileSync(targetFilePath, decoded.buffer);
@@ -839,11 +995,11 @@ function createExportImportHandler() {
         }
 
         targetFileName = ensureImportTxtName(path.basename(txtEntry.name), 'import_page.txt');
-        pageText = txtEntry.data.toString('utf8');
+        pageText = rewriteImportedPageImageRefs(txtEntry.data.toString('utf8'));
         zipEntriesForImport = zipEntries;
       } else {
         targetFileName = ensureImportTxtName(path.basename(sourceName), 'import_page.txt');
-        pageText = decoded.buffer.toString('utf8');
+        pageText = rewriteImportedPageImageRefs(decoded.buffer.toString('utf8'));
       }
 
       const targetFilePath = path.join(PAGE_DIR, targetFileName);
@@ -886,14 +1042,21 @@ function routePath(basePath, endpoint) {
 }
 
 function attachLocalApiRoutes(app, basePath = '/api/local') {
+  const remoteSyncHandlers = createRemoteSyncDevelopmentHandlers();
   app.post(routePath(basePath, 'imgData'), createImgDataHandler());
   app.post(routePath(basePath, 'saveTpl'), createSaveTplHandler());
   app.post(routePath(basePath, 'savePage'), createSavePageHandler());
+  app.post(routePath(basePath, 'saveMasterControl'), createSaveMasterControlHandler());
   app.post(routePath(basePath, 'export'), createExportHandler());
+  app.post(routePath(basePath, 'exportAll'), createExportAllHandler());
   app.post(routePath(basePath, 'upload'), createUploadHandler());
   app.post(routePath(basePath, 'exportImport'), createExportImportHandler());
+  app.post(routePath(basePath, 'remoteSyncPreflight'), remoteSyncHandlers.preflight);
+  app.post(routePath(basePath, 'remoteSyncStart'), remoteSyncHandlers.start);
+  app.post(routePath(basePath, 'remoteSyncStatus'), remoteSyncHandlers.status);
 }
 
 module.exports = {
   attachLocalApiRoutes,
+  rewriteImportedPageImageRefs,
 };
